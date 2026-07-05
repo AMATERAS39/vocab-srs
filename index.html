@@ -89,7 +89,6 @@ code{background:var(--paper);padding:1px 5px;border-radius:4px;font-size:.78rem}
 .tag{font-size:.68rem;font-weight:700;color:#fff;border-radius:4px;padding:2px 8px}
 .tag.mode{background:var(--sub)}
 .word-display{font-family:var(--serif);font-size:2.3rem;font-weight:700;text-align:center;margin:16px 0 6px;letter-spacing:.02em;word-break:break-word}
-.word-hidden{font-family:var(--serif);font-size:2.3rem;text-align:center;margin:16px 0 6px;color:var(--line);letter-spacing:.3em}
 .hint{font-size:.78rem;color:var(--sub);text-align:center;margin-bottom:14px}
 .hint strong{color:var(--shu)}
 .audio-btn{display:block;margin:0 auto 14px;padding:10px 26px;border:1.5px solid var(--ink);border-radius:24px;font-size:.9rem;font-weight:700;background:#fff}
@@ -106,10 +105,6 @@ code{background:var(--paper);padding:1px 5px;border-radius:4px;font-size:.78rem}
 .choice-btn:disabled{opacity:.75;cursor:default}
 .choice-btn.correct{border-color:var(--midori);color:var(--midori);background:#EDF5F1}
 .choice-btn.wrong{border-color:var(--shu);color:var(--shu);background:var(--shu-soft)}
-.mode-checks{display:flex;flex-direction:column;gap:7px;font-size:.85rem;margin-bottom:12px}
-.mode-checks label{display:flex;align-items:center;gap:8px}
-.skip-btn{display:block;width:100%;margin-top:4px;color:var(--sub)}
-.confirm-banner{background:var(--shu-soft);border-radius:6px;padding:8px 10px;font-size:.78rem;color:var(--shu);margin-bottom:14px;line-height:1.6}
 .blank-block{margin-bottom:12px;padding-bottom:10px;border-bottom:1px dashed var(--line)}
 .blank-slot{color:var(--shu);font-weight:700}
 .pat-prompt{font-family:var(--serif);font-weight:700;font-size:1.05rem;color:var(--ink)}
@@ -144,24 +139,12 @@ code{background:var(--paper);padding:1px 5px;border-radius:4px;font-size:.78rem}
 
 /* 赤シート */
 .answer-zone{position:relative;border-top:1px dashed var(--line);padding-top:14px;min-height:120px}
-.akasheet{position:absolute;inset:8px 0 0 0;background:linear-gradient(160deg,#D95540,var(--shu));border-radius:8px;color:#fff;
-  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;font-weight:700;letter-spacing:.1em;cursor:pointer;z-index:2}
-.akasheet .small{font-size:.68rem;font-weight:400;opacity:.85;letter-spacing:.05em}
-.akasheet.lift{transform:translateY(-110%) rotate(-2deg);opacity:0;transition:transform .3s ease,opacity .3s ease;pointer-events:none}
 .entry{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px}
 .pos-badge{flex:none;align-self:flex-start;display:inline-block;min-width:2.8em;text-align:center;font-size:.72rem;font-weight:700;line-height:1.5;color:var(--shu);border:1.5px solid var(--shu);border-radius:4px;padding:1px 6px;margin-top:2px}
 .entry .meaning{flex:1}
 .meaning{font-size:1rem;font-weight:500}
 .core-line{font-size:.82rem;background:var(--paper);border-left:3px solid var(--shu);padding:7px 10px;border-radius:0 6px 6px 0;margin-bottom:12px;line-height:1.6}
 .core-label{font-weight:700;color:var(--shu);margin-right:8px;font-size:.7rem;letter-spacing:.1em}
-.strict-note{font-size:.72rem;color:var(--shu);background:var(--shu-soft);border-radius:6px;padding:6px 10px;margin-top:10px}
-.grade-row{display:flex;gap:8px;margin-top:16px}
-.grade-row button{flex:1;padding:13px 4px;border-radius:8px;font-size:.86rem;font-weight:700;border:1.5px solid var(--line);background:#fff}
-.g-ng{color:var(--shu);border-color:var(--shu)!important}
-.g-mid{color:var(--sub)}
-.g-ok{color:#fff;background:var(--midori)!important;border-color:var(--midori)!important}
-.grade-key{display:block;font-size:.62rem;font-weight:400;opacity:.7}
-.exit-link{display:block;text-align:center;margin-top:16px;font-size:.78rem;color:var(--sub);text-decoration:underline}
 
 /* ---------- 完了 ---------- */
 .done-card{text-align:center;padding:36px 20px}
@@ -186,7 +169,6 @@ body{font-size:clamp(13px,1.9vh,16px)}
 .home-svg{width:19px;height:19px;fill:var(--ink)}
 .copyright-wrap{max-width:580px;margin:0 auto;padding:0 16px 18px;text-align:right}
 .copyright{font-size:.62rem;color:var(--sub);opacity:.75}
-.head-right{display:flex;align-items:center;gap:8px;position:relative}
 .menu-btn{background:var(--card);border:1px solid var(--line);border-radius:9px;cursor:pointer;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:0}
 .menu-svg{width:19px;height:19px;fill:var(--ink);display:block}
 .menu-drop{display:none;position:absolute;top:110%;right:0;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 4px 14px rgba(0,0,0,.12);z-index:50;min-width:150px;overflow:hidden}
