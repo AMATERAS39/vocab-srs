@@ -1,0 +1,1886 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>English Vocabulary</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EDF0F2;
+  --card:#FFFFFF;
+  --ink:#1F2C38;
+  --sub:#5D6B76;
+  --shu:#C8452C;      /* 朱色：赤シート・強調 */
+  --shu-soft:#F6E2DD;
+  --midori:#2F7D5B;   /* 定着・正解 */
+  --line:#D5DBE0;
+  --serif:"Shippori Mincho","Hiragino Mincho ProN",serif;
+  --sans:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.65;min-height:100vh}
+.wrap{max-width:580px;margin:0 auto;padding:20px 16px 8px}
+button{font-family:var(--sans);cursor:pointer;border:none;background:none;color:inherit}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--shu);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------- ヘッダー ---------- */
+header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:20px;border-bottom:2px solid var(--ink);padding-bottom:10px}
+header h1{font-family:var(--serif);font-size:1.25rem;font-weight:700;letter-spacing:.06em}
+.date-line{font-size:.78rem;color:var(--sub)}
+.streak{font-size:.78rem;color:var(--shu);font-weight:700}
+
+/* ---------- ホーム ---------- */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:14px}
+.queue-row{display:flex;gap:12px;margin:12px 0 16px}
+.queue-box{flex:1;text-align:center;padding:12px 6px;border:1px solid var(--line);border-radius:8px}
+.queue-box .num{font-family:var(--serif);font-size:1.9rem;font-weight:700;line-height:1.2}
+.queue-box .lbl{font-size:.72rem;color:var(--sub)}
+.queue-box.review .num{color:var(--shu)}
+.btn-primary{display:block;width:100%;padding:14px;background:var(--ink);color:#fff;border-radius:8px;font-size:1rem;font-weight:700;letter-spacing:.08em}
+.btn-primary:disabled{background:var(--line);color:var(--sub);cursor:default}
+.panel h2{font-family:var(--serif);font-size:.95rem;font-weight:700;margin-bottom:10px;letter-spacing:.05em}
+.lv-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:.8rem}
+.lv-tab{width:52px;flex:none;text-align:center;color:#fff;border-radius:4px;padding:2px 0;font-weight:700;font-size:.72rem}
+.bar{flex:1;height:10px;background:var(--paper);border-radius:5px;overflow:hidden;position:relative}
+.bar .fill-learn{position:absolute;left:0;top:0;bottom:0;background:var(--shu);opacity:.45}
+.bar .fill-master{position:absolute;left:0;top:0;bottom:0;background:var(--midori)}
+.lv-cnt{width:86px;flex:none;text-align:right;color:var(--sub);font-variant-numeric:tabular-nums}
+.legend{font-size:.7rem;color:var(--sub);margin-top:6px}
+.legend .dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin:0 3px 0 10px;vertical-align:middle}
+details.panel{padding:0}
+details.panel summary{padding:14px 18px;font-family:var(--serif);font-weight:700;font-size:.95rem;cursor:pointer;list-style:none}
+details.panel summary::before{content:"▸ ";color:var(--shu)}
+details.panel[open] summary::before{content:"▾ "}
+details.panel .inner{padding:0 18px 18px}
+.setting-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;font-size:.85rem}
+.setting-row select,.setting-row input[type=number]{font-family:var(--sans);padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:.85rem;background:#fff}
+textarea{width:100%;min-height:110px;border:1px solid var(--line);border-radius:6px;padding:8px;font-size:.78rem;font-family:ui-monospace,monospace;background:#fff;color:var(--ink)}
+.btn-sub{padding:8px 14px;border:1px solid var(--ink);border-radius:6px;font-size:.82rem;font-weight:500;margin:8px 8px 0 0;background:#fff}
+.msg{font-size:.78rem;margin-top:8px;color:var(--midori)}
+.msg.err{color:var(--shu)}
+.warn-banner{background:var(--shu-soft);border:1px solid var(--shu);color:var(--shu);border-radius:8px;padding:10px 12px;font-size:.78rem;margin-bottom:14px;line-height:1.6}
+.save-badge{font-size:.68rem;color:var(--sub)}
+.save-badge.err{color:var(--shu);font-weight:700}
+code{background:var(--paper);padding:1px 5px;border-radius:4px;font-size:.78rem}
+.note{font-size:.76rem;color:var(--sub);line-height:1.7}
+
+/* ---------- 学習カード（単語カード風） ---------- */
+.session-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:.8rem;color:var(--sub)}
+.progress-track{height:5px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:18px}
+.progress-track .p{height:100%;background:var(--ink);transition:width .25s ease}
+.wcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:26px 22px 22px;position:relative;box-shadow:0 2px 10px rgba(31,44,56,.06)}
+.card-meta{display:flex;justify-content:flex-end;gap:8px;align-items:center;margin-bottom:8px}
+.diff-stars{display:inline-flex;align-items:center}
+.stars-svg{height:15px;width:75px}
+.star-fill{fill:var(--shu)}
+.star-empty{fill:none;stroke:var(--line);stroke-width:1.2}
+.tag{font-size:.68rem;font-weight:700;color:#fff;border-radius:4px;padding:2px 8px}
+.tag.mode{background:var(--sub)}
+.word-display{font-family:var(--serif);font-size:2.3rem;font-weight:700;text-align:center;margin:16px 0 6px;letter-spacing:.02em;word-break:break-word}
+.word-hidden{font-family:var(--serif);font-size:2.3rem;text-align:center;margin:16px 0 6px;color:var(--line);letter-spacing:.3em}
+.hint{font-size:.78rem;color:var(--sub);text-align:center;margin-bottom:14px}
+.hint strong{color:var(--shu)}
+.audio-btn{display:block;margin:0 auto 14px;padding:10px 26px;border:1.5px solid var(--ink);border-radius:24px;font-size:.9rem;font-weight:700;background:#fff}
+.dict-row{display:flex;gap:8px;margin:0 0 14px}
+.dict-row input{flex:1;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:1.05rem;font-family:var(--serif)}
+.dict-row .btn-sub{margin:0}
+.dict-result{text-align:center;font-weight:700;margin-bottom:10px;font-size:.9rem}
+.dict-result.ok{color:var(--midori)}
+.dict-result.ng{color:var(--shu)}
+.prompt-zone{border:1px dashed var(--line);border-radius:8px;padding:10px 12px;margin-bottom:10px}
+.prompt-zone .meaning{font-size:.9rem}
+.choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 12px}
+.choice-btn{padding:12px 6px;border:1.5px solid var(--line);border-radius:8px;font-family:var(--serif);font-size:1rem;font-weight:700;background:#fff;word-break:break-word}
+.choice-btn:disabled{opacity:.75;cursor:default}
+.choice-btn.correct{border-color:var(--midori);color:var(--midori);background:#EDF5F1}
+.choice-btn.wrong{border-color:var(--shu);color:var(--shu);background:var(--shu-soft)}
+.mode-checks{display:flex;flex-direction:column;gap:7px;font-size:.85rem;margin-bottom:12px}
+.mode-checks label{display:flex;align-items:center;gap:8px}
+.skip-btn{display:block;width:100%;margin-top:4px;color:var(--sub)}
+.confirm-banner{background:var(--shu-soft);border-radius:6px;padding:8px 10px;font-size:.78rem;color:var(--shu);margin-bottom:14px;line-height:1.6}
+.blank-block{margin-bottom:12px;padding-bottom:10px;border-bottom:1px dashed var(--line)}
+.blank-slot{color:var(--shu);font-weight:700}
+.pat-prompt{font-family:var(--serif);font-weight:700;font-size:1.05rem;color:var(--ink)}
+.opt-list{display:flex;flex-direction:column;gap:6px;margin-top:8px;margin-left:4px}
+.opt-btn{text-align:left;padding:9px 11px;border:1.5px solid var(--line);border-radius:7px;background:#fff;font-size:.86rem;line-height:1.4}
+.opt-btn.picked{border-color:var(--ink);background:var(--paper)}
+.opt-btn.correct{border-color:var(--midori);color:var(--midori);background:#EDF5F1}
+.opt-btn.wrong{border-color:var(--shu);color:var(--shu);background:var(--shu-soft)}
+.opt-btn:disabled{cursor:default}
+.btn-ghost{display:block;width:100%;padding:12px;border:1.5px solid var(--ink);border-radius:8px;font-size:.95rem;font-weight:700;background:#fff;margin-top:10px}
+/* 参照モード */
+.ref-controls{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.ref-controls select,.ref-controls input{font-family:var(--sans);padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:.82rem;background:#fff;flex:1;min-width:120px}
+.ref-count{font-size:.76rem;color:var(--sub);margin-bottom:10px}
+.ref-item{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:12px 14px;margin-bottom:8px}
+.ref-head{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+.ref-word{font-family:var(--serif);font-size:1.3rem;font-weight:700}
+.ref-lv{font-size:.66rem;font-weight:700;color:#fff;border-radius:4px;padding:1px 6px}
+.ref-status{font-size:.66rem;margin-left:auto;padding:1px 7px;border-radius:10px}
+.ref-status.m{background:#EDF5F1;color:var(--midori)}
+.ref-status.l{background:var(--shu-soft);color:var(--shu)}
+.ref-status.n{background:var(--paper);color:var(--sub)}
+.ref-play{border:1px solid var(--line);border-radius:6px;padding:2px 9px;font-size:.78rem;background:#fff}
+.ref-core{font-size:.76rem;color:var(--sub);border-left:3px solid var(--shu);padding:3px 8px;margin:6px 0}
+.ref-ent{display:flex;gap:8px;margin-bottom:3px;align-items:flex-start}
+.ref-ent .pos-badge{align-self:flex-start;margin-top:2px}
+.ref-ent .meaning{flex:1}
+.acc-tag{font-size:.68rem;color:var(--sub);background:var(--paper);border-radius:10px;padding:1px 8px}
+.acc-line{text-align:center;font-size:.78rem;color:var(--sub);margin-bottom:8px}
+.ref-acc{font-size:.7rem;margin-left:6px;padding:1px 7px;border-radius:10px;background:var(--paper);color:var(--sub)}
+.ref-acc.low{background:var(--shu-soft);color:var(--shu);font-weight:700}
+
+/* 赤シート */
+.answer-zone{position:relative;border-top:1px dashed var(--line);padding-top:14px;min-height:120px}
+.akasheet{position:absolute;inset:8px 0 0 0;background:linear-gradient(160deg,#D95540,var(--shu));border-radius:8px;color:#fff;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;font-weight:700;letter-spacing:.1em;cursor:pointer;z-index:2}
+.akasheet .small{font-size:.68rem;font-weight:400;opacity:.85;letter-spacing:.05em}
+.akasheet.lift{transform:translateY(-110%) rotate(-2deg);opacity:0;transition:transform .3s ease,opacity .3s ease;pointer-events:none}
+.entry{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px}
+.pos-badge{flex:none;align-self:flex-start;display:inline-block;min-width:2.8em;text-align:center;font-size:.72rem;font-weight:700;line-height:1.5;color:var(--shu);border:1.5px solid var(--shu);border-radius:4px;padding:1px 6px;margin-top:2px}
+.entry .meaning{flex:1}
+.meaning{font-size:1rem;font-weight:500}
+.core-line{font-size:.82rem;background:var(--paper);border-left:3px solid var(--shu);padding:7px 10px;border-radius:0 6px 6px 0;margin-bottom:12px;line-height:1.6}
+.core-label{font-weight:700;color:var(--shu);margin-right:8px;font-size:.7rem;letter-spacing:.1em}
+.strict-note{font-size:.72rem;color:var(--shu);background:var(--shu-soft);border-radius:6px;padding:6px 10px;margin-top:10px}
+.grade-row{display:flex;gap:8px;margin-top:16px}
+.grade-row button{flex:1;padding:13px 4px;border-radius:8px;font-size:.86rem;font-weight:700;border:1.5px solid var(--line);background:#fff}
+.g-ng{color:var(--shu);border-color:var(--shu)!important}
+.g-mid{color:var(--sub)}
+.g-ok{color:#fff;background:var(--midori)!important;border-color:var(--midori)!important}
+.grade-key{display:block;font-size:.62rem;font-weight:400;opacity:.7}
+.exit-link{display:block;text-align:center;margin-top:16px;font-size:.78rem;color:var(--sub);text-decoration:underline}
+
+/* ---------- 完了 ---------- */
+.done-card{text-align:center;padding:36px 20px}
+.done-card .stamp{width:88px;height:88px;border:3px solid var(--shu);border-radius:50%;color:var(--shu);
+  font-family:var(--serif);font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;
+  transform:rotate(-8deg);font-size:1.15rem;letter-spacing:.1em}
+.done-stats{font-size:.9rem;color:var(--sub);margin-bottom:20px}
+
+/* ==== 追加UI・レイアウト圧縮 ==== */
+html,body{height:100%}
+body{font-size:clamp(13px,1.9vh,16px)}
+.panel{padding:clamp(9px,1.6vh,16px);margin-bottom:clamp(6px,1.2vh,12px)}
+.wcard{padding:clamp(10px,1.8vh,18px)}
+.word-display{font-size:clamp(1.35rem,4.5vh,2.1rem)}
+.opt-btn{padding:clamp(4px,0.9vh,8px) 10px;font-size:clamp(.78rem,1.7vh,.95rem)}
+.entry{margin-bottom:clamp(3px,0.7vh,8px)}
+.prompt-zone{max-height:48vh;overflow-y:auto}
+.dict-row{display:flex;gap:6px;align-items:stretch;flex-wrap:nowrap}
+.dict-row input{flex:1 1 auto;min-width:0}
+.dict-row .btn-sub{flex:0 0 auto;white-space:nowrap;padding:6px 10px}
+.home-ico{cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;border:1px solid var(--line);border-radius:9px;background:var(--card)}
+.home-svg{width:19px;height:19px;fill:var(--ink)}
+.copyright-wrap{max-width:580px;margin:0 auto;padding:0 16px 18px;text-align:right}
+.copyright{font-size:.62rem;color:var(--sub);opacity:.75}
+.head-right{display:flex;align-items:center;gap:8px;position:relative}
+.menu-btn{background:var(--card);border:1px solid var(--line);border-radius:9px;cursor:pointer;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:0}
+.menu-svg{width:19px;height:19px;fill:var(--ink);display:block}
+.menu-drop{display:none;position:absolute;top:110%;right:0;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 4px 14px rgba(0,0,0,.12);z-index:50;min-width:150px;overflow:hidden}
+.menu-drop.open{display:block}
+.menu-drop button{display:block;width:100%;text-align:left;background:none;border:none;padding:10px 14px;font-size:.9rem;cursor:pointer}
+.menu-drop button:hover{background:var(--paper)}
+.quote-line{font-size:.74rem;color:var(--sub);margin-top:2px;font-style:italic}
+.wrong-line{color:var(--shu);font-size:.85rem;font-weight:700;margin:2px 0;text-align:center}
+.ok-line{color:var(--midori);font-size:.85rem;font-weight:700;margin:2px 0;text-align:center}
+.acc-gauge{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:4px 0}
+.acc-gauge .g{height:100%;border-radius:3px}
+.fill-seen{position:absolute;left:0;top:0;height:100%;background:#B9B2A6;opacity:.55}
+.pos-toggle-row{display:flex;flex-wrap:nowrap;gap:6px;justify-content:center;margin:12px 0}
+.pos-toggle{flex:1 1 0;min-width:0;padding:10px 4px;border:1.5px solid var(--line);border-radius:9px;background:var(--card);font-size:clamp(.72rem,2.4vw,.92rem);cursor:pointer;text-align:center;white-space:nowrap}
+.pos-toggle.on{border-color:var(--shu);color:var(--shu);font-weight:700;background:#FBF1EE}
+.pos-toggle.correct{border-color:var(--midori);color:var(--midori);background:#EDF5F1;font-weight:700}
+.pos-toggle.wrong{border-color:var(--shu);color:var(--shu);background:#FBEAE6;text-decoration:line-through}
+.ref-status.s{background:#EFEBE3;color:#8B8375}
+.about h2{margin-top:14px}
+.about-svg{width:100%;max-width:400px;display:block;margin:4px auto}
+.screen-svg{width:100%;max-width:320px;display:block;margin:6px auto;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.screen-svg text{font-family:var(--sans)}
+.scr-bg{fill:var(--paper)}
+.scr-card{fill:var(--card);stroke:var(--line);stroke-width:1}
+.scr-ink{fill:var(--ink)}
+.scr-sub{fill:var(--sub)}
+.scr-shu{fill:var(--shu)}
+.scr-btn-dark{fill:var(--ink)}
+.ab-box{fill:none;stroke:var(--shu);stroke-width:1.5}
+.ab-box.on{fill:#FBF1EE}
+.ab-t{font-size:12px;text-anchor:middle;fill:var(--ink);font-weight:700}
+.ab-a{font-size:14px;text-anchor:middle;fill:var(--sub)}
+.ab-s{font-size:9.5px;text-anchor:middle;fill:var(--sub)}
+.ab-line{stroke:var(--line);stroke-width:2}
+.ab-dot{fill:var(--card);stroke:var(--shu);stroke-width:2}
+.ab-dot.on{fill:var(--shu)}
+
+/* ==== ヘッダー1行化・アイコン ==== */
+header{display:flex;justify-content:space-between;align-items:flex-start;position:relative;gap:8px}
+.head-left{display:flex;align-items:center;gap:10px;min-width:0}
+h1{font-size:clamp(1.05rem,3vh,1.5rem);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.date-line{white-space:nowrap}
+.book-ico{flex:none;display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;padding:0;border:1px solid var(--line);border-radius:10px;background:var(--card);cursor:pointer}
+.book-svg{width:21px;height:21px;fill:var(--shu)}
+.quote-line{font-size:.72rem;color:var(--sub);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px 0 8px}
+.menu-drop button{white-space:nowrap}
+
+/* ==== 画面遷移のちらつき軽減 ==== */
+#app{background:var(--paper)}
+.wcard{background:var(--card);will-change:contents}
+.word-display{contain:paint}
+
+/* ==== アプリ説明の画面図解 ==== */
+.ab-frame{fill:var(--paper);stroke:var(--line);stroke-width:1.5}
+.ab-hi{fill:var(--card);stroke:var(--shu);stroke-width:1.2}
+.ab-ic{font-size:11px;text-anchor:middle;fill:var(--shu);font-weight:700}
+.ab-tl{font-size:11px;fill:var(--ink);font-weight:700}
+.ab-tl2{font-size:12px;text-anchor:middle;fill:var(--ink);font-weight:700}
+.ab-s2{font-size:8.5px;fill:var(--sub);text-anchor:middle}
+.ab-card{fill:var(--card);stroke:var(--line);stroke-width:1}
+.ab-star{font-size:11px;fill:var(--shu);letter-spacing:1px}
+.ab-t2{font-size:9.5px;fill:var(--ink)}
+.about-svg{width:100%;max-width:420px}
+
+/* ==== 説明のスクリーンショット ==== */
+.shot{margin:8px 0 4px;text-align:center}
+.shot img{width:100%;max-width:300px;border:1px solid var(--line);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.shot figcaption{font-size:.7rem;color:var(--sub);margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="copyright-wrap"><div class="copyright">©2026 AMATERAS</div></div>
+
+<script>
+/* =========================================================
+   単語データ（サンプル200語・頻度順・レベル1〜5）
+   形式: {i:通し番号, w:単語, l:レベル(1基本〜5難関), e:[[品詞,"意味1；意味2"],...]}
+   レベル1〜2は「全品詞・全語義の再生」で合格判定する運用
+========================================================= */
+const BUILTIN = [
+/* ---- Level 1: 多品詞・基本語 ---- */
+{i:1,w:"increase",l:1,c:"in-(上へ)+crescere(育つ)→「積み上がって大きくなる」",e:[["自動",["増える"]],["他動",["〜を増やす"]],["名",["増加"]]]},
+{i:2,w:"decrease",l:1,c:"de-(下へ)+crescere(育つ)→「削られて小さくなる」",e:[["自動",["減る"]],["他動",["〜を減らす"]],["名",["減少"]]]},
+{i:3,w:"matter",l:1,c:"「そこにある実質・中身」→物質；中身のある事柄=問題",e:[["名",["問題","事柄","物質"]],["自動",[["It doesn't matter","（否定・疑問で）重要である"],"重要である"]]]},
+{i:4,w:"cause",l:1,c:"「結果を生み出す元」",e:[["名",["原因","大義"]],["他動",[["cause A to do","Aに〜させる原因となる"],"〜を引き起こす"]]]},
+{i:5,w:"mean",l:1,c:"(動)「心が指し示すもの」→意味・意図。(形)は別語源で「劣った」→意地悪な・平均の",e:[["他動",[["mean to do","〜するつもりである"],["mean doing","〜することを意味する"],"〜を意味する"]],["形",["意地悪な","平均の"]],["名",["手段"]],["熟",[["by means of A","Aによって"]]]]},
+{i:6,w:"face",l:1,c:"「正面」→顔・表面；正面から向き合う",e:[["名",["顔","表面"]],["他動",["〜に直面する","〜に向き合う"]],["句動",[["face up to A","Aを直視する"],["be faced with A","Aに直面している"]]]]},
+{i:7,w:"cost",l:1,c:"「代わりに差し出すもの」→費用・犠牲",e:[["名",["費用","犠牲"]],["他動",[["cost A B","AにB〔費用・犠牲〕を負わせる"],"（費用が）かかる"]],["熟",[["at the cost of A","Aを犠牲にして"]]]]},
+{i:8,w:"last",l:1,c:"「一番あと」→最後の；最後まで持ちこたえて続く",e:[["形",["最後の","この前の"]],["自動",["続く","持ちこたえる"]],["副",["最後に"]]]},
+{i:9,w:"run",l:1,c:"「途切れず流れ続ける」→走る；(店・機械が)動き続ける",e:[["自動",["走る","（機械が）動く","（液体が）流れる"]],["他動",["〜を経営する","〜を走らせる"]],["名",["走ること","連続"]],["句動",[["run out of A","Aを切らす"],["run into A","Aに偶然出会う；Aに衝突する"],["run over A","A〔人など〕を車でひく"],["run across A","Aに偶然出会う"]]]]},
+{i:10,w:"order",l:1,c:"「整った並び」→順序・秩序；並べさせる→命令・注文",e:[["名",["順序","命令","注文","秩序"]],["他動",[["order A to do","Aに〜するよう命じる"],"〜を注文する"]]]},
+{i:11,w:"sound",l:1,c:"(名・動)「音」。(形)は別語源(健やか)→健全な・ぐっすりの",e:[["名",["音"]],["自動",[["sound like A","Aのように聞こえる"],"〜に聞こえる"]],["形",["健全な","（眠りが）深い"]]]},
+{i:12,w:"present",l:1,c:"pre-(前に)+esse(ある)→「目の前にある」→現在・出席；目の前に差し出す→贈呈・贈り物",e:[["形",["現在の","出席している"]],["名",["贈り物","現在"]],["他動",[["present A with B","AにBを贈る"],"〜を贈呈する","〜を提示する"]],["熟",[["at present","現在は"]]]]},
+{i:13,w:"object",l:1,c:"ob-(向かって)+ject(投げる)→「前に投げ出された物」→物体・対象；反対を投げつける",e:[["名",["物体","対象","目的"]],["自動",["反対する"]],["句動",[["object to A／doing","A・〜することに反対する"]]]]},
+{i:14,w:"subject",l:1,c:"sub-(下に)+ject(投げる)→「下に置かれたもの」→支配下→主題・教科・被験者",e:[["名",["主題","教科","被験者"]],["形",[["be subject to A","Aを受けやすい；Aに従属して"]]],["他動",[["subject A to B","AをBにさらす"]]]]},
+{i:15,w:"project",l:1,c:"pro-(前へ)+ject(投げる)→「前へ投げる」→計画・投影・突き出る",e:[["名",["計画","事業"]],["他動",["〜を計画する","〜を投影する"]],["自動",["突き出る"]]]},
+{i:16,w:"produce",l:1,c:"pro-(前へ)+ducere(導く)→「前へ引き出す」→生産する・生み出す",e:[["他動",["〜を生産する","〜を引き起こす"]],["名",["農産物"]]]},
+{i:17,w:"offer",l:1,c:"ob-+ferre(運ぶ)→「相手の前に運び出す」→差し出す",e:[["他動",[["offer to do","〜しようと申し出る"],["offer A B","AにBを提供する"],"〜を申し出る","〜を提供する"]],["名",["申し出","提案"]]]},
+{i:18,w:"provide",l:1,c:"pro-(前もって)+videre(見る)→「先を見て備える」→供給する・養う",e:[["他動",[["provide A with B","AにBを供給する"],["provide B for A","AにBを供給する"],"〜を供給する"]],["句動",[["provide for A","Aを養う；Aに備える"]]]]},
+{i:19,w:"share",l:1,c:"「切り分けて持ち合う」→共有・分け前・株",e:[["他動",[["share A with B","AをBと分け合う"],"〜を共有する"]],["名",["分け前","株"]]]},
+{i:20,w:"notice",l:1,c:"not-(知る)→「知って目に留める」→気づく・通知",e:[["他動",[["notice A do／doing","Aが〜する・しているのに気づく"],"〜に気づく"]],["名",["通知","注目"]]]},
+{i:21,w:"respect",l:1,c:"re-(再び)+spect(見る)→「振り返ってよく見る」→尊敬；見る点=観点",e:[["名",["尊敬","点・観点"]],["他動",["〜を尊敬する"]],["熟",[["with respect to A","Aに関して"]]]]},
+{i:22,w:"experience",l:1,c:"ex-+per(試みる)→「試して通り抜けたもの」",e:[["名",["経験"]],["他動",["〜を経験する"]]]},
+{i:23,w:"influence",l:1,c:"in-+fluere(流れる)→「中へ流れ込む力」",e:[["名",["影響"]],["他動",["〜に影響を与える"]],["句動",[["V an influence on A","Aに影響を与える"]]]]},
+{i:24,w:"demand",l:1,c:"de-(強く)+mandare(命じる)→「強く求める」→要求・需要",e:[["名",["要求","需要"]],["他動",[["demand that S（should）do","Sが〜するよう要求する"],"〜を強く要求する"]]]},
+{i:25,w:"supply",l:1,c:"sub-+plere(満たす)→「下から満たして補う」",e:[["名",["供給","（<名>s で）生活必需品"]],["他動",[["supply A with B","AにBを供給する"],"〜を供給する"]]]},
+{i:26,w:"support",l:1,c:"sub-(下から)+portare(運ぶ)→「下から支え運ぶ」→支持・扶養",e:[["他動",["〜を支える","〜を養う","〜を支持する"]],["名",["支持","支え"]]]},
+{i:27,w:"force",l:1,c:"fortis(強い)→「押し通す強い力」→力・軍隊・強制",e:[["名",["力","軍隊"]],["他動",[["force A to do","Aに〜することを強いる"]]]]},
+{i:28,w:"form",l:1,c:"「かたち」→形・形式・用紙；形作る",e:[["名",["形","形式","用紙"]],["他動",["〜を形成する"]],["自動",["形づくられる","できる"]]]},
+{i:29,w:"figure",l:1,c:"「形あるもの」→姿・人物・図；形で書かれた数=数字",e:[["名",["数字","人物","姿","図"]],["他動",["〜と考える"]],["句動",[["figure out A","Aを理解する；Aを解決する"]]]]},
+{i:30,w:"measure",l:1,c:"「ものさしで測る」→測定；程度を測った手立て=対策",e:[["他動",["〜を測る"]],["自動",["（寸法が）〜ある"]],["名",["手段・対策","基準"]],["熟",[["take measures","対策を講じる"]]]]},
+{i:31,w:"view",l:1,c:"videre(見る)→「見ること」→眺め・見方",e:[["名",["眺め","見解"]],["他動",[["view A as B","AをBとみなす"],"〜を眺める"]],["熟",[["in view of A","Aを考慮して"]]]]},
+{i:32,w:"value",l:1,c:"valere(強い・値打ちがある)→「値打ち」→価値・重んじる",e:[["名",["価値"]],["他動",["〜を高く評価する","〜を重んじる"]]]},
+{i:33,w:"doubt",l:1,c:"du(二つ)→「二つの間で心が揺れる」→疑い",e:[["名",["疑い"]],["他動",["〜を疑う","〜ではないと思う"]],["熟",[["no doubt","疑いなく"]]]]},
+{i:34,w:"benefit",l:1,c:"bene(良く)+fit(なされた)→「良い働き」→利益・恩恵",e:[["名",["利益","恩恵"]],["他動",["〜のためになる"]],["句動",[["benefit from A","Aから利益を得る"]]]]},
+{i:35,w:"harm",l:1,c:"「傷を与える」",e:[["名",["害"]],["他動",["〜を害する"]],["熟",[["do harm to A","Aに害を与える"]]]]},
+{i:36,w:"lack",l:1,c:"「あるべき所に無い」→不足・欠く",e:[["名",["不足"]],["他動",["〜を欠いている"]],["熟",[["for lack of A","A不足のために"],["be lacking in A","Aが欠けている"]]]]},
+{i:37,w:"aim",l:1,c:"「狙いを定める」→目的・目指す",e:[["名",["目的","狙い"]],["他動",[["aim A at B","AをBに向ける"]]],["句動",[["aim at A","Aを狙う"],["aim to do","〜することを目指す"]]]]},
+{i:38,w:"claim",l:1,c:"clamare(叫ぶ)→「自分のものだと声を上げる」→主張・要求",e:[["他動",[["claim that ...／claim to do","〜と主張する"],"〜を〔当然の権利として〕要求する"]],["名",["主張","要求"]]]},
+{i:39,w:"deal",l:1,c:"「分け与える」→分配→取引；割り当てられた分を扱う",e:[["他動",["（カードなど）を配る"]],["名",["取引"]],["句動",[["deal with A","Aを扱う；Aに対処する"],["deal in A","Aを商う"]]],["熟",[["a great deal of A","多量のA"]]]]},
+{i:40,w:"charge",l:1,c:"「荷を積む」→負わせる(料金・責任・罪)；(電気を)込める=充電",e:[["名",["料金","責任","告発"]],["他動",[["charge A for B","Bの代金をAに請求する"],["charge A with B","AをBの罪で告発する"],"〜を請求する","〜を充電する"]],["熟",[["in charge of A","Aを担当して"]]]]},
+/* ---- Level 2: 基本動詞・頻出語 ---- */
+{i:41,w:"achieve",l:2,c:"a-+chief(頂点)→「頂点まで至る」→達成",e:[["他動",["〜を達成する"]]]},
+{i:42,w:"avoid",l:2,c:"「空(void)にして身を引く」→避ける",e:[["他動",[["avoid doing","〜するのを避ける"],"〜を避ける"]]]},
+{i:43,w:"compare",l:2,c:"com-+par(等しい)→「並べて等しいか見る」→比較",e:[["他動",[["compare A with B","AをBと比較する"],["compare A to B","AをBにたとえる"]]],["熟",[["compared with/to A","Aと比べると"]]]]},
+{i:44,w:"consist",l:2,c:"con-+sistere(立つ)→「一緒に立って成り立つ」",e:[["句動",[["consist of A","Aから成る"],["consist in A","A〔の中〕にある（自動詞・受け身不可）"]]]]},
+{i:45,w:"contain",l:2,c:"con-+tenere(保つ)→「中に保ち持つ」→含む；(感情を)中に留める=抑える",e:[["他動",["〜を含む","（感情）を抑える"]]]},
+{i:46,w:"describe",l:2,c:"de-+scribere(書く)→「書き写して描き出す」→描写・説明",e:[["他動",[["describe A as B","AをBだと述べる"],"〜を描写する","〜を説明する"]]]},
+{i:47,w:"develop",l:2,c:"de-(逆)+velop(包む)→「包みを開く」→潜在力を開いて伸ばす",e:[["他動",["〜を発達させる","〜を開発する"]],["自動",["発達する"]]]},
+{i:48,w:"discover",l:2,c:"dis-(逆)+cover(覆う)→「覆いを外す」→発見",e:[["他動",["〜を発見する"]]]},
+{i:49,w:"encourage",l:2,c:"en-(中に与える)+courage(勇気)→「勇気を吹き込む」→励ます・促す",e:[["他動",[["encourage A to do","Aに〜するよう促す"],"〜を励ます","〜を促進する"]]]},
+{i:50,w:"establish",l:2,c:"stabilis(安定)→「安定して据え付ける」→設立・確立",e:[["他動",["〜を設立する","〜を確立する"]]]},
+{i:51,w:"examine",l:2,c:"「秤にかけて調べる」→検査・診察",e:[["他動",["〜を調べる","〜を診察する"]]]},
+{i:52,w:"exist",l:2,c:"ex-(外に)+sistere(立つ)→「外に立ち現れている」→存在する",e:[["自動",["存在する"]]]},
+{i:53,w:"expect",l:2,c:"ex-(外を)+spect(見る)→「外を見て待ち構える」→予期・期待",e:[["他動",[["expect A to do","Aが〜すると思う"],"〜を予期する","〜を期待する"]]]},
+{i:54,w:"explain",l:2,c:"ex-+planus(平ら)→「平らに広げて見せる」→説明",e:[["他動",[["explain A to B","AをBに説明する"],"〜を説明する"]]]},
+{i:55,w:"express",l:2,c:"ex-(外へ)+press(押す)→「押し出す」→表現；押し出されて直行する=急行",e:[["他動",[["express oneself","自分の考えを述べる"],"〜を表現する"]],["形",["急行の","明確な"]],["名",["急行"]]]},
+{i:56,w:"gain",l:2,c:"「手に入れて増やす」→獲得・増加",e:[["他動",["〜を得る"]],["自動",["増す","（時計が）進む"]],["名",["増加","利益"]]]},
+{i:57,w:"improve",l:2,c:"「利益ある状態へ持っていく」→改善",e:[["他動",["〜を改善する"]],["自動",["良くなる"]]]},
+{i:58,w:"include",l:2,c:"in-+claudere(閉じる)→「中に閉じ込める」→含む",e:[["他動",["〜を含む"]]]},
+{i:59,w:"indicate",l:2,c:"index(人差し指)と同源→「指で指し示す」→示す",e:[["他動",["〜を示す","〜を指摘する"]]]},
+{i:60,w:"involve",l:2,c:"in-+volvere(巻く)→「中に巻き込む」→含む・巻き込む",e:[["他動",[["be involved in A","Aに関わっている"],"〜を含む・伴う","〜を巻き込む"]]]},
+{i:61,w:"maintain",l:2,c:"manu(手)+tenere(保つ)→「手で保ち続ける」→維持；立場を保つ=主張",e:[["他動",[["maintain that ...","〜と主張する"],"〜を維持する"]]]},
+{i:62,w:"mention",l:2,c:"mens(心)→「心に浮かんだことを口にする」→言及",e:[["他動",["〜に言及する"]],["名",["言及"]],["熟",[["Don't mention it.","どういたしまして"]]]]},
+{i:63,w:"occur",l:2,c:"ob-+currere(走る)→「こちらへ走り出てくる」→起こる；心に走り込む=ふと浮かぶ",e:[["自動",["起こる"]],["句動",[["occur to A","〔考えが〕Aの心にふと浮かぶ"]]]]},
+{i:64,w:"prefer",l:2,c:"prae-(前に)+ferre(運ぶ)→「前に置く」→優先して好む",e:[["他動",[["prefer A to B","BよりAを好む"],["prefer to do","〜するほうを好む"],"〜のほうを好む"]]]},
+{i:65,w:"prevent",l:2,c:"prae-(先に)+venire(来る)→「先回りして立ちふさがる」→妨げる・防ぐ",e:[["他動",[["prevent A from doing","Aが〜するのを妨げる"],"〜を妨げる","〜を防ぐ"]]]},
+{i:66,w:"realize",l:2,c:"「real(現実)にする」→実現する；現実として受け止める=悟る",e:[["他動",[["realize that ...","〜に気づく・悟る"],"〜を実現する"]]]},
+{i:67,w:"recognize",l:2,c:"re-(再び)+cognoscere(知る)→「再び知る」→見分ける・認める",e:[["他動",["〜を認識する・見分ける","〜を〔正当と〕認める"]]]},
+{i:68,w:"reduce",l:2,c:"re-(後ろへ)+ducere(導く)→「引き戻す」→減らす",e:[["他動",["〜を減らす"]]]},
+{i:69,w:"refer",l:2,c:"re-+ferre(運ぶ)→「〜のところへ持っていく」→言及・参照",e:[["句動",[["refer to A","Aに言及する；Aを参照する"],["refer to A as B","AをBと呼ぶ"]]]]},
+{i:70,w:"regard",l:2,c:"re-+garder(見る)→「じっと見る」→〜と見る(みなす)・敬意",e:[["他動",[["regard A as B","AをBとみなす"]]],["名",["尊敬","配慮"]],["熟",[["with regard to A","Aに関して"]]]]},
+{i:71,w:"remain",l:2,c:"re-(後ろに)+manere(とどまる)→「あとに残りとどまる」",e:[["自動",["〜のままである","残る"]],["名",["（複数形）遺跡","残り"]]]},
+{i:72,w:"require",l:2,c:"re-(繰り返し)+quaerere(求める)→「強く求める」→必要とする・要求",e:[["他動",[["require A to do","Aに〜するよう求める"],"〜を必要とする","〜を要求する"]]]},
+{i:73,w:"seek",l:2,c:"「探し求めて追う」",e:[["他動",[["seek to do","〜しようと努める"],"〜を探し求める"]],["句動",[["seek for/after A","Aを探し求める"]]]]},
+{i:74,w:"solve",l:2,c:"solvere(ゆるめる)→「固く結ばれたものを解きほぐす」→解決・解く",e:[["他動",["〜を解決する","〜を解く"]]]},
+{i:75,w:"suggest",l:2,c:"sub-(下から)+gerere(運ぶ)→「下からそっと差し出す」→提案・示唆",e:[["他動",[["suggest doing","〜を提案する"],"〜を示唆する"]]]},
+{i:76,w:"suppose",l:2,c:"sub-(下に)+ponere(置く)→「土台として下に置く」→仮定・思う",e:[["他動",[["be supposed to do","〜することになっている"],"〜と思う","〜と仮定する"]]]},
+{i:77,w:"tend",l:2,c:"tendere(張る・伸ばす)→「〜の方へ伸びていく」→傾向",e:[["自動",[["tend to do","〜する傾向がある"]]],["句動",[["tend toward A","Aの傾向がある"]]]]},
+{i:78,w:"vary",l:2,c:"varius(まだら)→「まだら模様のように様々」→変化・多様",e:[["自動",[["vary from A to B","AからBまで様々である"],"変わる","さまざまである"]],["他動",["〜を変える"]]]},
+{i:79,w:"attitude",l:2,c:"「心身の構え」→態度・考え方",e:[["名",["態度","考え方"]],["熟",[["attitude toward A","Aに対する態度"]]]]},
+{i:80,w:"knowledge",l:2,c:"know→「知られている中身」→知識",e:[["名",["知識"]]]},
+/* ---- Level 3: 中級（形容詞・動詞） ---- */
+{i:81,w:"significant",l:3,c:"signum(しるし)→「意味のしるしを帯びる」→重要な・意義深い",e:[["形","重要な；意義深い；かなりの"]]},
+{i:82,w:"essential",l:3,c:"「本質(essence)に関わる」→不可欠・本質的",e:[["形","不可欠の（be essential to/for A：Aに不可欠）；本質的な"],["名","（essentials で）必需品；要点"]]},
+{i:83,w:"obvious",l:3,c:"ob-(向かい)+via(道)→「道の真ん中にあり誰でも気づく」→明らか",e:[["形","明らかな（It is obvious that ...：〜は明白だ）"]]},
+{i:84,w:"appropriate",l:3,c:"ad-+proprius(固有の)→「その場に固有=ぴったり合う」→適切",e:[["形","適切な（be appropriate for A：Aにふさわしい）"]]},
+{i:85,w:"available",l:3,c:"valere(力がある)→「役立つ状態でそこにある」→利用可能",e:[["形","利用できる；入手できる；手が空いている"]]},
+{i:86,w:"aware",l:3,c:"ware(見張る)→「用心して気づいている」",e:[["形","be aware of A／be aware that ...：Aに・〜だと気づいている"]]},
+{i:87,w:"complex",l:3,c:"com-+plectere(編む)→「編み合わさった」→複雑；編み合わさった建物群=複合施設",e:[["形","複雑な"],["名","複合施設；コンプレックス"]]},
+{i:88,w:"considerable",l:3,c:"「considerする(考慮する)に値するほどの」→かなりの",e:[["形","かなりの"]]},
+{i:89,w:"crucial",l:3,c:"crux(十字路)→「分かれ道を決する」→決定的に重要",e:[["形","決定的に重要な（be crucial to/for A：Aにとって極めて重要）"]]},
+{i:90,w:"evident",l:3,c:"e-(外に)+videre(見える)→「外から見えている」→明白",e:[["形","明白な"]]},
+{i:91,w:"abandon",l:3,c:"a-+bandon(支配権)→「支配権を明け渡す」→捨てる・断念",e:[["他動","〜を捨てる；〜を断念する（abandon doing）"]]},
+{i:92,w:"absorb",l:3,c:"ab-+sorbere(吸う)→「吸い込む」→吸収；心を吸い込む=夢中にさせる",e:[["他動","〜を吸収する（be absorbed in A：Aに夢中である）"]]},
+{i:93,w:"accompany",l:3,c:"com-+panis(パン)→「パンを共にする仲間として付き添う」",e:[["他動","〜に同行する；〜に伴う（be accompanied by A：Aを伴っている）"]]},
+{i:94,w:"accomplish",l:3,c:"ad-+complere(満たす)→「最後まで満たし終える」→成し遂げる",e:[["他動","〜を成し遂げる"]]},
+{i:95,w:"acquire",l:3,c:"ad-+quaerere(求める)→「求めて自分のものにする」→習得・獲得",e:[["他動","〜を習得する；〜を獲得する"]]},
+{i:96,w:"adapt",l:3,c:"ad-+aptus(適した)→「合うように作り変える」→適応",e:[["自動","適応する"],["他動","〜を適応させる；〜を改作する"],["句動","adapt（oneself）to A：Aに適応する"]]},
+{i:97,w:"adjust",l:3,c:"ad-+justus(正しい)→「正しい位置に合わせる」→調整",e:[["他動","〜を調整する"],["句動","adjust to A：Aに適応する"]]},
+{i:98,w:"admit",l:3,c:"ad-+mittere(送る)→「中へ入れてやる」→入場許可；事実を中に入れる=認める",e:[["他動","〜を〔しぶしぶ〕認める（admit doing：〜したことを認める）；〜の入場を許す（be admitted to A：Aへの入学を認められる）"]]},
+{i:99,w:"adopt",l:3,c:"ad-+optare(選ぶ)→「選び取って自分のものにする」→採用・養子",e:[["他動","〜を採用する；〜を養子にする"]]},
+{i:100,w:"affect",l:3,c:"ad-+facere(作用する)→「働きかけて変化を及ぼす」→影響",e:[["他動","〜に影響を与える"]]},
+{i:101,w:"analyze",l:3,c:"ana-(細かく)+lyein(解く)→「分解してほどく」→分析",e:[["他動","〜を分析する"]]},
+{i:102,w:"anticipate",l:3,c:"ante-(前)+capere(取る)→「先取りする」→予期",e:[["他動","〜を予期する（anticipate doing：〜することを見込む）"]]},
+{i:103,w:"appreciate",l:3,c:"ad-+pretium(価格)→「価値を正しく見積もる」→評価・感謝・鑑賞",e:[["他動","〜を正しく評価する；〜に感謝する（I would appreciate it if ...：〜していただけるとありがたい）；〜を鑑賞する"]]},
+{i:104,w:"argue",l:3,c:"arguere(明らかにする)→「明らかにしようと論を交わす」→議論・主張",e:[["自動","議論する（argue with A about B：AとBについて言い争う）"],["他動","argue that ...：〜と主張する"],["句動","argue for A：Aに賛成論を述べる／argue against A：Aに反対論を述べる"]]},
+{i:105,w:"arise",l:3,c:"a-+rise→「立ち上がって出てくる」→生じる",e:[["自動","生じる"],["句動","arise from A：Aから生じる"]]},
+{i:106,w:"assume",l:3,c:"ad-+sumere(取る)→「(検証せず)取り込む」→仮定；役目を取り込む=引き受ける",e:[["他動","〜と〔根拠なく〕仮定する（assume that ...）；（責任など）を引き受ける"]]},
+{i:107,w:"attribute",l:3,c:"ad-+tribuere(割り当てる)→「〜に割り当てる」→帰属させる；割り当てられた性質=属性",e:[["他動","attribute A to B：AをBのせいにする・Bに帰する"],["名","属性；特質"]]},
+{i:108,w:"behave",l:3,c:"be-+have→「自分を保つ」→ふるまう",e:[["自動","ふるまう"],["他動","behave oneself：行儀よくする"]]},
+{i:109,w:"calculate",l:3,c:"calculus(計算用の小石)→「小石を並べて数える」→計算",e:[["他動","〜を計算する"]]},
+{i:110,w:"conclude",l:3,c:"con-+claudere(閉じる)→「閉じて締めくくる」→結論・終える",e:[["他動","〜と結論づける（conclude that ...）；〜を締めくくる"],["自動","終わる"]]},
+{i:111,w:"concern",l:3,c:"con-+cernere(ふるい分ける)→「互いに関わり合う」→関係；心に関わる=心配",e:[["他動","〜に関係する；〜を心配させる（be concerned about A：Aを心配している／be concerned with A：Aに関係している）"],["名","関心事；心配"]]},
+{i:112,w:"confuse",l:3,c:"con-+fundere(注ぐ)→「一緒に注いで混ざってしまう」→混乱・混同",e:[["他動","〜を混乱させる；confuse A with B：AをBと混同する"]]},
+{i:113,w:"struggle",l:3,c:"「もがきながら争う」→奮闘",e:[["自動","奮闘する（struggle to do：〜しようともがく）"],["名","奮闘；闘争"],["句動","struggle with/against A：Aと格闘する"]]},
+{i:114,w:"emphasize",l:3,c:"em-+phainein(見せる)→「中身を強く見せつける」→強調",e:[["他動","〜を強調する"]]},
+{i:115,w:"estimate",l:3,c:"aestimare(値踏みする)→「価値を見積もる」→見積もり・推定",e:[["他動","〜を見積もる・推定する"],["名","見積もり；推定"]]},
+{i:116,w:"identify",l:3,c:"idem(同じ)→「同一のものだと見定める」→特定；自分と同一視する",e:[["他動","〜を特定する；identify A as B：AをBだと確認する"],["句動","identify with A：Aに共感する・一体感を持つ"]]},
+{i:117,w:"ignore",l:3,c:"in-(否)+gnoscere(知る)→「知らないことにする」→無視",e:[["他動","〜を無視する"]]},
+{i:118,w:"imply",l:3,c:"in-+plicare(折る)→「中に折り込む」→暗に含む",e:[["他動","〜を暗に意味する；〜をほのめかす"]]},
+{i:119,w:"insist",l:3,c:"in-+sistere(立つ)→「その上に立って動かない」→強く主張・要求",e:[["他動","insist that S（should）do：〜すべきだと強く主張する"],["句動","insist on A／doing：Aを要求する；〜すると言い張る"]]},
+{i:120,w:"observe",l:3,c:"ob-+servare(注意を払う)→「注意を向け続ける」→観察；規則に注意を払う=遵守",e:[["他動","〜を観察する；〜と述べる；（規則）を守る"]]},
+/* ---- Level 4: 上級 ---- */
+{i:121,w:"abstract",l:4,c:"abs-(離す)+trahere(引く)→「具体から引き離す」→抽象；要点を引き出す=要約",e:[["形","抽象的な"],["名","要約"],["他動","〜を抽出する"]]},
+{i:122,w:"accumulate",l:4,c:"ad-+cumulus(山)→「山と積み上げる」→蓄積",e:[["他動","〜を蓄積する"],["自動","たまる"]]},
+{i:123,w:"advocate",l:4,c:"ad-+vocare(呼ぶ)→「味方に呼ばれて声を上げる」→擁護・主張",e:[["他動","〜を主張する・擁護する"],["名","擁護者；提唱者"]]},
+{i:124,w:"alter",l:4,c:"alter(他の)→「別のものに変える」",e:[["他動","〜を〔部分的に〕変える"],["自動","変わる"]]},
+{i:125,w:"ambiguous",l:4,c:"ambi-(両方)+agere(進む)→「両方へ取れて定まらない」→あいまい",e:[["形","あいまいな；多義的な"]]},
+{i:126,w:"apparent",l:4,c:"ad-+parere(現れる)→「表に現れている」→明白な；表に見えるだけの=外見上の",e:[["形","明らかな；外見上の"]]},
+{i:127,w:"arbitrary",l:4,c:"arbiter(裁定者)→「裁定者の一存で決まる」→恣意的・気まぐれ",e:[["形","恣意的な；気まぐれな"]]},
+{i:128,w:"assess",l:4,c:"ad-+sedere(座る)→「(査定人が)隣に座って値踏みする」→評価・査定",e:[["他動","〜を評価する；〜を査定する"]]},
+{i:129,w:"assert",l:4,c:"ad-+serere(結びつける)→「自分の立場に結びつけて言い切る」→断言",e:[["他動","assert that ...：〜と断言する；（権利など）を主張する"]]},
+{i:130,w:"cite",l:4,c:"citare(呼び出す)→「証拠として呼び出す」→引用・例示",e:[["他動","〜を引用する；〜を〔例として〕挙げる"]]},
+{i:131,w:"coherent",l:4,c:"co-+haerere(くっつく)→「互いにくっついて筋が通る」→首尾一貫",e:[["形","首尾一貫した；筋の通った"]]},
+{i:132,w:"compensate",l:4,c:"com-+pensare(量る)→「釣り合うように量って埋める」→補償・補う",e:[["句動","compensate for A：Aを補う"],["他動","compensate A for B：BのことでAに補償する"]]},
+{i:133,w:"comprehensive",l:4,c:"com-+prehendere(つかむ)→「全体をつかみ取る」→包括的",e:[["形","包括的な；総合的な"]]},
+{i:134,w:"conceive",l:4,c:"con-+capere(取る)→「心の中に取り込む」→思いつく・想像する",e:[["他動","〜を思いつく"],["句動","conceive of A：Aを想像する"]]},
+{i:135,w:"confront",l:4,c:"con-+frons(正面)→「正面を突き合わせる」→直面・対決",e:[["他動","〜に立ち向かう（be confronted with A：Aに直面している）"]]},
+{i:136,w:"consent",l:4,c:"con-(共に)+sentire(感じる)→「同じ気持ちになる」→同意",e:[["名","同意（without consent：同意なく）"],["句動","consent to A：Aに同意する"]]},
+{i:137,w:"constitute",l:4,c:"con-+statuere(立てる)→「部品を共に立てて組み上げる」→構成",e:[["他動","〜を構成する；〜に相当する"]]},
+{i:138,w:"contradict",l:4,c:"contra-(逆)+dicere(言う)→「逆のことを言う」→矛盾・反論",e:[["他動","〜と矛盾する；〜に反論する"]]},
+{i:139,w:"controversy",l:4,c:"contra-(逆)+vertere(向く)→「逆を向いて言い争う」→論争",e:[["名","論争"]]},
+{i:140,w:"convey",l:4,c:"con-+via(道)→「道づたいに運ぶ」→運搬；意味を運ぶ=伝達",e:[["他動","〜を伝える（convey A to B：AをBに伝える）；〜を運ぶ"]]},
+{i:141,w:"correspond",l:4,c:"cor-(共に)+respondere(応じる)→「互いに応じ合う」→一致・相当・文通",e:[["句動","correspond to A：Aに一致する・相当する／correspond with A：Aと文通する（自動詞）"]]},
+{i:142,w:"criterion",l:4,c:"krinein(判断する)→「判定のためのものさし」→基準",e:[["名","基準（複数形 criteria）"]]},
+{i:143,w:"deceive",l:4,c:"de-(離す)+capere(取る)→「こっそり取り上げる」→だます",e:[["他動","〜をだます（deceive A into doing：Aをだまして〜させる）"]]},
+{i:144,w:"dedicate",l:4,c:"de-+dicare(宣言する)→「捧げると宣言する」→献身・捧げる",e:[["他動","dedicate A to B：AをBに捧げる（dedicate oneself to A：Aに身を捧げる）"]]},
+{i:145,w:"deliberate",l:4,c:"de-+libra(天秤)→「天秤にかけて考え抜いた」→意図的・慎重；熟考する",e:[["形","意図的な；慎重な"],["自動","熟考する（deliberate on A：Aについて熟考する）"]]},
+{i:146,w:"derive",l:4,c:"de-+rivus(川)→「川から水路を引く」→由来する・引き出す",e:[["句動","derive from A：Aに由来する"],["他動","derive A from B：BからA〔利益・知識など〕を引き出す"]]},
+{i:147,w:"deteriorate",l:4,c:"deterior(より悪い)→「より悪い方へ進む」→悪化",e:[["自動","悪化する"]]},
+{i:148,w:"dilemma",l:4,c:"di-(二つ)+lemma(前提)→「二つの前提に挟まれる」→板挟み",e:[["名","ジレンマ；板挟み"]]},
+{i:149,w:"diminish",l:4,c:"de-+minuere(小さくする)→「小さくしていく」→減少",e:[["自動","減少する"],["他動","〜を減らす"]]},
+{i:150,w:"dispute",l:4,c:"dis-(別々に)+putare(考える)→「考えが割れて言い争う」→論争・異議",e:[["名","論争；紛争"],["他動","〜に異議を唱える"]]},
+{i:151,w:"distinct",l:4,c:"di-+stinguere(印をつける)→「区切りの印がはっきりある」→別個・明瞭",e:[["形","明確に異なる（be distinct from A：Aとは別個の）；はっきりした"]]},
+{i:152,w:"distribute",l:4,c:"dis-(別々に)+tribuere(割り当てる)→「配り分ける」→分配・分布",e:[["他動","〜を分配する（distribute A to B：AをBに配る）；〜を分布させる"]]},
+{i:153,w:"embrace",l:4,c:"em-(中に)+brace(腕)→「腕の中に入れる」→抱擁；考えを抱き入れる=受容",e:[["他動","〜を抱きしめる；（考えなど）を受け入れる"],["名","抱擁"]]},
+{i:154,w:"emerge",l:4,c:"e-(外へ)+mergere(沈める)→「沈んだ状態から浮かび出る」→出現",e:[["自動","現れる；明らかになる"],["句動","emerge from A：Aから現れ出る"]]},
+{i:155,w:"enhance",l:4,c:"altus(高い)→「高く引き上げる」→高める",e:[["他動","〜を高める；〜を向上させる"]]},
+{i:156,w:"evaluate",l:4,c:"e-+value→「価値を引き出して定める」→評価",e:[["他動","〜を評価する"]]},
+{i:157,w:"exaggerate",l:4,c:"ex-+aggerare(積み上げる)→「盛りに盛る」→誇張",e:[["他動","〜を誇張する"]]},
+{i:158,w:"exploit",l:4,c:"ex-+plicare(折る)→「折り開いて使い尽くす」→活用・搾取",e:[["他動","〜を搾取する；〜を〔最大限〕活用する"],["名","功績"]]},
+{i:159,w:"facilitate",l:4,c:"facilis(容易な)→「容易にしてやる」→促進",e:[["他動","〜を容易にする；〜を促進する"]]},
+{i:160,w:"fluctuate",l:4,c:"fluctus(波)→「波のように上下する」→変動",e:[["自動","変動する"]]},
+/* ---- Level 5: 難関大レベル ---- */
+{i:161,w:"aesthetic",l:5,c:"aisthesis(知覚)→「感覚で美を捉える」→美的",e:[["形","美的な"],["名","（aesthetics で）美学"]]},
+{i:162,w:"alleviate",l:5,c:"ad-+levis(軽い)→「重荷を軽くしてやる」→緩和",e:[["他動","（苦痛など）を緩和する"]]},
+{i:163,w:"ambivalent",l:5,c:"ambi-(両方)+valere(力がある)→「相反する二つの感情が同居する」",e:[["形","相反する感情を持つ（be ambivalent about A：Aに複雑な感情を抱く）"]]},
+{i:164,w:"autonomy",l:5,c:"auto-(自分)+nomos(法)→「自分の法で立つ」→自律・自治",e:[["名","自律；自治"]]},
+{i:165,w:"coincide",l:5,c:"co-+incidere(落ちる)→「同じ所に落ち合う」→同時発生・一致",e:[["自動","同時に起こる；一致する"],["句動","coincide with A：Aと同時に起こる；Aと一致する"]]},
+{i:166,w:"compassion",l:5,c:"com-(共に)+passio(苦しみ)→「苦しみを共にする」→思いやり",e:[["名","思いやり；深い同情（compassion for A：Aへの思いやり）"]]},
+{i:167,w:"condemn",l:5,c:"con-+damnare(罰する)→「罰を宣告する」→強い非難・有罪判決",e:[["他動","〜を強く非難する（condemn A for B：BのことでAを非難する）；condemn A to B：AにB〔刑〕を宣告する"]]},
+{i:168,w:"contemplate",l:5,c:"con-+templum(観測所)→「観測所からじっと見つめる」→熟視・熟考",e:[["他動","〜を熟考する（contemplate doing：〜しようかと考える）；〜をじっと見る"]]},
+{i:169,w:"cynical",l:5,c:"kyon(犬)→「犬儒学派のように世を斜めに見る」→冷笑的",e:[["形","皮肉な；冷笑的な（be cynical about A：Aを斜めに見ている）"]]},
+{i:170,w:"eloquent",l:5,c:"e-(外へ)+loqui(話す)→「言葉が流れ出る」→雄弁",e:[["形","雄弁な"]]},
+{i:171,w:"empathy",l:5,c:"em-(中へ)+pathos(感情)→「相手の感情の中に入り込む」→共感",e:[["名","共感（empathy with/for A：Aへの共感）"]]},
+{i:172,w:"endeavor",l:5,c:"en-+devoir(義務)→「己の務めとして力を尽くす」→努力",e:[["名","努力；試み"],["自動","endeavor to do：〜しようと努力する"]]},
+{i:173,w:"epitome",l:5,c:"epi-+temnein(切る)→「切り詰めて要点だけにしたもの」→縮図・典型",e:[["名","典型；縮図（the epitome of A：Aの典型）"]]},
+{i:174,w:"feasible",l:5,c:"faire(行う)→「実際に行うことができる」→実行可能",e:[["形","実行可能な"]]},
+{i:175,w:"futile",l:5,c:"futilis(漏れやすい)→「注いでも漏れる器」→無駄・むなしい",e:[["形","無駄な；むなしい（It is futile to do：〜しても無駄だ）"]]},
+{i:176,w:"hierarchy",l:5,c:"hieros(聖)+archein(支配)→「聖職者の位階」→階層・序列",e:[["名","階層制；序列"]]},
+{i:177,w:"indispensable",l:5,c:"in-(否)+dispense(免除する)→「免除できない」→不可欠",e:[["形","不可欠の（be indispensable to/for A：Aに不可欠）"]]},
+{i:178,w:"inevitable",l:5,c:"in-(否)+e-+vitare(避ける)→「避けて逃れられない」→不可避",e:[["形","避けられない"]]},
+{i:179,w:"integrity",l:5,c:"integer(欠けのない)→「欠けのない全体性」→誠実・完全",e:[["名","誠実；完全性"]]},
+{i:180,w:"intuition",l:5,c:"in-+tueri(見る)→「内側で直接見て取る」→直観",e:[["名","直観"]]},
+{i:181,w:"legitimate",l:5,c:"lex(法)→「法にかなっている」→合法・正当",e:[["形","合法の；正当な"]]},
+{i:182,w:"meticulous",l:5,c:"metus(恐れ)→「失敗を恐れるほど細心」→几帳面",e:[["形","細心の；きわめて注意深い"]]},
+{i:183,w:"notorious",l:5,c:"noscere(知る)→「(悪い方で)広く知れ渡った」→悪名高い",e:[["形","悪名高い（be notorious for A：Aで悪名高い）"]]},
+{i:184,w:"obsolete",l:5,c:"obsolescere(すたれる)→「使い古されて役目を終えた」→時代遅れ",e:[["形","時代遅れの；廃れた"]]},
+{i:185,w:"paradox",l:5,c:"para-(反する)+doxa(通念)→「通念に反する説」→逆説",e:[["名","逆説；矛盾した事態"]]},
+{i:186,w:"pervasive",l:5,c:"per-(隅々まで)+vadere(行く)→「隅々まで行き渡る」→浸透",e:[["形","広く行き渡った；浸透性の"]]},
+{i:187,w:"plausible",l:5,c:"plaudere(拍手する)→「拍手をもらえそうな=一見もっともな」",e:[["形","もっともらしい"]]},
+{i:188,w:"pragmatic",l:5,c:"pragma(行為・実務)→「理屈より実務と結果を重んじる」→実際的",e:[["形","実用的な；実際的な"]]},
+{i:189,w:"profound",l:5,c:"pro-+fundus(底)→「底が深い」→深遠・深い",e:[["形","深遠な；（影響などが）深い"]]},
+{i:190,w:"prudent",l:5,c:"providens(先を見る)の縮約→「先を見通して用心深い」→慎重・賢明",e:[["形","慎重な；賢明な"]]},
+{i:191,w:"reciprocal",l:5,c:"re-(後ろへ)+pro-(前へ)→「前後に行き来し合う」→相互",e:[["形","相互の"]]},
+{i:192,w:"reconcile",l:5,c:"re-+conciliare(呼び集める)→「再び一つに呼び戻す」→和解・調和",e:[["他動","reconcile A with B：AをBと和解させる・調和させる（reconcile oneself to A：A〔不快な事〕を受け入れる）"]]},
+{i:193,w:"redundant",l:5,c:"red-+unda(波)→「波があふれ返る」→余分・冗長",e:[["形","余分な；冗長な"]]},
+{i:194,w:"resilient",l:5,c:"re-+salire(跳ぶ)→「押されても跳ね返って戻る」→回復力・弾力",e:[["形","回復力のある；弾力のある"]]},
+{i:195,w:"scrutiny",l:5,c:"scruta(がらくた)→「がらくたの山まで漁って調べる」→精査",e:[["名","精査；監視（under scrutiny：厳しい監視下で）"]]},
+{i:196,w:"skeptical",l:5,c:"skeptesthai(よく見る)→「よく見て簡単には信じない」→懐疑的",e:[["形","懐疑的な（be skeptical of/about A：Aに懐疑的）"]]},
+{i:197,w:"subtle",l:5,c:"sub-+tela(織物)→「織り目の下まで細かい」→微妙・かすか・巧妙",e:[["形","微妙な；かすかな；巧妙な"]]},
+{i:198,w:"susceptible",l:5,c:"sus-(下で)+capere(受け取る)→「受け取りやすい」→影響されやすい",e:[["形","be susceptible to A：Aの影響を受けやすい"]]},
+{i:199,w:"tangible",l:5,c:"tangere(触れる)→「手で触れられる」→有形・明白",e:[["形","有形の；明白な"]]},
+{i:200,w:"ubiquitous",l:5,c:"ubique(どこにでも)→「至る所に存在する」→遍在",e:[["形","遍在する；どこにでもある"]]}
+];
+
+/* =========================================================
+   SRS ロジック（エビングハウス準拠の固定間隔＋失敗時リセット）
+   step 0→1→2→3→4 に対応する復習間隔: 1,3,7,14,30 日
+   step4 (30日後) の復習に◎ → 定着 (mastered)
+========================================================= */
+const INTERVALS = [1,3,7,14,30];
+const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
+const STORE_KEY = "vocab-srs-v1";
+
+/* ====================== クラウド同期（Supabase） ======================
+   ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
+   未設定のままなら、従来どおりブラウザ内保存（ゲスト）で動きます。 */
+const SUPABASE_URL      = "https://ovoghuyjqttsugnlwgor.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im92b2dodXlqcXR0c3Vnbmx3Z29yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyMzM3NzgsImV4cCI6MjA5ODgwOTc3OH0.aQVwvU9GrYCejopv2vqbnNDvsL2Nh0rHR6eDJx9FBbQ";
+
+let sb = null;          // Supabase クライアント
+let currentUser = null; // ログイン中ユーザー（未ログインは null）
+
+function cloudConfigured(){
+  return !SUPABASE_URL.includes("YOUR-PROJECT") && !SUPABASE_ANON_KEY.includes("YOUR-PUBLIC");
+}
+async function initSupabase(){
+  if(!cloudConfigured()) return null;
+  try{
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { data:{ session } } = await sb.auth.getSession();
+    currentUser = session ? session.user : null;
+    sb.auth.onAuthStateChange((_evt, sess)=>{
+      const before = currentUser ? currentUser.id : null;
+      currentUser = sess ? sess.user : null;
+      const after  = currentUser ? currentUser.id : null;
+      renderAuthBar();
+      if(before !== after) syncOnAuthChange();
+    });
+    return sb;
+  }catch(e){ sb = null; return null; }
+}
+
+let state = {
+  settings:{ newPerDay:30, rate:0.95, difficulty:1 }, // difficulty: 1〜5（☆。Lv.N以下をストック）
+  words:{},      // id -> {step,due,reps,lapses,mastered,learnedOn,revStage,failStreak,
+                 //        cSeen,cCorrect,wSeen,wCorrect}  ※c=選択式 w=記述式
+  log:{},        // "YYYY-MM-DD" -> {news,reviews,stocked}
+  custom:[],     // 追加単語（BUILTIN と同形式）
+  activeSession:null // 中断復帰用のセッション途中状態
+};
+
+function todayStr(d=new Date()){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), dd=String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${dd}`;
+}
+function addDays(days){
+  const d=new Date(); d.setDate(d.getDate()+days); return todayStr(d);
+}
+function allWords(){ const c = Array.isArray(state.custom) ? state.custom : []; return BUILTIN.concat(c).filter(w => w && typeof w === "object" && w.i != null); }
+function byId(id){ return allWords().find(w=>w.i===id); }
+
+/* 保存の三段フォールバック: window.storage(アーティファクト) → localStorage(通常ブラウザ) → メモリのみ */
+let saveTimer = null, dirty = false;
+const persistInfo = { backend:null, failed:false };
+
+async function backendSet(key, val){
+  if(sb && currentUser){
+    try{
+      const { error } = await sb.from("user_data")
+        .upsert({ user_id: currentUser.id, data: val, updated_at: new Date().toISOString() });
+      if(!error){ persistInfo.backend = "cloud"; persistInfo.failed = false; return true; }
+    }catch(e){ /* ネット不通など → ローカルへ退避 */ }
+  }
+  if(window.storage && typeof window.storage.set === "function"){
+    try{
+      const r = await window.storage.set(key, val);
+      if(r){ persistInfo.backend = "artifact"; persistInfo.failed = false; return true; }
+    }catch(e){ /* レート制限・非対応 → 次の手段へ */ }
+  }
+  try{
+    localStorage.setItem(key, val);
+    persistInfo.backend = "local"; persistInfo.failed = false; return true;
+  }catch(e){ /* localStorage も不可 */ }
+  persistInfo.backend = "memory"; persistInfo.failed = true; return false;
+}
+async function backendGet(key){
+  if(sb && currentUser){
+    try{
+      const { data, error } = await sb.from("user_data")
+        .select("data").eq("user_id", currentUser.id).maybeSingle();
+      if(!error){ persistInfo.backend = "cloud"; return data ? data.data : null; }
+    }catch(e){ /* 取得失敗 → ローカルへ */ }
+  }
+  if(window.storage && typeof window.storage.get === "function"){
+    try{
+      const r = await window.storage.get(key);
+      if(r && r.value != null){ persistInfo.backend = "artifact"; return r.value; }
+    }catch(e){ /* 初回はキー無しで例外 → 次の手段へ */ }
+  }
+  try{
+    const v = localStorage.getItem(key);
+    if(v != null){ if(!persistInfo.backend) persistInfo.backend = "local"; return v; }
+  }catch(e){}
+  return null;
+}
+function updateSaveBadge(status){
+  const el = document.getElementById("saveBadge");
+  if(!el) return;
+  if(status === "saved"){ el.className = "save-badge"; el.textContent = "保存済み ✓"; }
+  else if(status === "pending"){ el.className = "save-badge"; el.textContent = "保存待ち…"; }
+  else{ el.className = "save-badge err"; el.textContent = "⚠ 保存不可（要バックアップ）"; }
+}
+function scheduleSave(){ // 採点のたびに呼ぶ。2秒に1回にまとめてレート制限を回避
+  dirty = true;
+  updateSaveBadge("pending");
+  if(saveTimer) return;
+  saveTimer = setTimeout(flushSave, 2000);
+}
+async function flushSave(){ // 即時保存（設定変更・セッション終了・離脱時）
+  if(saveTimer){ clearTimeout(saveTimer); saveTimer = null; }
+  if(!dirty){ updateSaveBadge(persistInfo.failed ? "error" : "saved"); return !persistInfo.failed; }
+  const ok = await backendSet(STORE_KEY, JSON.stringify(state));
+  if(ok) dirty = false;
+  updateSaveBadge(ok ? "saved" : "error");
+  return ok;
+}
+function saveState(){ dirty = true; return flushSave(); }
+async function loadState(){
+  const v = await backendGet(STORE_KEY);
+  if(v){
+    try{
+      const s = JSON.parse(v);
+      state = Object.assign(state, s);
+      if(!Array.isArray(state.custom)) state.custom = [];
+      state.settings = Object.assign({newPerDay:30,rate:0.95,difficulty:1}, s.settings||{});
+      delete state.settings.modes; // 旧設定の掃除
+      /* 旧difficulty(easy/mid/hard)を☆数値へ移行 */
+      if(typeof state.settings.difficulty === "string"){
+        state.settings.difficulty = ({easy:1,mid:2,hard:3})[state.settings.difficulty] || 1;
+      }
+    }catch(e){ /* 壊れたデータは無視して初期状態 */ }
+  }
+}
+window.addEventListener("pagehide", ()=>{ if(dirty) flushSave(); });
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "hidden" && dirty) flushSave(); });
+function persistBanner(){
+  if(persistInfo.backend === "memory" || persistInfo.failed){
+    return `<div class="warn-banner">⚠ この環境では自動保存が使えていません。進捗はこの画面を閉じると消えます。学習後は「単語データの追加・バックアップ」→「バックアップを書き出す」で退避してください。</div>`;
+  }
+  return "";
+}
+
+/* ---- 今日のキュー ---- */
+/* ---- ストック方式 ----
+   開いた日に未出単語を newPerDay 語だけ「ストック（学習対象）」に登録する。
+   登録=state.words にエントリ作成（step0, 翌日から復習対象）。以降 SRS で出題。 */
+function stockToday(){
+  const t = todayStr();
+  if(state.log[t] && state.log[t].stocked!=null) return;
+  let diff = chunkStars();
+  const candidates = d => allWords().filter(w=>{ const st=state.words[w.i]; return (!st || st.inReview===false) && w.l<=d; }).sort((a,b)=>a.i-b.i);
+  let fresh = candidates(diff);
+  /* ②難易度自動昇格：☆N以下の未ストック語が尽きたら☆を上げる */
+  while(fresh.length===0 && diff<5){ diff++; fresh = candidates(diff); }
+  if(diff !== chunkStars()) state.settings.difficulty = diff;
+  fresh = fresh.slice(0, state.settings.newPerDay);
+  for(const w of fresh) ensureWordRecord(w.i, true);
+  if(!state.log[t]) state.log[t] = {news:0, reviews:0};
+  state.log[t].stocked = fresh.length;
+  saveState();
+}
+function dueReviews(){
+  const t = todayStr();
+  return allWords()
+    .filter(w => { const st=state.words[w.i]; return st && st.inReview!==false && !st.mastered && st.due <= t; })
+    .sort((a,b)=>{
+      const sa=state.words[a.i], sb=state.words[b.i];
+      const na=((sa.cSeen||0)+(sa.wSeen||0))===0?0:1, nb=((sb.cSeen||0)+(sb.wSeen||0))===0?0:1;
+      if(na!==nb) return na-nb;
+      const wa=(sa.failStreak||0)>0?0:1, wb=(sb.failStreak||0)>0?0:1;
+      if(wa!==wb) return wa-wb;
+      return sa.due.localeCompare(sb.due) || a.i-b.i;
+    });
+}
+/* 正答率（選択式・記述式それぞれ）: {cRate,cSeen,cCorrect,wRate,wSeen,wCorrect,reps} */
+function accuracy(id){
+  const st = state.words[id];
+  if(!st) return null;
+  const cSeen=st.cSeen||0, wSeen=st.wSeen||0;
+  if(cSeen===0 && wSeen===0) return null;
+  return {
+    reps: st.reps||0,
+    cSeen, cCorrect:st.cCorrect||0, cRate: cSeen? Math.round((st.cCorrect||0)/cSeen*100):null,
+    wSeen, wCorrect:st.wCorrect||0, wRate: wSeen? Math.round((st.wCorrect||0)/wSeen*100):null
+  };
+}
+/* 回答を1回分記録（リトライ含む・正答率の母数）。kind: "c"(選択式) | "w"(記述式) */
+function recordAnswer(id, kind, ok){
+  const st = state.words[id];
+  if(kind==="c"){ st.cSeen=(st.cSeen||0)+1; if(ok) st.cCorrect=(st.cCorrect||0)+1; }
+  else{ st.wSeen=(st.wSeen||0)+1; if(ok) st.wCorrect=(st.wCorrect||0)+1; }
+}
+/* カード左上の統計表示（出題回数・選択式正答率・記述式正答率） */
+function accStatsHtml(id){
+  const a = accuracy(id);
+  if(!a){ return '<span class="acc-tag">初出</span>'; }
+  const c = a.cRate!=null ? `選 ${a.cRate}%` : "選 −";
+  const wv = a.wRate!=null ? `記 ${a.wRate}%` : "記 −";
+  return `<span class="acc-tag">出題${a.reps}回・${c}・${wv}</span>`;
+}
+/* チャンク終了時の定着判定。cPass/wPass = 各ブロックで2回目までに正解したか */
+function finalizeWord(id, cPass, wPass){
+  const st = state.words[id];
+  st.reps = (st.reps||0) + 1;          // 出題回数（チャンク内+1）
+  if(cPass && wPass){
+    /* 定着判定1回。3回連続で「定着済」 */
+    st.okStreak = (st.okStreak||0) + 1;
+    st.failStreak = 0;
+    st.revStage = Math.min(2, (st.revStage||0) + 1);
+    if(st.okStreak >= 3){ st.mastered = true; st.due = "9999-12-31"; }
+    else{
+      st.step = Math.min(INTERVALS.length-1, (st.step||0) + 1);
+      st.due = addDays(INTERVALS[st.step]);
+    }
+  }else{
+    st.okStreak = 0;
+    st.failStreak = (st.failStreak||0) + 1;
+    if(st.failStreak >= 2){ st.revStage = 0; }
+    st.step = 0; st.due = addDays(1); st.lapses = (st.lapses||0)+1;
+  }
+  bumpLog("reviews");
+}
+function bumpLog(kind){
+  const t = todayStr();
+  if(!state.log[t]) state.log[t] = {news:0, reviews:0};
+  state.log[t][kind]++;
+}
+function streak(){
+  let n=0; const d=new Date();
+  if(!state.log[todayStr(d)]) d.setDate(d.getDate()-1); // 今日未学習でも昨日まで連続なら継続扱い
+  while(state.log[todayStr(d)]){ n++; d.setDate(d.getDate()-1); }
+  return n;
+}
+
+/* ---- 音声 (Web Speech API) ---- */
+let enVoice = null;
+function pickVoice(){
+  const vs = speechSynthesis.getVoices();
+  enVoice = vs.find(v=>/en[-_]US/i.test(v.lang)) || vs.find(v=>/^en/i.test(v.lang)) || null;
+}
+if("speechSynthesis" in window){
+  pickVoice();
+  speechSynthesis.onvoiceschanged = pickVoice;
+}
+function speak(text){
+  if(!("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "en-US";
+  if(enVoice) u.voice = enVoice;
+  u.rate = state.settings.rate;
+  speechSynthesis.speak(u);
+}
+
+/* =========================================================
+   画面
+========================================================= */
+const app = document.getElementById("app");
+let session = null; // {queue:[{id,isNew,mode}], idx, revealed, counts:{}}
+
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function renderHome(){
+  session = null;
+  if(state.activeSession && !state.activeSession.order) state.activeSession = null;
+  stockToday();
+  const revs = dueReviews();
+  const answered = (w)=>{ const st=state.words[w.i]; return st && ((st.cSeen||0)+(st.wSeen||0))>0; };
+  const stockCount = allWords().filter(w=>{ const st=state.words[w.i]; return st && st.inReview!==false; }).length;
+  const weakCount = allWords().filter(w=>{
+    const st=state.words[w.i]; if(!st || st.mastered) return false;
+    const cr=(st.cSeen)?st.cCorrect/st.cSeen:1, wr=(st.wSeen)?st.wCorrect/st.wSeen:1;
+    return ((st.cSeen||0)+(st.wSeen||0))>0 && Math.min(cr,wr)<0.6;
+  }).length;
+  const hasActive = !!state.activeSession;
+  const a = state.activeSession;
+  const lvHtml = [1,2,3,4,5].map(lv=>{
+    const ws = allWords().filter(w=>w.l===lv);
+    const m = ws.filter(w=>state.words[w.i] && state.words[w.i].mastered).length;
+    const r = ws.filter(w=>{ const st=state.words[w.i]; return st && !st.mastered && st.inReview!==false && answered(w); }).length;
+    const p = ws.filter(w=>{ const st=state.words[w.i]; return st && !st.mastered && st.inReview===false && answered(w); }).length;
+    const n = ws.length||1;
+    return `<div class="lv-row">
+      <span class="lv-tab" style="background:${LV_COLORS[lv]}">Lv.${lv}</span>
+      <div class="bar">
+        <div class="fill-seen" style="width:${(m+r+p)/n*100}%"></div>
+        <div class="fill-learn" style="width:${(m+r)/n*100}%"></div>
+        <div class="fill-master" style="width:${m/n*100}%"></div>
+      </div>
+      <span class="lv-cnt">${m}/${r}/${p}/${ws.length}</span>
+    </div>`;
+  }).join("");
+  const quote = QUOTES[Math.floor(Math.random()*QUOTES.length)];
+  const ps = state.posSession;
+
+  app.innerHTML = `
+  <header>
+    <div class="head-left">
+      <button class="book-ico" id="refBtn" title="単語帳（参照モード）">${BOOK_SVG}</button>
+      <div>
+        <h1>English Vocabulary</h1>
+        <div class="date-line">${todayStr().replace(/-/g,"/")}・連続 ${streak()} 日</div>
+      </div>
+    </div>
+    <button class="menu-btn" id="menuBtn" title="メニュー">${MENU_SVG}</button>
+    <div class="menu-drop" id="menuDrop">
+      <button id="menuSet">設定</button>
+      <button id="menuData">単語データの追加</button>
+      <button id="menuAbout">アプリの説明</button>
+    </div>
+  </header>
+  <div class="quote-line">${esc(quote)}</div>
+  ${persistBanner()}
+
+  <div class="panel">
+    <h2>学習</h2>
+    <div class="queue-row">
+      <div class="queue-box review"><div class="num">${revs.length}</div><div class="lbl">今日の復習対象</div></div>
+      <div class="queue-box"><div class="num">${stockCount}</div><div class="lbl">ストック総数</div></div>
+    </div>
+    ${hasActive ? `<button class="btn-primary" id="resumeBtn">▶ 続きから再開（${(a.pos||0)+1}/${a.order.length}）</button>
+      <button class="btn-ghost" id="newBtn">新規開始</button>`
+    : `<button class="btn-primary" id="startBtn" ${revs.length===0?"disabled":""}>${revs.length===0?"今日のノルマは完了":"学習を始める"}</button>`}
+  </div>
+
+  <div class="panel">
+    <button class="btn-primary" id="weakBtn" ${weakCount===0?"disabled":""} style="background:var(--shu)">苦手モード${weakCount?`（${weakCount}語）`:""}</button>
+  </div>
+
+  <div class="panel">
+    <h2>品詞モード</h2>
+    ${ps ? `<button class="btn-primary" id="posResume">▶ 続きから（${ps.pos+1}/${ps.ids.length}）</button>
+      <button class="btn-ghost" id="posNew">最初から</button>`
+    : `<button class="btn-primary" id="posStart">品詞モードを始める</button>`}
+  </div>
+
+  <div class="panel">
+    <h2>レベル別進捗</h2>
+    ${lvHtml}
+    <div class="legend">
+      <span class="dot" style="background:var(--midori)"></span>定着済
+      <span class="dot" style="background:var(--shu);opacity:.5"></span>復習中
+      <span class="dot" style="background:#B9B2A6"></span>出題済
+    </div>
+    <div class="note" style="margin-top:6px">数字は左から「定着済／復習中／出題済／収録」。</div>
+  </div>`;
+
+  const menuBtn = document.getElementById("menuBtn");
+  const menuDrop = document.getElementById("menuDrop");
+  menuBtn.onclick = ()=>{ menuDrop.classList.toggle("open"); };
+  document.getElementById("menuSet").onclick = ()=>renderSettings();
+  document.getElementById("menuData").onclick = ()=>renderData();
+  document.getElementById("menuAbout").onclick = ()=>renderAbout();
+  document.getElementById("refBtn").onclick = ()=>renderReference();
+
+  if(hasActive){
+    document.getElementById("resumeBtn").onclick = ()=>resumeSession();
+    document.getElementById("newBtn").onclick = ()=>{ state.activeSession=null; startSession("review"); };
+  }else{
+    const sb=document.getElementById("startBtn"); if(sb) sb.onclick = ()=>startSession("review");
+  }
+  const wb=document.getElementById("weakBtn"); if(wb) wb.onclick = ()=>{ state.activeSession=null; startSession("weak"); };
+  if(ps){
+    document.getElementById("posResume").onclick = ()=>startPosSession(false);
+    document.getElementById("posNew").onclick = ()=>startPosSession(true);
+  }else{
+    document.getElementById("posStart").onclick = ()=>startPosSession(true);
+  }
+}
+/* ==== データ追加ページ（メニューから） ==== */
+function renderData(){
+  session = null;
+  app.innerHTML = `
+  <header><div><h1>単語データの追加</h1></div>
+    <a class="streak" href="#" id="backHome" style="text-decoration:underline">戻る</a></header>
+  <div class="panel"><div class="inner">
+    <p class="note">以下の形式の JSON 配列を貼り付けると語彙を拡張できます（<code>i</code> は省略可・自動採番、<code>c</code> はコアイメージで省略可）。区分ラベルは <code>自動／他動／名／形／副／句動／熟</code>。訳は文字列、または熟語パターン付きなら <code>[["run out of A","Aを切らす"], "訳"]</code> 形式の配列（パターンは原形で記述）。</p>
+    <textarea id="importBox" placeholder='[{"w":"...","l":3,"e":[["他動","..."]]}]'></textarea>
+    <button class="btn-sub" id="importBtn">単語を追加</button>
+    <button class="btn-sub" id="exportBtn">バックアップを書き出す</button>
+    <button class="btn-sub" id="restoreBtn">バックアップから復元</button>
+    <span class="msg" id="dataMsg"></span>
+  </div></div>`;
+  document.getElementById("backHome").onclick = (e)=>{ e.preventDefault(); renderHome(); };
+  document.getElementById("importBtn").onclick = async ()=>{
+    const box = document.getElementById("importBox"), msg = document.getElementById("dataMsg");
+    try{
+      const arr = JSON.parse(box.value);
+      if(!Array.isArray(arr)) throw new Error("配列ではありません");
+      let maxId = Math.max(...allWords().map(w=>w.i));
+      let added = 0;
+      const existing = new Set(allWords().map(w=>w.w.toLowerCase()));
+      for(const o of arr){
+        if(typeof o.w!=="string" || !Array.isArray(o.e)) throw new Error("形式エラー: "+JSON.stringify(o).slice(0,40));
+        if(existing.has(o.w.toLowerCase())) continue;
+        state.custom.push({ i:++maxId, w:o.w, l:Math.max(1,Math.min(5,o.l||3)), e:o.e });
+        existing.add(o.w.toLowerCase()); added++;
+      }
+      await saveState();
+      msg.className="msg"; msg.textContent = `${added} 語を追加しました（重複は除外）`;
+    }catch(e){ msg.className="msg err"; msg.textContent = "読み込み失敗: "+e.message; }
+  };
+  document.getElementById("exportBtn").onclick = ()=>{
+    document.getElementById("importBox").value = JSON.stringify({state});
+    const msg=document.getElementById("dataMsg"); msg.className="msg";
+    msg.textContent = "上の欄の内容をコピーして保管してください";
+  };
+  document.getElementById("restoreBtn").onclick = async ()=>{
+    const msg=document.getElementById("dataMsg");
+    try{
+      const o = JSON.parse(document.getElementById("importBox").value);
+      if(!o.state || typeof o.state.words!=="object") throw new Error("バックアップ形式ではありません");
+      state = o.state;
+      if(!Array.isArray(state.custom)) state.custom = [];
+      state.settings = Object.assign({newPerDay:30,rate:0.95,difficulty:1,posChunk:30}, state.settings||{});
+      if(typeof state.settings.difficulty === "string"){
+        state.settings.difficulty = ({easy:1,mid:2,hard:3})[state.settings.difficulty] || 1;
+      }
+      delete state.settings.modes;
+      await saveState();
+      msg.className="msg"; msg.textContent="復元しました";
+      setTimeout(renderHome, 600);
+    }catch(e){ msg.className="msg err"; msg.textContent="復元失敗: "+e.message; }
+  };
+}
+
+
+/* ---- セッション ----
+   各語を選択式→(誤答/スキップ時のみ確認)→記述式→判定 の順で処理する。
+   判定(SRSの間隔更新)は記述式の結果のみで行う。 */
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+/* --- 語義データの正規化（新旧両構造を吸収）---
+   新: [品詞, [候補,...]]  候補 = "日本語" | ["原形パターン","日本語訳"]
+   旧: [品詞, "訳；訳"]
+   返り値: [{pos, ja:[日本語訳...], cands:[表示用候補...]}]
+   ja: 選択式の正解候補（日本語のみ）  cands: 確認・参照モード用の全表示 */
+const POS_ORDER = {"自動":0,"他動":1,"名":2,"形":3,"副":4,"句動":5,"熟":6};
+function normEntries(w){
+  const arr = w.e.map(ent=>{
+    const pos = ent[0];
+    const raw = ent[1];
+    if(Array.isArray(raw)){
+      const items = raw.map(c=>Array.isArray(c)?{ja:c[1], pat:c[0]}:{ja:c, pat:null});
+      const ja = items.map(x=>x.ja);
+      const cands = items.map(x=>x.pat?(x.pat+"："+x.ja):x.ja);
+      return {pos, ja, cands, items};
+    }else{
+      const parts = String(raw).split("；").map(s=>s.trim()).filter(Boolean);
+      const jaArr = parts.length?parts:[String(raw)];
+      return {pos, ja:jaArr, cands:[String(raw)], items:jaArr.map(j=>({ja:j, pat:null}))};
+    }
+  });
+  /* 品詞順に安定ソート（自動→他動→名→形→副→句動→熟） */
+  return arr.map((e,idx)=>({e,idx})).sort((a,b)=>{
+    const pa = POS_ORDER[a.e.pos]??99, pb = POS_ORDER[b.e.pos]??99;
+    return (pa-pb) || (a.idx-b.idx);
+  }).map(x=>x.e);
+}
+/* 確認・記述式で表示する全訳リスト（品詞ラベル＋全候補） */
+function fullEntriesHtml(w){
+  return normEntries(w).map(e=>
+    `<div class="entry"><span class="pos-badge">${esc(e.pos)}</span><span class="meaning">${esc(e.cands.join("／"))}</span></div>`
+  ).join("");
+}
+function promptEntries(w){
+  return fullEntriesHtml(w);
+}
+/* 記述式の問題文用：英熟語パターンを出さず、日本語訳のみを表示 */
+function jaOnlyEntries(w){
+  return normEntries(w).map(e=>
+    `<div class="entry"><span class="pos-badge">${esc(e.pos)}</span><span class="meaning">${esc(e.ja.join("／"))}</span></div>`
+  ).join("");
+}
+/* 空欄数を復習段階(revStage)で決める。
+   revStage 0(初回): 1個以上 かつ 全区分の25%未満
+   revStage 1(復習1回目): 25%以上75%未満
+   revStage 2(2回目以降): 75%以上
+   範囲内は個数ランダム。最低1個は絶対。 */
+function blankCountByStage(posCount, revStage){
+  if(posCount <= 1) return 1;
+  const lo25 = posCount*0.25, hi75 = posCount*0.75;
+  let min, max;
+  if(revStage <= 0){          // 25%未満
+    min = 1; max = Math.max(1, Math.ceil(lo25) - 1);
+    if(lo25 === Math.floor(lo25)) max = Math.max(1, lo25 - 1); // ちょうど25%は含めない
+    max = Math.min(max, posCount);
+  }else if(revStage === 1){    // 25%以上75%未満
+    min = Math.max(1, Math.ceil(lo25));
+    max = Math.max(min, Math.ceil(hi75) - 1);
+    if(hi75 === Math.floor(hi75)) max = Math.max(min, hi75 - 1);
+    max = Math.min(max, posCount);
+  }else{                       // 75%以上
+    min = Math.max(1, Math.ceil(hi75));
+    max = posCount;
+  }
+  if(min > max) min = max;
+  return min + Math.floor(Math.random()*(max - min + 1)); // 範囲内ランダム
+}
+/* チャンク（今回出題される語群）の難易度☆(1〜5)＝設定difficulty */
+function chunkStars(){
+  return Math.max(1, Math.min(5, state.settings.difficulty||1));
+}
+function starHtml(d){
+  d = Math.max(1, Math.min(5, d));
+  let s = '<svg class="stars-svg" viewBox="0 0 '+(5*15)+' 15" aria-hidden="true">';
+  for(let i=0;i<5;i++){
+    const cx=i*15+7.5;
+    const pts=starPoints(cx,7.5,6.5);
+    s += '<polygon points="'+pts+'" class="'+(i<d?"star-fill":"star-empty")+'"/>';
+  }
+  return s+'</svg>';
+}
+function starPoints(cx,cy,r){
+  const ri=r*0.42; let p=[];
+  for(let k=0;k<10;k++){ const ang=-Math.PI/2 + k*Math.PI/5; const rad=(k%2===0)?r:ri;
+    p.push((cx+rad*Math.cos(ang)).toFixed(2)+','+(cy+rad*Math.sin(ang)).toFixed(2)); }
+  return p.join(' ');
+}
+/* 品詞ごとの訳プールを作る（誤答肢の品詞統一用）。品詞 -> [訳,...] */
+function jaPoolByPos(excludeId, sameLv){
+  const pool = {};
+  for(const x of allWords()){
+    if(x.i === excludeId) continue;
+    if(sameLv!=null && (x.l===sameLv) !== true) continue;
+    for(const e of normEntries(x)){
+      (pool[e.pos] = pool[e.pos] || []).push(...e.ja);
+    }
+  }
+  return pool;
+}
+/* 選択式の問題を生成：
+   各区分から候補(items)を1つランダムに選んで正解とし、
+   誤答肢3つは「同じ品詞」の他語の訳から（不足時は他品詞で補充）。
+   正解候補がパターン付きなら、そのパターンを問題文表示用に保持 */
+function makePosQuiz(w){
+  const norm = normEntries(w);
+  const st = state.words[w.i];
+  const revStage = st ? (st.revStage||0) : 0;
+  const nBlank = blankCountByStage(norm.length, revStage);
+  const idxs = shuffle(norm.map((_,k)=>k)).slice(0, nBlank).sort((a,b)=>a-b);
+  const ownJa = new Set(norm.flatMap(e=>e.ja));
+  const poolSameLv = jaPoolByPos(w.i, w.l);
+  const poolAll = jaPoolByPos(w.i, null);
+  const quizzes = {};   // k -> {correct, pat, opts:[...]}
+  for(const k of idxs){
+    const pos = norm[k].pos;
+    const it = norm[k].items[Math.floor(Math.random()*norm[k].items.length)]; // 候補を1つ
+    const correct = it.ja;
+    /* 誤答肢：同品詞・同レベル → 同品詞・全レベル → 全品詞、の順で補充 */
+    const distractors = [];
+    const tryPush = (arr)=>{
+      for(const cand of shuffle(arr.slice())){
+        if(distractors.length >= 3) break;
+        if(cand === correct || ownJa.has(cand) || distractors.includes(cand)) continue;
+        distractors.push(cand);
+      }
+    };
+    tryPush(poolSameLv[pos] || []);
+    if(distractors.length < 3) tryPush(poolAll[pos] || []);
+    if(distractors.length < 3){ // 最終フォールバック：全品詞から
+      const flat = Object.values(poolAll).flat();
+      tryPush(flat);
+    }
+    quizzes[k] = { correct, pat: it.pat || null, opts: shuffle([correct].concat(distractors)) };
+  }
+  return { blanks:idxs, quizzes };
+}
+function buildQueue(mode){
+  let ids;
+  if(mode === "weak"){
+    const lowRate = (st)=>{
+      const cr = (st.cSeen)? st.cCorrect/st.cSeen : 1;
+      const wr = (st.wSeen)? st.wCorrect/st.wSeen : 1;
+      return Math.min(cr, wr);
+    };
+    const seenAny = (st)=> (st.cSeen||0)+(st.wSeen||0);
+    ids = allWords().filter(w=>{ const st=state.words[w.i]; return st && seenAny(st)>0 && !st.mastered && lowRate(st)<0.6; })
+      .sort((a,b)=>{
+        const sa=state.words[a.i], sb=state.words[b.i];
+        const ra=lowRate(sa), rb=lowRate(sb);
+        if(ra!==rb) return ra-rb;
+        return seenAny(sb)-seenAny(sa);
+      })
+      .slice(0, 30)
+      .map(w=>({id:w.i}));
+  }else{
+    ids = dueReviews().map(w=>({id:w.i}));
+  }
+  return ids.map(x=>{
+    const w = byId(x.id);
+    return {
+      id:x.id,
+      quiz: makePosQuiz(w),
+      picks:{}, choiceDone:false, choiceOk:null, confirming:false,
+      cTries:0, cPassed:false, cFailed:false,
+      answeredWrite:false, writeOk:null, confirmingW:false,
+      wTries:0, wPassed:false, wFailed:false
+    };
+  });
+}
+function startSession(mode){
+  const queue = buildQueue(mode||"review");
+  if(queue.length===0) return;
+  /* block: choice→write。各ブロックで phase: "main"(全語1回目)→"retry"(間違えた語の2回目) */
+  session = { queue, block:"choice", phase:"main", order:queue.map((_,i)=>i), pos:0,
+              retry:[], mode:(mode||"review"), counts:{ok:0,ng:0} };
+  saveSession();
+  renderCard();
+}
+/* セッションの途中状態を保存／復元（完全復元用） */
+function curItem(){
+  const s = session;
+  if(!s || s.pos >= s.order.length) return null;
+  return s.queue[s.order[s.pos]];
+}
+/* 現ブロック・フェーズを1つ進める。フェーズ/ブロックの遷移も処理 */
+function advance(){
+  const s = session;
+  s.pos++;
+  if(s.pos < s.order.length){ saveSession(); return renderCard(); }
+  /* order を消化しきった */
+  if(s.phase === "main"){
+    if(s.retry.length){
+      s.phase = "retry"; s.order = s.retry.slice(); s.retry = []; s.pos = 0;
+      saveSession(); return renderCard();
+    }
+    // retry無し → 次ブロックへ
+    return nextBlock();
+  }else{ // retryフェーズ終了
+    return nextBlock();
+  }
+}
+function nextBlock(){
+  const s = session;
+  if(s.block === "choice"){
+    s.block = "write"; s.phase = "main";
+    s.order = s.queue.map((_,i)=>i); s.retry = []; s.pos = 0;
+    saveSession(); return renderCard();
+  }
+  /* 記述式も終了 → 全語の最終判定 */
+  finalizeSession();
+}
+/* 全語の定着/未定着を確定し、SRSへ反映 */
+function finalizeSession(){
+  const s = session;
+  for(const item of s.queue){
+    const both = item.cPassed && item.wPassed;
+    if(s.mode === "review"){
+      finalizeWord(item.id, item.cPassed, item.wPassed);
+    }
+    if(both) s.counts.ok++; else s.counts.ng++;
+  }
+  renderDone();
+}
+function saveSession(){
+  state.activeSession = session ? {
+    queue: session.queue, block: session.block, phase: session.phase,
+    order: session.order, pos: session.pos, retry: session.retry,
+    mode: session.mode, counts: session.counts
+  } : null;
+  scheduleSave();
+}
+function resumeSession(){
+  const a = state.activeSession;
+  if(!a) return false;
+  session = { queue:a.queue, block:a.block||"choice", phase:a.phase||"main",
+              order:a.order||a.queue.map((_,i)=>i), pos:a.pos||0, retry:a.retry||[],
+              mode:a.mode||"review", counts:a.counts||{ok:0,ng:0} };
+  renderCard();
+  return true;
+}
+function renderCard(){
+  const s = session;
+  const item = curItem();
+  if(!item){ return; }
+  const w = byId(item.id);
+  const retryTag = s.phase==="retry" ? "（2回目）" : "";
+  const blockLabel = (s.block==="choice" ? "① 選択式" : "② 記述式") + retryTag;
+  const pct = Math.round(s.pos / Math.max(1,s.order.length) * 100);
+
+  let body = "";
+  if(s.block === "choice"){
+    if(item.confirming){
+      const wrongC = item.quiz.blanks
+        .filter(k=>item.picks[k] && item.picks[k] !== item.quiz.quizzes[k].correct)
+        .map(k=>`<div class="wrong-line">✕ あなたの解答：${esc(item.picks[k])}</div>`).join("");
+      body = `${confirmCardBody(w, wrongC)}
+        <button class="btn-primary" data-act="choiceConfirmNext">Next</button>`;
+    }else{
+      body = renderChoiceBody(item, w, false);
+    }
+  }else{
+    if(item.confirmingW){
+      const wrongW = `<div class="wrong-line">✕ あなたの解答：${esc(item.lastInput||"（スキップ）")}</div>`;
+      body = `${confirmCardBody(w, wrongW)}
+        <button class="btn-primary" data-act="writeConfirmNext">Next</button>`;
+    }else{
+      body = renderWriteBody(item, w);
+    }
+  }
+
+  const modeTag = s.mode==="weak" ? '<span class="tag" style="background:var(--shu)">苦手</span>' : '';
+
+  app.innerHTML = `
+    <div class="session-head">
+      <button class="home-ico" data-act="exit" title="ホームに戻る（進捗保存）"><svg viewBox="0 0 24 24" class="home-svg" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5V20a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg></button>
+      <span>${s.pos+1} / ${s.order.length}</span>
+      <span class="tag mode">${blockLabel}</span>
+    </div>
+    <div class="progress-track"><div class="p" style="width:${pct}%"></div></div>
+    <div class="wcard">
+      <div class="card-meta">
+        <span class="diff-stars" title="難易度">${starHtml(chunkStars())}</span>
+        ${accStatsHtml(item.id)}
+        <span style="margin-left:auto"></span>${modeTag}
+      </div>
+      ${body}
+    </div>`;
+
+  app.querySelectorAll("[data-act]").forEach(el=>{
+    el.onclick = (ev)=>{ ev.preventDefault(); handleAct(el.dataset.act, el); };
+  });
+  const win = document.getElementById("writeIn");
+  if(win && !item.answeredWrite){
+    win.focus();
+    win.onkeydown = e=>{ if(e.key==="Enter") handleAct("writeCheck"); };
+  }
+}
+
+/* ---- 選択式（品詞別・訳選択）の本体 ---- */
+function renderChoiceBody(item, w, strict){
+  const q = item.quiz;
+  const norm = normEntries(w);
+  const rows = norm.map((e,k)=>{
+    const isBlank = q.blanks.includes(k);
+    if(!isBlank){
+      return `<div class="entry"><span class="pos-badge">${esc(e.pos)}</span><span class="meaning">${esc(e.cands.join("／"))}</span></div>`;
+    }
+    const picked = item.picks[k];
+    const correct = q.quizzes[k].correct;
+    const pat = q.quizzes[k].pat;
+    const optHtml = q.quizzes[k].opts.map(o=>{
+      let cls = "opt-btn";
+      if(item.choiceDone){
+        if(o===correct) cls += " correct";
+        else if(o===picked) cls += " wrong";
+      }else if(o===picked){ cls += " picked"; }
+      return `<button class="${cls}" data-act="pick" data-k="${k}" data-val="${esc(o)}" ${item.choiceDone?"disabled":""}>${esc(o)}</button>`;
+    }).join("");
+    const label = pat
+      ? `<span class="pos-badge">${esc(e.pos)}</span><span class="pat-prompt">${esc(pat)}</span>`
+      : `<span class="pos-badge">${esc(e.pos)}</span>`;
+    return `<div class="blank-block">
+      <div class="entry">${label}<span class="meaning blank-slot">${picked?esc(picked):"〔　？　〕"}</span></div>
+      <div class="opt-list">${optHtml}</div>
+    </div>`;
+  }).join("");
+
+  const allPicked = q.blanks.every(k=>item.picks[k]);
+  let footer = "";
+  if(item.choiceDone){
+    footer = `<div class="dict-result ${item.choiceOk?"ok":"ng"}">${item.choiceOk?"◎ 正解":"✕ 不正解"}</div>
+      <button class="audio-btn" data-act="speak">🔊 発音を確認</button>
+      ${item.choiceOk
+        ? `<button class="btn-primary" data-act="choiceNext">Next</button>`
+        : `<button class="btn-primary" data-act="choiceCheckWord">Check</button>`}`;
+  }else{
+    footer = `<button class="btn-primary" data-act="choiceCheck" ${allPicked?"":"disabled"}>解答</button>`;
+  }
+  return `<div class="word-display">${esc(w.w)}</div>
+    <div class="prompt-zone">${rows}</div>
+    ${footer}`;
+}
+
+/* ---- 確認カード共通本体 ---- */
+function confirmCardBody(w, wrongHtml){
+  const a = accuracy(w.i);
+  const accLine = a ? `<div class="acc-line">出題 ${a.reps}回　選択式 ${a.cRate!=null?a.cRate+"%":"−"}　記述式 ${a.wRate!=null?a.wRate+"%":"−"}</div>` : "";
+  return `<div class="word-display" style="font-size:1.7rem">${esc(w.w)}</div>
+    ${accLine}
+    ${wrongHtml||""}
+    ${w.c ? `<div class="core-line"><span class="core-label">コア</span>${esc(w.c)}</div>` : ""}
+    <button class="audio-btn" data-act="speak">🔊 発音を聞く</button>
+    <div class="prompt-zone">${promptEntries(w)}</div>`;
+}
+
+/* ---- 記述式の本体 ---- */
+function renderWriteBody(item, w){
+  const secondFail = session && session.mode==="review" && item.wTries>=2;
+  const ngMsg = "✕ 不正解（正: "+esc(w.w)+"）— " + (secondFail ? "翌日やり直し" : "確認しよう");
+  return `<div class="hint">意味に合う英単語をスペルまで正確に入力（Enterで判定）</div>
+    <div class="prompt-zone">${jaOnlyEntries(w)}</div>
+    <div class="dict-row">
+      <input id="writeIn" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="英単語を入力" ${item.answeredWrite?"disabled":""}>
+      <button class="btn-sub" data-act="writeCheck" ${item.answeredWrite?"disabled":""}>判定</button>
+      <button class="btn-sub" data-act="writeSkip" ${item.answeredWrite?"disabled":""}>スキップ</button>
+    </div>
+    ${item.answeredWrite ? `
+      <div class="dict-result ${item.writeOk?"ok":"ng"}">${item.writeOk?"◎ 正解":ngMsg}</div>
+      <div class="answer-zone" style="border:none;padding-top:6px">
+        <div class="word-display" style="font-size:1.4rem;margin:0 0 8px">${esc(w.w)}</div>
+        ${w.c ? `<div class="core-line"><span class="core-label">コア</span>${esc(w.c)}</div>` : ""}
+        ${promptEntries(w)}
+      </div>
+      <button class="audio-btn" data-act="speak">🔊 発音を確認</button>
+      ${item.writeOk
+        ? `<button class="btn-primary" data-act="writeNext">Next</button>`
+        : `<button class="btn-primary" data-act="writeCheckWord">Check</button>`}` : ""}`;
+}
+function handleAct(act, el){
+  const s = session;
+  const item = curItem();
+  if(!item) return;
+  const w = byId(item.id);
+  if(act==="speak"){ speak(w.w); return; }
+  if(act==="exit"){ saveSession(); flushSave(); renderHome(); return; }
+
+  /* ==== ブロックA：選択式 ==== */
+  if(act==="pick"){
+    if(item.choiceDone) return;
+    const k = parseInt(el.dataset.k);
+    item.picks[k] = el.dataset.val;
+    renderCard();
+    return;
+  }
+  if(act==="choiceCheck"){ // 「解答する」
+    const q = item.quiz;
+    if(!q.blanks.every(k=>item.picks[k])) return;
+    item.choiceDone = true;
+    item.choiceOk = q.blanks.every(k=>item.picks[k] === q.quizzes[k].correct);
+    item.cTries++;
+    recordAnswer(item.id, "c", item.choiceOk);       // 回答回数に必ずカウント（リトライ含む）
+    if(item.choiceOk) item.cPassed = true;
+    else if(item.cTries >= 2) item.cFailed = true;   // 2回失敗確定
+    saveSession();
+    renderCard();
+    speak(w.w);
+    return;
+  }
+
+  if(act==="choiceCheckWord"){ // 不正解時の「Check」→確認画面
+    item.confirming = true;
+    saveSession();
+    renderCard();
+    return;
+  }
+  if(act==="choiceConfirmNext" || act==="choiceNext"){
+    /* 選択式の1問終了。誤答かつ1回目(main)なら retry に積む */
+    if(!item.choiceOk && s.phase==="main" && !item.cPassed){
+      s.retry.push(s.order[s.pos]);
+    }
+    // 次問へ進む前に、選択式の状態をリセット（2回目再挑戦に備える）
+    item.choiceDone = false; item.choiceOk = null; item.picks = {}; item.confirming = false;
+    if(s.phase==="retry"){ item.quiz = makePosQuiz(w); } // 2回目は新しい問題を作る
+    advance();
+    return;
+  }
+
+  /* ==== ブロックB：記述式 ==== */
+  if(act==="writeCheck"){ // 「判定」
+    const v = (document.getElementById("writeIn").value||"").trim().toLowerCase();
+    if(!v) return;
+    item.answeredWrite = true;
+    item.writeOk = (v === w.w.toLowerCase());
+    item.lastInput = v;
+    item.wTries++;
+    recordAnswer(item.id, "w", item.writeOk);
+    if(item.writeOk) item.wPassed = true;
+    else if(item.wTries >= 2) item.wFailed = true;
+    saveSession();
+    renderCard();
+    speak(w.w);
+    return;
+  }
+  if(act==="writeSkip"){
+    if(item.answeredWrite) return;
+    item.answeredWrite = true;
+    item.writeOk = false;
+    item.lastInput = "";
+    item.wTries++;
+    recordAnswer(item.id, "w", false);
+    if(item.wTries >= 2) item.wFailed = true;
+    saveSession();
+    renderCard();
+    return;
+  }
+  if(act==="writeCheckWord"){ // 不正解時の「Check」→確認画面
+    item.confirmingW = true;
+    saveSession();
+    renderCard();
+    return;
+  }
+  if(act==="writeConfirmNext" || act==="writeNext"){
+    if(!item.writeOk && s.phase==="main" && !item.wPassed){
+      s.retry.push(s.order[s.pos]);
+    }
+    item.answeredWrite = false; item.writeOk = null; item.confirmingW = false;
+    advance();
+    return;
+  }
+}
+/* キー操作は使わない。入力欄のEnterのみ有効。 */
+function renderDone(){
+  const c = session.counts;
+  const mode = session.mode;
+  session = null;
+  state.activeSession = null;
+  saveState();
+  const label = mode==="weak" ? "苦手モード" : "今回の学習";
+  app.innerHTML = `
+    <div class="panel done-card">
+      <div class="stamp">完了</div>
+      <h2 style="font-family:var(--serif);font-size:1.1rem;margin-bottom:8px">${label}が終了</h2>
+      <div class="done-stats">${mode==="review" ? `定着 ◎ ${c.ok}　未定着 ✕ ${c.ng}` : `◎ ${c.ok}　✕ ${c.ng}`}<br>連続 ${streak()} 日目。</div>
+      <button class="btn-primary" id="homeBtn">ホームに戻る</button>
+    </div>`;
+  document.getElementById("homeBtn").onclick = renderHome;
+}
+
+/* ---- 参照モード（判定に一切関与しない全単語一覧）---- */
+let refFilter = { lv:"all", q:"", sort:"std" };
+function renderReference(){
+  session = null;
+  const words = allWords().slice().sort((a,b)=>a.i-b.i);
+  const q = refFilter.q.trim().toLowerCase();
+  let list = words.filter(w=>{
+    if(refFilter.lv!=="all" && w.l!==parseInt(refFilter.lv)) return false;
+    if(q){
+      const hay = (w.w+" "+normEntries(w).flatMap(e=>e.cands).join(" ")+" "+(w.c||"")).toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  /* ⑥ 正答率ソート（選択式・記述式の合算）。未回答は末尾 */
+  const combined = (w)=>{
+    const st=state.words[w.i]; if(!st) return null;
+    const seen=(st.cSeen||0)+(st.wSeen||0); if(!seen) return null;
+    return Math.round(((st.cCorrect||0)+(st.wCorrect||0))/seen*100);
+  };
+  if(refFilter.sort==="desc"){
+    list = list.slice().sort((a,b)=>{ const ra=combined(a), rb=combined(b);
+      if(ra==null&&rb==null) return a.i-b.i; if(ra==null) return 1; if(rb==null) return -1; return rb-ra||a.i-b.i; });
+  }else if(refFilter.sort==="asc"){
+    list = list.slice().sort((a,b)=>{ const ra=combined(a), rb=combined(b);
+      if(ra==null&&rb==null) return a.i-b.i; if(ra==null) return 1; if(rb==null) return -1; return ra-rb||a.i-b.i; });
+  }
+  const items = list.map(w=>{
+    const [cls,label] = wordStatus(w);
+    const a = accuracy(w.i);
+    const rate = combined(w);
+    const gcol = rate==null ? "transparent" : rate>=80 ? "var(--midori)" : rate>=60 ? "#C9A227" : "var(--shu)";
+    const accHtml = a
+      ? `<span class="ref-acc">出題${a.reps}回</span>`
+        + (a.cRate!=null?`<span class="ref-acc ${a.cRate<60?"low":""}">選 ${a.cRate}%</span>`:"")
+        + (a.wRate!=null?`<span class="ref-acc ${a.wRate<60?"low":""}">記 ${a.wRate}%</span>`:"")
+      : "";
+    return `<div class="ref-item">
+      <div class="ref-head">
+        <span class="ref-lv" style="background:${LV_COLORS[w.l]}">Lv.${w.l}</span>
+        <span class="ref-word">${esc(w.w)}</span>
+        <button class="ref-play" data-play="${esc(w.w)}">🔊</button>
+        <span class="ref-status ${cls}">${label}</span>
+      </div>
+      <div class="acc-gauge" title="正答率${rate==null?"（未回答）":" "+rate+"%"}"><div class="g" style="width:${rate||0}%;background:${gcol}"></div></div>
+      ${accHtml?`<div style="margin:2px 0 6px">${accHtml}</div>`:""}
+      ${w.c ? `<div class="ref-core">${esc(w.c)}</div>` : ""}
+      ${normEntries(w).map(e=>`<div class="ref-ent"><span class="pos-badge">${esc(e.pos)}</span><span class="meaning">${esc(e.cands.join("／"))}</span></div>`).join("")}
+    </div>`;
+  }).join("");
+
+  app.innerHTML = `
+    <header>
+      <div><h1>単語帳（参照モード）</h1>
+      <div class="date-line">判定なし・閲覧のみ</div></div>
+      <a class="streak" href="#" id="backHome" style="text-decoration:underline">戻る</a>
+    </header>
+    <div class="panel">
+      <div class="ref-controls">
+        <select id="refLv">
+          <option value="all" ${refFilter.lv==="all"?"selected":""}>全レベル</option>
+          ${[1,2,3,4,5].map(l=>`<option value="${l}" ${refFilter.lv==String(l)?"selected":""}>Lv.${l} のみ</option>`).join("")}
+        </select>
+        <select id="refSort">
+          <option value="std" ${refFilter.sort==="std"?"selected":""}>番号順</option>
+          <option value="asc" ${refFilter.sort==="asc"?"selected":""}>正答率が低い順</option>
+          <option value="desc" ${refFilter.sort==="desc"?"selected":""}>正答率が高い順</option>
+        </select>
+        <input id="refQ" placeholder="単語・意味で検索" value="${esc(refFilter.q)}">
+      </div>
+      <div class="ref-count">該当 ${list.length} 語 / 全 ${words.length} 語</div>
+      ${items || `<div class="note">該当する単語がありません。</div>`}
+    </div>`;
+
+  document.getElementById("backHome").onclick = (e)=>{ e.preventDefault(); renderHome(); };
+  document.getElementById("refLv").onchange = (e)=>{ refFilter.lv = e.target.value; renderReference(); };
+  document.getElementById("refSort").onchange = (e)=>{ refFilter.sort = e.target.value; renderReference(); };
+  const qi = document.getElementById("refQ");
+  qi.oninput = (e)=>{ refFilter.q = e.target.value; };
+  qi.onkeydown = (e)=>{ if(e.key==="Enter") renderReference(); };
+  app.querySelectorAll("[data-play]").forEach(b=>{ b.onclick = ()=>speak(b.dataset.play); });
+}
+
+/* ==== 追加機能：ステータス・格言・品詞モード・設定・説明 ==== */
+/* 語の記録を作成/昇格。inReview=true でノルマ（復習候補）入り */
+function ensureWordRecord(id, inReview){
+  if(!state.words[id]){
+    state.words[id] = { step:0, due:todayStr(), reps:0, lapses:0, mastered:false,
+      learnedOn:todayStr(), revStage:0, failStreak:0, okStreak:0,
+      cSeen:0, cCorrect:0, wSeen:0, wCorrect:0, inReview:!!inReview };
+  }else if(inReview && state.words[id].inReview===false){
+    state.words[id].inReview = true;
+    if(!state.words[id].due || state.words[id].due > todayStr()) state.words[id].due = todayStr();
+  }
+  return state.words[id];
+}
+/* ステータス4段階: 未学習/出題済/復習中/定着済
+   ・一度も回答していない語は、ストック済みでも「未学習」
+   ・復習候補外だが回答済み → 出題済
+   ・復習候補内で回答済み → 復習中
+   ・3回連続定着 → 定着済 */
+function wordStatus(w){
+  const st = state.words[w.i];
+  if(!st) return ["n","未学習"];
+  if(st.mastered) return ["m","定着済"];
+  const answered = ((st.cSeen||0)+(st.wSeen||0)) > 0;
+  if(!answered) return ["n","未学習"];      // ストックされただけ＝まだ未学習
+  if(st.inReview===false) return ["s","出題済"];
+  return ["l","復習中"];
+}
+const BOOK_SVG = "<svg viewBox=\"0 0 24 24\" class=\"book-svg\" aria-hidden=\"true\"><path d=\"M7 3h11a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H7a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3z\"/><path d=\"M7 5.2h9.3a0 0 0 0 1 0 0v2.1a0 0 0 0 1 0 0H7a1.05 1.05 0 0 1 0-2.1z\" fill=\"#fff\"/></svg>";
+const MENU_SVG = "<svg viewBox=\"0 0 24 24\" class=\"menu-svg\" aria-hidden=\"true\"><rect x=\"3\" y=\"5.5\" width=\"18\" height=\"2.4\" rx=\"1.2\"/><rect x=\"3\" y=\"10.8\" width=\"18\" height=\"2.4\" rx=\"1.2\"/><rect x=\"3\" y=\"16.1\" width=\"18\" height=\"2.4\" rx=\"1.2\"/></svg>";
+const SVG_IMG = {
+  "home_top": "<svg viewBox=\"0 0 300 250\" class=\"screen-svg\" role=\"img\" aria-label=\"\u30db\u30fc\u30e0\u753b\u9762\u4e0a\u90e8\u306e\u6a21\u5f0f\u56f3\">\n<rect x=\"0\" y=\"0\" width=\"300\" height=\"250\" class=\"scr-bg\"/>\n<rect x=\"10\" y=\"10\" width=\"24\" height=\"24\" rx=\"6\" class=\"scr-btn-dark\"/>\n<rect x=\"15.5\" y=\"17.5\" width=\"13\" height=\"2\" fill=\"#fff\"/>\n<rect x=\"15.5\" y=\"22.5\" width=\"9\" height=\"2\" fill=\"#fff\"/>\n<text x=\"42\" y=\"24\" class=\"scr-ink scr-serif\" font-size=\"13\" font-weight=\"700\">English Vocabulary</text>\n<text x=\"42\" y=\"35\" class=\"scr-sub scr-sans\" font-size=\"7.5\">2026/07/05\u30fb\u9023\u7d9a 2\u65e5</text>\n<rect x=\"262\" y=\"9\" width=\"26\" height=\"26\" rx=\"7\" fill=\"none\" stroke=\"var(--line)\"/>\n<rect x=\"270\" y=\"17.5\" width=\"10\" height=\"1.8\" rx=\"0.9\" class=\"scr-ink\"/>\n<rect x=\"270\" y=\"21.3\" width=\"10\" height=\"1.8\" rx=\"0.9\" class=\"scr-ink\"/>\n<rect x=\"270\" y=\"25.1\" width=\"10\" height=\"1.8\" rx=\"0.9\" class=\"scr-ink\"/>\n<line x1=\"10\" y1=\"46\" x2=\"290\" y2=\"46\" stroke=\"var(--ink)\" stroke-width=\"2\"/>\n<text x=\"10\" y=\"58\" font-style=\"italic\" class=\"scr-sub scr-sans\" font-size=\"7\">\u63a5\u982d\u8f9e re- \u306f\u300c\u518d\u3073\u30fb\u5f8c\u308d\u3078\u300d\u3002\u77e5\u308c\u3070\u8a9e\u5f59\u304c\u5e83\u304c\u308b\u3002</text>\n<rect x=\"10\" y=\"68\" width=\"280\" height=\"172\" rx=\"10\" class=\"scr-card\"/>\n<text x=\"24\" y=\"90\" class=\"scr-ink scr-serif\" font-size=\"12\" font-weight=\"700\">\u5b66\u7fd2</text>\n<rect x=\"24\" y=\"100\" width=\"122\" height=\"62\" rx=\"8\" fill=\"none\" stroke=\"var(--line)\"/>\n<text x=\"85\" y=\"128\" text-anchor=\"middle\" class=\"scr-shu scr-serif\" font-size=\"20\" font-weight=\"700\">32</text>\n<text x=\"85\" y=\"146\" text-anchor=\"middle\" class=\"scr-sub scr-sans\" font-size=\"7\">\u4eca\u65e5\u306e\u5fa9\u7fd2\u5bfe\u8c61</text>\n<rect x=\"154\" y=\"100\" width=\"122\" height=\"62\" rx=\"8\" fill=\"none\" stroke=\"var(--line)\"/>\n<text x=\"215\" y=\"128\" text-anchor=\"middle\" class=\"scr-ink scr-serif\" font-size=\"20\" font-weight=\"700\">60</text>\n<text x=\"215\" y=\"146\" text-anchor=\"middle\" class=\"scr-sub scr-sans\" font-size=\"7\">\u30b9\u30c8\u30c3\u30af\u7dcf\u6570</text>\n<rect x=\"24\" y=\"176\" width=\"252\" height=\"30\" rx=\"8\" class=\"scr-btn-dark\"/>\n<text x=\"150\" y=\"195\" text-anchor=\"middle\" fill=\"#fff\" class=\"scr-sans\" font-size=\"9\" font-weight=\"700\">&#9654; \u7d9a\u304d\u304b\u3089\u518d\u958b\uff0814/32\uff09</text>\n<rect x=\"24\" y=\"214\" width=\"252\" height=\"24\" rx=\"8\" fill=\"none\" stroke=\"var(--ink)\" stroke-width=\"1.3\"/>\n<text x=\"150\" y=\"230\" text-anchor=\"middle\" class=\"scr-ink scr-sans\" font-size=\"9\" font-weight=\"700\">\u65b0\u898f\u958b\u59cb</text>\n</svg>",
+  "home_bottom": "<svg viewBox=\"0 0 300 300\" class=\"screen-svg\" role=\"img\" aria-label=\"\u30db\u30fc\u30e0\u753b\u9762\u4e0b\u90e8\u306e\u6a21\u5f0f\u56f3\">\n<rect x=\"0\" y=\"0\" width=\"300\" height=\"300\" class=\"scr-bg\"/>\n<rect x=\"10\" y=\"6\" width=\"280\" height=\"102\" rx=\"10\" class=\"scr-card\"/>\n<text x=\"24\" y=\"26\" class=\"scr-ink scr-serif\" font-size=\"12\" font-weight=\"700\">\u54c1\u8a5e\u30e2\u30fc\u30c9</text>\n<rect x=\"24\" y=\"36\" width=\"252\" height=\"26\" rx=\"8\" class=\"scr-btn-dark\"/>\n<text x=\"150\" y=\"53\" text-anchor=\"middle\" fill=\"#fff\" class=\"scr-sans\" font-size=\"8.5\" font-weight=\"700\">&#9654; \u7d9a\u304d\u304b\u3089\uff083/30\uff09</text>\n<rect x=\"24\" y=\"70\" width=\"252\" height=\"24\" rx=\"8\" fill=\"none\" stroke=\"var(--ink)\" stroke-width=\"1.3\"/>\n<text x=\"150\" y=\"86\" text-anchor=\"middle\" class=\"scr-ink scr-sans\" font-size=\"8.5\" font-weight=\"700\">\u6700\u521d\u304b\u3089</text>\n<rect x=\"10\" y=\"118\" width=\"280\" height=\"172\" rx=\"10\" class=\"scr-card\"/>\n<text x=\"24\" y=\"138\" class=\"scr-ink scr-serif\" font-size=\"12\" font-weight=\"700\">\u30ec\u30d9\u30eb\u5225\u9032\u6357</text>\n<g font-family=\"var(--sans)\">\n<rect x=\"24\" y=\"150\" width=\"30\" height=\"14\" rx=\"4\" fill=\"#2F7D5B\"/><text x=\"39\" y=\"160\" text-anchor=\"middle\" fill=\"#fff\" font-size=\"7.5\" font-weight=\"700\">Lv.1</text>\n<rect x=\"60\" y=\"151\" width=\"180\" height=\"10\" rx=\"5\" fill=\"var(--line)\"/><rect x=\"60\" y=\"151\" width=\"118\" height=\"10\" rx=\"5\" fill=\"#C88569\"/>\n<text x=\"276\" y=\"160\" text-anchor=\"end\" class=\"scr-sub\" font-size=\"7\">0/31/0/40</text>\n<rect x=\"24\" y=\"172\" width=\"30\" height=\"14\" rx=\"4\" fill=\"#4A7BA6\"/><text x=\"39\" y=\"182\" text-anchor=\"middle\" fill=\"#fff\" font-size=\"7.5\" font-weight=\"700\">Lv.2</text>\n<rect x=\"60\" y=\"173\" width=\"180\" height=\"10\" rx=\"5\" fill=\"var(--line)\"/><rect x=\"60\" y=\"173\" width=\"88\" height=\"10\" rx=\"5\" fill=\"#C88569\"/>\n<text x=\"276\" y=\"182\" text-anchor=\"end\" class=\"scr-sub\" font-size=\"7\">0/20/0/40</text>\n<rect x=\"24\" y=\"194\" width=\"30\" height=\"14\" rx=\"4\" fill=\"#8B6BAE\"/><text x=\"39\" y=\"204\" text-anchor=\"middle\" fill=\"#fff\" font-size=\"7.5\" font-weight=\"700\">Lv.3</text>\n<rect x=\"60\" y=\"195\" width=\"180\" height=\"10\" rx=\"5\" fill=\"var(--line)\"/>\n<text x=\"276\" y=\"204\" text-anchor=\"end\" class=\"scr-sub\" font-size=\"7\">0/0/0/40</text>\n<rect x=\"24\" y=\"216\" width=\"30\" height=\"14\" rx=\"4\" fill=\"#A6822F\"/><text x=\"39\" y=\"226\" text-anchor=\"middle\" fill=\"#fff\" font-size=\"7.5\" font-weight=\"700\">Lv.4</text>\n<rect x=\"60\" y=\"217\" width=\"180\" height=\"10\" rx=\"5\" fill=\"var(--line)\"/>\n<text x=\"276\" y=\"226\" text-anchor=\"end\" class=\"scr-sub\" font-size=\"7\">0/0/0/40</text>\n<rect x=\"24\" y=\"238\" width=\"30\" height=\"14\" rx=\"4\" fill=\"#B5432A\"/><text x=\"39\" y=\"248\" text-anchor=\"middle\" fill=\"#fff\" font-size=\"7.5\" font-weight=\"700\">Lv.5</text>\n<rect x=\"60\" y=\"239\" width=\"180\" height=\"10\" rx=\"5\" fill=\"var(--line)\"/>\n<text x=\"276\" y=\"248\" text-anchor=\"end\" class=\"scr-sub\" font-size=\"7\">0/0/0/40</text>\n</g>\n<circle cx=\"28\" cy=\"262\" r=\"4\" fill=\"#2F7D5B\"/><text x=\"36\" y=\"265\" class=\"scr-sub\" font-size=\"7\">\u5b9a\u7740\u6e08</text>\n<circle cx=\"80\" cy=\"262\" r=\"4\" fill=\"#C88569\"/><text x=\"88\" y=\"265\" class=\"scr-sub\" font-size=\"7\">\u5fa9\u7fd2\u4e2d</text>\n<circle cx=\"132\" cy=\"262\" r=\"4\" fill=\"#B9B2A6\"/><text x=\"140\" y=\"265\" class=\"scr-sub\" font-size=\"7\">\u51fa\u984c\u6e08</text>\n<text x=\"24\" y=\"280\" class=\"scr-sub\" font-size=\"6.5\">\u6570\u5b57\u306f\u5de6\u304b\u3089\u300c\u5b9a\u7740\u6e08\uff0f\u5fa9\u7fd2\u4e2d\uff0f\u51fa\u984c\u6e08\uff0f\u53ce\u9332\u300d\u3002</text>\n<text x=\"276\" y=\"294\" text-anchor=\"end\" class=\"scr-sub\" font-size=\"6\" opacity=\"0.75\">&#169;2026 AMATERAS</text>\n</svg>",
+  "quiz_choice": "<svg viewBox=\"0 0 300 280\" class=\"screen-svg\" role=\"img\" aria-label=\"\u9078\u629e\u5f0f\u753b\u9762\u306e\u6a21\u5f0f\u56f3\">\n<rect x=\"0\" y=\"0\" width=\"300\" height=\"280\" class=\"scr-bg\"/>\n<rect x=\"10\" y=\"10\" width=\"26\" height=\"26\" rx=\"8\" fill=\"none\" stroke=\"var(--line)\"/>\n<path d=\"M23 18 L15 25 L15 33 L20 33 L20 27 L26 27 L26 33 L31 33 L31 25 Z\" class=\"scr-ink\"/>\n<text x=\"150\" y=\"27\" text-anchor=\"middle\" class=\"scr-sub scr-sans\" font-size=\"9\">1 / 32</text>\n<rect x=\"238\" y=\"12\" width=\"52\" height=\"20\" rx=\"6\" fill=\"var(--ink)\"/>\n<text x=\"264\" y=\"26\" text-anchor=\"middle\" fill=\"#fff\" class=\"scr-sans\" font-size=\"8\" font-weight=\"700\">&#9312; \u9078\u629e\u5f0f</text>\n<rect x=\"10\" y=\"46\" width=\"280\" height=\"224\" rx=\"10\" class=\"scr-card\"/>\n<text x=\"24\" y=\"66\" font-size=\"10\">&#9733;&#9733;</text><text x=\"42\" y=\"66\" font-size=\"10\" fill=\"var(--line)\">&#9733;&#9733;&#9733;</text>\n<rect x=\"80\" y=\"57\" width=\"128\" height=\"16\" rx=\"8\" fill=\"var(--paper)\"/>\n<text x=\"144\" y=\"68\" text-anchor=\"middle\" class=\"scr-sub scr-sans\" font-size=\"7\">\u51fa\u984c1\u56de\u30fb\u9078 33%\u30fb\u8a18 100%</text>\n<text x=\"150\" y=\"98\" text-anchor=\"middle\" class=\"scr-ink scr-serif\" font-size=\"20\" font-weight=\"700\">share</text>\n<rect x=\"24\" y=\"110\" width=\"252\" height=\"140\" rx=\"8\" fill=\"none\" stroke=\"var(--line)\" stroke-dasharray=\"3 3\"/>\n<rect x=\"30\" y=\"118\" width=\"32\" height=\"15\" rx=\"4\" fill=\"none\" stroke=\"var(--shu)\"/><text x=\"46\" y=\"129\" text-anchor=\"middle\" class=\"scr-shu\" font-size=\"7.5\" font-weight=\"700\">\u4ed6\u52d5</text>\n<text x=\"72\" y=\"129\" class=\"scr-ink\" font-size=\"9\">\u3014\u3000\uff1f\u3000\u3015</text>\n<rect x=\"30\" y=\"140\" width=\"240\" height=\"20\" rx=\"6\" fill=\"#fff\" stroke=\"var(--line)\"/><text x=\"40\" y=\"153\" class=\"scr-ink\" font-size=\"8\">\uff5e\u3092\u610f\u5473\u3059\u308b</text>\n<rect x=\"30\" y=\"164\" width=\"240\" height=\"20\" rx=\"6\" fill=\"#fff\" stroke=\"var(--line)\"/><text x=\"40\" y=\"177\" class=\"scr-ink\" font-size=\"8\">\uff5e\u3068\u4e3b\u5f35\u3059\u308b</text>\n<rect x=\"30\" y=\"188\" width=\"240\" height=\"20\" rx=\"6\" fill=\"#fff\" stroke=\"var(--line)\"/><text x=\"40\" y=\"201\" class=\"scr-ink\" font-size=\"8\">\uff5e\u3092\u5171\u6709\u3059\u308b</text>\n<rect x=\"30\" y=\"212\" width=\"240\" height=\"20\" rx=\"6\" fill=\"#fff\" stroke=\"var(--line)\"/><text x=\"40\" y=\"225\" class=\"scr-ink\" font-size=\"8\">A\u306bB\u3092\u4f9b\u7d66\u3059\u308b</text>\n<rect x=\"30\" y=\"238\" width=\"32\" height=\"15\" rx=\"4\" fill=\"none\" stroke=\"var(--shu)\"/><text x=\"46\" y=\"249\" text-anchor=\"middle\" class=\"scr-shu\" font-size=\"7.5\" font-weight=\"700\">\u540d</text>\n<text x=\"72\" y=\"249\" class=\"scr-ink\" font-size=\"8\">\u5206\u3051\u524d\uff0f\u682a</text>\n<rect x=\"24\" y=\"256\" width=\"252\" height=\"0\" />\n</svg>",
+  "quiz_confirm": "<svg viewBox=\"0 0 300 300\" class=\"screen-svg\" role=\"img\" aria-label=\"\u9078\u629e\u5f0f\uff08\u8aa4\u7b54\u78ba\u8a8d\uff09\u753b\u9762\u306e\u6a21\u5f0f\u56f3\">\n<rect x=\"0\" y=\"0\" width=\"300\" height=\"300\" class=\"scr-bg\"/>\n<rect x=\"10\" y=\"10\" width=\"26\" height=\"26\" rx=\"8\" fill=\"none\" stroke=\"var(--line)\"/>\n<path d=\"M23 18 L15 25 L15 33 L20 33 L20 27 L26 27 L26 33 L31 33 L31 25 Z\" class=\"scr-ink\"/>\n<text x=\"150\" y=\"27\" text-anchor=\"middle\" class=\"scr-sub scr-sans\" font-size=\"9\">1 / 32</text>\n<rect x=\"238\" y=\"12\" width=\"52\" height=\"20\" rx=\"6\" fill=\"var(--ink)\"/>\n<text x=\"264\" y=\"26\" text-anchor=\"middle\" fill=\"#fff\" class=\"scr-sans\" font-size=\"8\" font-weight=\"700\">&#9312; \u9078\u629e\u5f0f</text>\n<rect x=\"10\" y=\"46\" width=\"280\" height=\"244\" rx=\"10\" class=\"scr-card\"/>\n<text x=\"24\" y=\"66\" font-size=\"10\">&#9733;&#9733;</text><text x=\"42\" y=\"66\" font-size=\"10\" fill=\"var(--line)\">&#9733;&#9733;&#9733;</text>\n<rect x=\"80\" y=\"57\" width=\"128\" height=\"16\" rx=\"8\" fill=\"var(--paper)\"/>\n<text x=\"144\" y=\"68\" text-anchor=\"middle\" class=\"scr-sub scr-sans\" font-size=\"7\">\u51fa\u984c1\u56de\u30fb\u9078 25%\u30fb\u8a18 100%</text>\n<text x=\"150\" y=\"96\" text-anchor=\"middle\" class=\"scr-ink scr-serif\" font-size=\"18\" font-weight=\"700\">share</text>\n<text x=\"150\" y=\"112\" text-anchor=\"middle\" class=\"scr-sub scr-sans\" font-size=\"7\">\u51fa\u984c 1\u56de\u3000\u9078\u629e\u5f0f 25%\u3000\u8a18\u8ff0\u5f0f 100%</text>\n<text x=\"150\" y=\"128\" text-anchor=\"middle\" class=\"scr-shu scr-sans\" font-size=\"8\" font-weight=\"700\">&#10005; \u3042\u306a\u305f\u306e\u89e3\u7b54\uff1a\uff5e\u3092\u610f\u5473\u3059\u308b</text>\n<rect x=\"24\" y=\"138\" width=\"4\" height=\"34\" fill=\"var(--shu)\"/>\n<rect x=\"30\" y=\"138\" width=\"246\" height=\"34\" fill=\"var(--shu-soft)\"/>\n<rect x=\"34\" y=\"144\" width=\"24\" height=\"14\" rx=\"4\" fill=\"var(--shu)\"/><text x=\"46\" y=\"154\" text-anchor=\"middle\" fill=\"#fff\" font-size=\"7\">\u30b3\u30a2</text>\n<text x=\"64\" y=\"155\" class=\"scr-ink\" font-size=\"7.5\">\u300c\u5207\u308a\u5206\u3051\u3066\u6301\u3061\u5408\u3046\u300d\u2192\u5171\u6709\u30fb\u5206\u3051\u524d\u30fb\u682a</text>\n<rect x=\"90\" y=\"180\" width=\"120\" height=\"26\" rx=\"13\" fill=\"none\" stroke=\"var(--ink)\"/>\n<text x=\"150\" y=\"197\" text-anchor=\"middle\" class=\"scr-ink\" font-size=\"8.5\">&#128264; \u767a\u97f3\u3092\u805e\u304f</text>\n<rect x=\"24\" y=\"216\" width=\"252\" height=\"52\" rx=\"8\" fill=\"none\" stroke=\"var(--line)\" stroke-dasharray=\"3 3\"/>\n<rect x=\"30\" y=\"222\" width=\"32\" height=\"15\" rx=\"4\" fill=\"none\" stroke=\"var(--shu)\"/><text x=\"46\" y=\"233\" text-anchor=\"middle\" class=\"scr-shu\" font-size=\"7.5\" font-weight=\"700\">\u4ed6\u52d5</text>\n<text x=\"72\" y=\"233\" class=\"scr-ink\" font-size=\"7.5\">share A with B\uff1aA\u3092B\u3068\u5206\u3051\u5408\u3046\uff0f</text>\n<text x=\"46\" y=\"248\" class=\"scr-ink\" font-size=\"7.5\">\uff5e\u3092\u5171\u6709\u3059\u308b</text>\n<rect x=\"30\" y=\"252\" width=\"32\" height=\"15\" rx=\"4\" fill=\"none\" stroke=\"var(--shu)\"/><text x=\"46\" y=\"263\" text-anchor=\"middle\" class=\"scr-shu\" font-size=\"7.5\" font-weight=\"700\">\u540d</text>\n<text x=\"72\" y=\"263\" class=\"scr-ink\" font-size=\"7.5\">\u5206\u3051\u524d\uff0f\u682a</text>\n<rect x=\"24\" y=\"274\" width=\"252\" height=\"26\" rx=\"8\" fill=\"var(--ink)\"/>\n<text x=\"150\" y=\"291\" text-anchor=\"middle\" fill=\"#fff\" class=\"scr-sans\" font-size=\"9\" font-weight=\"700\">Next</text>\n</svg>",
+  "quiz_write": "<svg viewBox=\"0 0 300 210\" class=\"screen-svg\" role=\"img\" aria-label=\"\u8a18\u8ff0\u5f0f\u753b\u9762\u306e\u6a21\u5f0f\u56f3\">\n<rect x=\"0\" y=\"0\" width=\"300\" height=\"210\" class=\"scr-bg\"/>\n<rect x=\"10\" y=\"10\" width=\"26\" height=\"26\" rx=\"8\" fill=\"none\" stroke=\"var(--line)\"/>\n<path d=\"M23 18 L15 25 L15 33 L20 33 L20 27 L26 27 L26 33 L31 33 L31 25 Z\" class=\"scr-ink\"/>\n<text x=\"150\" y=\"27\" text-anchor=\"middle\" class=\"scr-sub scr-sans\" font-size=\"9\">1 / 32</text>\n<rect x=\"234\" y=\"12\" width=\"56\" height=\"20\" rx=\"6\" fill=\"var(--ink)\"/>\n<text x=\"262\" y=\"26\" text-anchor=\"middle\" fill=\"#fff\" class=\"scr-sans\" font-size=\"8\" font-weight=\"700\">&#9313; \u8a18\u8ff0\u5f0f</text>\n<rect x=\"10\" y=\"46\" width=\"280\" height=\"150\" rx=\"10\" class=\"scr-card\"/>\n<text x=\"24\" y=\"66\" font-size=\"10\">&#9733;&#9733;</text><text x=\"42\" y=\"66\" font-size=\"10\" fill=\"var(--line)\">&#9733;&#9733;&#9733;</text>\n<rect x=\"80\" y=\"57\" width=\"128\" height=\"16\" rx=\"8\" fill=\"var(--paper)\"/>\n<text x=\"144\" y=\"68\" text-anchor=\"middle\" class=\"scr-sub scr-sans\" font-size=\"7\">\u51fa\u984c1\u56de\u30fb\u9078 40%\u30fb\u8a18 100%</text>\n<text x=\"24\" y=\"86\" class=\"scr-ink scr-sans\" font-size=\"8\">\u610f\u5473\u306b\u5408\u3046\u82f1\u5358\u8a9e\u3092\u30b9\u30da\u30eb\u307e\u3067\u6b63\u78ba\u306b\u5165\u529b\uff08Enter\u3067\u5224\u5b9a\uff09</text>\n<rect x=\"24\" y=\"96\" width=\"252\" height=\"46\" rx=\"8\" fill=\"none\" stroke=\"var(--line)\" stroke-dasharray=\"3 3\"/>\n<rect x=\"30\" y=\"102\" width=\"32\" height=\"15\" rx=\"4\" fill=\"none\" stroke=\"var(--shu)\"/><text x=\"46\" y=\"113\" text-anchor=\"middle\" class=\"scr-shu\" font-size=\"7.5\" font-weight=\"700\">\u4ed6\u52d5</text>\n<text x=\"72\" y=\"113\" class=\"scr-ink\" font-size=\"8\">A\u3092B\u3068\u5206\u3051\u5408\u3046\uff0f\uff5e\u3092\u5171\u6709\u3059\u308b</text>\n<rect x=\"30\" y=\"120\" width=\"32\" height=\"15\" rx=\"4\" fill=\"none\" stroke=\"var(--shu)\"/><text x=\"46\" y=\"131\" text-anchor=\"middle\" class=\"scr-shu\" font-size=\"7.5\" font-weight=\"700\">\u540d</text>\n<text x=\"72\" y=\"131\" class=\"scr-ink\" font-size=\"8\">\u5206\u3051\u524d\uff0f\u682a</text>\n<rect x=\"24\" y=\"150\" width=\"150\" height=\"32\" rx=\"8\" fill=\"#fff\" stroke=\"var(--line)\"/><text x=\"34\" y=\"169\" class=\"scr-sub\" font-size=\"8\">\u82f1\u5358\u8a9e\u3092\u5165\u529b</text>\n<rect x=\"180\" y=\"150\" width=\"46\" height=\"32\" rx=\"8\" fill=\"none\" stroke=\"var(--ink)\"/><text x=\"203\" y=\"169\" text-anchor=\"middle\" class=\"scr-ink\" font-size=\"8\" font-weight=\"700\">\u5224\u5b9a</text>\n<rect x=\"230\" y=\"150\" width=\"46\" height=\"32\" rx=\"8\" fill=\"none\" stroke=\"var(--ink)\"/><text x=\"253\" y=\"169\" text-anchor=\"middle\" class=\"scr-ink\" font-size=\"8\" font-weight=\"700\">\u30b9\u30ad\u30c3\u30d7</text>\n</svg>",
+  "reference": "<svg viewBox=\"0 0 300 300\" class=\"screen-svg\" role=\"img\" aria-label=\"\u53c2\u7167\u30e2\u30fc\u30c9\u753b\u9762\u306e\u6a21\u5f0f\u56f3\">\n<rect x=\"0\" y=\"0\" width=\"300\" height=\"300\" class=\"scr-bg\"/>\n<text x=\"10\" y=\"26\" class=\"scr-ink scr-serif\" font-size=\"14\" font-weight=\"700\">\u5358\u8a9e\u5e33\uff08\u53c2\u7167\u30e2\u30fc\u30c9\uff09</text>\n<text x=\"290\" y=\"26\" text-anchor=\"end\" class=\"scr-shu scr-sans\" font-size=\"9\" font-weight=\"700\" text-decoration=\"underline\">\u623b\u308b</text>\n<text x=\"10\" y=\"40\" class=\"scr-sub scr-sans\" font-size=\"7.5\">\u5224\u5b9a\u306a\u3057\u30fb\u95b2\u89a7\u306e\u307f</text>\n<line x1=\"10\" y1=\"48\" x2=\"290\" y2=\"48\" stroke=\"var(--ink)\" stroke-width=\"2\"/>\n<rect x=\"10\" y=\"60\" width=\"130\" height=\"24\" rx=\"7\" fill=\"none\" stroke=\"var(--line)\"/><text x=\"20\" y=\"76\" class=\"scr-ink\" font-size=\"8\">\u5168\u30ec\u30d9\u30eb</text>\n<rect x=\"160\" y=\"60\" width=\"130\" height=\"24\" rx=\"7\" fill=\"none\" stroke=\"var(--line)\"/><text x=\"170\" y=\"76\" class=\"scr-ink\" font-size=\"8\">\u756a\u53f7\u9806</text>\n<rect x=\"10\" y=\"90\" width=\"280\" height=\"24\" rx=\"7\" fill=\"none\" stroke=\"var(--line)\"/><text x=\"20\" y=\"106\" class=\"scr-sub\" font-size=\"8\">\u5358\u8a9e\u30fb\u610f\u5473\u3067\u691c\u7d22</text>\n<text x=\"10\" y=\"128\" class=\"scr-sub\" font-size=\"7.5\">\u8a72\u5f53 200 \u8a9e / \u5168 200 \u8a9e</text>\n<rect x=\"10\" y=\"138\" width=\"280\" height=\"150\" rx=\"10\" class=\"scr-card\"/>\n<rect x=\"24\" y=\"150\" width=\"30\" height=\"16\" rx=\"4\" fill=\"#2F7D5B\"/><text x=\"39\" y=\"161\" text-anchor=\"middle\" fill=\"#fff\" font-size=\"7.5\" font-weight=\"700\">Lv.1</text>\n<text x=\"60\" y=\"163\" class=\"scr-ink scr-serif\" font-size=\"15\" font-weight=\"700\">increase</text>\n<circle cx=\"188\" cy=\"157\" r=\"9\" fill=\"var(--paper)\"/><text x=\"188\" y=\"160\" text-anchor=\"middle\" font-size=\"8\">&#128266;</text>\n<rect x=\"242\" y=\"150\" width=\"38\" height=\"16\" rx=\"8\" fill=\"var(--line)\"/><text x=\"261\" y=\"161\" text-anchor=\"middle\" class=\"scr-sub\" font-size=\"6.5\">\u672a\u5b66\u7fd2</text>\n<rect x=\"24\" y=\"172\" width=\"252\" height=\"4\" rx=\"2\" fill=\"var(--line)\"/>\n<text x=\"24\" y=\"192\" class=\"scr-sub\" font-size=\"7\">in-(\u4e0a\u3078)+crescere(\u80b2\u3064)&#8594;\u300c\u7a4d\u307f\u4e0a\u304c\u3063\u3066\u5927\u304d\u304f\u306a\u308b\u300d</text>\n<rect x=\"24\" y=\"206\" width=\"30\" height=\"15\" rx=\"4\" fill=\"none\" stroke=\"var(--shu)\"/><text x=\"39\" y=\"217\" text-anchor=\"middle\" class=\"scr-shu\" font-size=\"7.5\" font-weight=\"700\">\u81ea\u52d5</text>\n<text x=\"60\" y=\"217\" class=\"scr-ink\" font-size=\"8.5\">\u5897\u3048\u308b</text>\n<rect x=\"24\" y=\"228\" width=\"30\" height=\"15\" rx=\"4\" fill=\"none\" stroke=\"var(--shu)\"/><text x=\"39\" y=\"239\" text-anchor=\"middle\" class=\"scr-shu\" font-size=\"7.5\" font-weight=\"700\">\u4ed6\u52d5</text>\n<text x=\"60\" y=\"239\" class=\"scr-ink\" font-size=\"8.5\">\uff5e\u3092\u5897\u3084\u3059</text>\n<rect x=\"24\" y=\"250\" width=\"30\" height=\"15\" rx=\"4\" fill=\"none\" stroke=\"var(--shu)\"/><text x=\"39\" y=\"261\" text-anchor=\"middle\" class=\"scr-shu\" font-size=\"7.5\" font-weight=\"700\">\u540d</text>\n<text x=\"60\" y=\"261\" class=\"scr-ink\" font-size=\"8.5\">\u5897\u52a0</text>\n</svg>",
+  "data": "<svg viewBox=\"0 0 300 300\" class=\"screen-svg\" role=\"img\" aria-label=\"\u5358\u8a9e\u30c7\u30fc\u30bf\u8ffd\u52a0\u753b\u9762\u306e\u6a21\u5f0f\u56f3\">\n<rect x=\"0\" y=\"0\" width=\"300\" height=\"300\" class=\"scr-bg\"/>\n<text x=\"10\" y=\"26\" class=\"scr-ink scr-serif\" font-size=\"14\" font-weight=\"700\">\u5358\u8a9e\u30c7\u30fc\u30bf\u306e\u8ffd\u52a0</text>\n<text x=\"290\" y=\"26\" text-anchor=\"end\" class=\"scr-shu scr-sans\" font-size=\"9\" font-weight=\"700\" text-decoration=\"underline\">\u623b\u308b</text>\n<line x1=\"10\" y1=\"36\" x2=\"290\" y2=\"36\" stroke=\"var(--ink)\" stroke-width=\"2\"/>\n<text x=\"10\" y=\"54\" class=\"scr-ink scr-sans\" font-size=\"7.5\">\u4ee5\u4e0b\u306e\u5f62\u5f0f\u306e JSON \u914d\u5217\u3092\u8cbc\u308a\u4ed8\u3051\u308b\u3068\u8a9e\u5f59\u3092\u62e1\u5f35\u3067\u304d\u307e\u3059</text>\n<text x=\"10\" y=\"66\" class=\"scr-ink scr-sans\" font-size=\"7.5\">\uff08<tspan fill=\"var(--sub)\">i</tspan> \u306f\u7701\u7565\u53ef\u30fb\u81ea\u52d5\u63a1\u756a\u3001<tspan fill=\"var(--sub)\">c</tspan> \u306f\u30b3\u30a2\u30a4\u30e1\u30fc\u30b8\u3067\u7701\u7565\u53ef\uff09\u3002</text>\n<text x=\"10\" y=\"78\" class=\"scr-ink scr-sans\" font-size=\"7.5\">\u533a\u5206\u30e9\u30d9\u30eb\u306f \u81ea\u52d5\uff0f\u4ed6\u52d5\uff0f\u540d\uff0f\u5f62\uff0f\u526f\uff0f\u53e5\u52d5\uff0f\u719f\u3002\u8a33\u306f\u6587\u5b57\u5217\u3001</text>\n<text x=\"10\" y=\"90\" class=\"scr-ink scr-sans\" font-size=\"7.5\">\u307e\u305f\u306f\u719f\u8a9e\u30d1\u30bf\u30fc\u30f3\u4ed8\u304d\u306a\u3089 [[&quot;run out of A&quot;,&quot;A\u3092\u5207\u3089\u3059&quot;],&quot;\u8a33&quot;] \u5f62\u5f0f\u3002</text>\n<rect x=\"10\" y=\"102\" width=\"280\" height=\"90\" rx=\"8\" fill=\"#fff\" stroke=\"var(--line)\"/>\n<text x=\"20\" y=\"120\" class=\"scr-sub\" font-size=\"8\" font-family=\"monospace\">[{\"w\":\"...\",\"l\":3,\"e\":[[\"\u4ed6\u52d5\",\"...\"]]}]</text>\n<rect x=\"10\" y=\"204\" width=\"120\" height=\"26\" rx=\"8\" fill=\"none\" stroke=\"var(--ink)\"/><text x=\"70\" y=\"221\" text-anchor=\"middle\" class=\"scr-ink\" font-size=\"8\" font-weight=\"700\">\u5358\u8a9e\u3092\u8ffd\u52a0</text>\n<rect x=\"140\" y=\"204\" width=\"150\" height=\"26\" rx=\"8\" fill=\"none\" stroke=\"var(--ink)\"/><text x=\"215\" y=\"221\" text-anchor=\"middle\" class=\"scr-ink\" font-size=\"8\" font-weight=\"700\">\u30d0\u30c3\u30af\u30a2\u30c3\u30d7\u3092\u66f8\u304d\u51fa\u3059</text>\n<rect x=\"10\" y=\"240\" width=\"150\" height=\"26\" rx=\"8\" fill=\"none\" stroke=\"var(--ink)\"/><text x=\"85\" y=\"257\" text-anchor=\"middle\" class=\"scr-ink\" font-size=\"8\" font-weight=\"700\">\u30d0\u30c3\u30af\u30a2\u30c3\u30d7\u304b\u3089\u5fa9\u5143</text>\n<text x=\"290\" y=\"292\" text-anchor=\"end\" class=\"scr-sub\" font-size=\"6\" opacity=\"0.75\">&#169;2026 AMATERAS</text>\n</svg>",
+  "settings": "<svg viewBox=\"0 0 300 300\" class=\"screen-svg\" role=\"img\" aria-label=\"\u8a2d\u5b9a\u753b\u9762\u306e\u6a21\u5f0f\u56f3\">\n<rect x=\"0\" y=\"0\" width=\"300\" height=\"300\" class=\"scr-bg\"/>\n<text x=\"10\" y=\"26\" class=\"scr-ink scr-serif\" font-size=\"14\" font-weight=\"700\">\u8a2d\u5b9a</text>\n<text x=\"290\" y=\"26\" text-anchor=\"end\" class=\"scr-shu scr-sans\" font-size=\"9\" font-weight=\"700\" text-decoration=\"underline\">\u623b\u308b</text>\n<line x1=\"10\" y1=\"36\" x2=\"290\" y2=\"36\" stroke=\"var(--ink)\" stroke-width=\"2\"/>\n<rect x=\"10\" y=\"50\" width=\"280\" height=\"200\" rx=\"10\" class=\"scr-card\"/>\n<text x=\"24\" y=\"76\" class=\"scr-ink scr-sans\" font-size=\"8\">\u5b66\u7fd2\u30e2\u30fc\u30c9\uff1a1\u65e5\u306b\u5897\u3048\u308b\u65b0\u3057\u3044\u5358\u8a9e\u306e\u6570</text>\n<rect x=\"222\" y=\"64\" width=\"52\" height=\"22\" rx=\"6\" fill=\"#fff\" stroke=\"var(--line)\"/><text x=\"248\" y=\"79\" text-anchor=\"middle\" class=\"scr-ink\" font-size=\"8.5\">30</text>\n<text x=\"24\" y=\"106\" class=\"scr-ink scr-sans\" font-size=\"8\">\u96e3\u6613\u5ea6\uff08&#9733;\u304c\u9ad8\u3044\u307b\u3069\u96e3\u3057\u3044\u5358\u8a9e\u307e\u3067\u51fa\u984c\uff09</text>\n<rect x=\"212\" y=\"94\" width=\"62\" height=\"22\" rx=\"6\" fill=\"#fff\" stroke=\"var(--line)\"/><text x=\"243\" y=\"109\" text-anchor=\"middle\" class=\"scr-shu\" font-size=\"8.5\">&#9733;&#9733;&#9734;&#9734;&#9734;</text>\n<text x=\"24\" y=\"136\" class=\"scr-ink scr-sans\" font-size=\"8\">\u97f3\u58f0\u306e\u8aad\u307f\u4e0a\u3052\u901f\u5ea6</text>\n<rect x=\"232\" y=\"124\" width=\"42\" height=\"22\" rx=\"6\" fill=\"#fff\" stroke=\"var(--line)\"/><text x=\"253\" y=\"139\" text-anchor=\"middle\" class=\"scr-ink\" font-size=\"8.5\">0.95</text>\n<text x=\"24\" y=\"166\" class=\"scr-ink scr-sans\" font-size=\"8\">\u54c1\u8a5e\u30e2\u30fc\u30c9\uff1a1\u56de\u306b\u51fa\u984c\u3059\u308b\u554f\u984c\u6570</text>\n<rect x=\"222\" y=\"154\" width=\"52\" height=\"22\" rx=\"6\" fill=\"#fff\" stroke=\"var(--line)\"/><text x=\"248\" y=\"169\" text-anchor=\"middle\" class=\"scr-ink\" font-size=\"8.5\">30</text>\n<text x=\"24\" y=\"192\" class=\"scr-sub scr-sans\" font-size=\"7\">\u5404\u8a2d\u5b9a\u306e\u8a73\u3057\u3044\u610f\u5473\u306f\u300c\u30a2\u30d7\u30ea\u306e\u8aac\u660e\u300d\u3092\u53c2\u7167\u3057\u3066\u304f\u3060\u3055\u3044\u3002</text>\n<rect x=\"24\" y=\"204\" width=\"130\" height=\"26\" rx=\"8\" fill=\"none\" stroke=\"var(--ink)\"/><text x=\"89\" y=\"221\" text-anchor=\"middle\" class=\"scr-ink\" font-size=\"8.5\" font-weight=\"700\">\u8a2d\u5b9a\u3092\u4fdd\u5b58</text>\n</svg>",
+  "weak": "<svg viewBox=\"0 0 300 300\" class=\"screen-svg\" role=\"img\" aria-label=\"\u82e6\u624b\u30e2\u30fc\u30c9\u753b\u9762\u306e\u6a21\u5f0f\u56f3\">\n<rect x=\"0\" y=\"0\" width=\"300\" height=\"300\" class=\"scr-bg\"/>\n<rect x=\"10\" y=\"10\" width=\"26\" height=\"26\" rx=\"8\" fill=\"none\" stroke=\"var(--line)\"/>\n<path d=\"M23 18 L15 25 L15 33 L20 33 L20 27 L26 27 L26 33 L31 33 L31 25 Z\" class=\"scr-ink\"/>\n<text x=\"150\" y=\"27\" text-anchor=\"middle\" class=\"scr-sub scr-sans\" font-size=\"9\">1 / 14</text>\n<rect x=\"238\" y=\"12\" width=\"52\" height=\"20\" rx=\"6\" fill=\"var(--sub)\"/>\n<text x=\"264\" y=\"26\" text-anchor=\"middle\" fill=\"#fff\" class=\"scr-sans\" font-size=\"8\" font-weight=\"700\">&#9312; \u9078\u629e\u5f0f</text>\n<rect x=\"10\" y=\"46\" width=\"280\" height=\"244\" rx=\"10\" class=\"scr-card\"/>\n<text x=\"24\" y=\"66\" font-size=\"10\">&#9733;&#9733;</text><text x=\"42\" y=\"66\" font-size=\"10\" fill=\"var(--line)\">&#9733;&#9733;&#9733;</text>\n<rect x=\"80\" y=\"57\" width=\"120\" height=\"16\" rx=\"8\" fill=\"var(--paper)\"/>\n<text x=\"140\" y=\"68\" text-anchor=\"middle\" class=\"scr-sub scr-sans\" font-size=\"7\">\u51fa\u984c0\u56de\u30fb\u9078 0%\u30fb\u8a18 &#12540;</text>\n<rect x=\"238\" y=\"57\" width=\"38\" height=\"17\" rx=\"8\" fill=\"var(--shu)\"/>\n<text x=\"257\" y=\"69\" text-anchor=\"middle\" fill=\"#fff\" class=\"scr-sans\" font-size=\"7.5\" font-weight=\"700\">\u82e6\u624b</text>\n<text x=\"150\" y=\"100\" text-anchor=\"middle\" class=\"scr-ink scr-serif\" font-size=\"20\" font-weight=\"700\">describe</text>\n<rect x=\"24\" y=\"112\" width=\"252\" height=\"150\" rx=\"8\" fill=\"none\" stroke=\"var(--line)\" stroke-dasharray=\"3 3\"/>\n<rect x=\"30\" y=\"120\" width=\"32\" height=\"15\" rx=\"4\" fill=\"none\" stroke=\"var(--shu)\"/><text x=\"46\" y=\"131\" text-anchor=\"middle\" class=\"scr-shu\" font-size=\"7.5\" font-weight=\"700\">\u4ed6\u52d5</text>\n<text x=\"72\" y=\"131\" class=\"scr-ink\" font-size=\"9\">\u3014\u3000\uff1f\u3000\u3015</text>\n<rect x=\"30\" y=\"142\" width=\"240\" height=\"20\" rx=\"6\" fill=\"#fff\" stroke=\"var(--line)\"/><text x=\"40\" y=\"155\" class=\"scr-ink\" font-size=\"8\">\uff5e\u3092\u3014\u6b63\u5f53\u3068\u3015\u8a8d\u3081\u308b</text>\n<rect x=\"30\" y=\"166\" width=\"240\" height=\"20\" rx=\"6\" fill=\"#fff\" stroke=\"var(--line)\"/><text x=\"40\" y=\"179\" class=\"scr-ink\" font-size=\"8\">\uff5e\u3092\u8a2d\u7acb\u3059\u308b</text>\n<rect x=\"30\" y=\"190\" width=\"240\" height=\"20\" rx=\"6\" fill=\"#fff\" stroke=\"var(--line)\"/><text x=\"40\" y=\"203\" class=\"scr-ink\" font-size=\"8\">\uff5e\u3092\u63cf\u5199\u3059\u308b</text>\n<rect x=\"30\" y=\"214\" width=\"240\" height=\"20\" rx=\"6\" fill=\"#fff\" stroke=\"var(--line)\"/><text x=\"40\" y=\"227\" class=\"scr-ink\" font-size=\"8\">\uff5e\u306e\u307b\u3046\u3092\u597d\u3080</text>\n<rect x=\"24\" y=\"270\" width=\"252\" height=\"30\" rx=\"8\" fill=\"var(--line)\"/>\n<text x=\"150\" y=\"290\" text-anchor=\"middle\" class=\"scr-sub scr-sans\" font-size=\"10\" font-weight=\"700\">\u89e3\u7b54</text>\n</svg>",
+  "pos": "<svg viewBox=\"0 0 300 260\" class=\"screen-svg\" role=\"img\" aria-label=\"\u54c1\u8a5e\u30e2\u30fc\u30c9\u753b\u9762\u306e\u6a21\u5f0f\u56f3\">\n<rect x=\"0\" y=\"0\" width=\"300\" height=\"260\" class=\"scr-bg\"/>\n<rect x=\"10\" y=\"10\" width=\"26\" height=\"26\" rx=\"8\" fill=\"none\" stroke=\"var(--line)\"/>\n<path d=\"M23 18 L15 25 L15 33 L20 33 L20 27 L26 27 L26 33 L31 33 L31 25 Z\" class=\"scr-ink\"/>\n<text x=\"150\" y=\"27\" text-anchor=\"middle\" class=\"scr-sub scr-sans\" font-size=\"9\">1 / 30</text>\n<rect x=\"180\" y=\"12\" width=\"110\" height=\"20\" rx=\"6\" fill=\"var(--sub)\"/>\n<text x=\"235\" y=\"26\" text-anchor=\"middle\" fill=\"#fff\" class=\"scr-sans\" font-size=\"7.5\" font-weight=\"700\">\u54c1\u8a5e\u30e2\u30fc\u30c9\uff08\u5224\u5b9a\u306a\u3057\uff09</text>\n<rect x=\"10\" y=\"46\" width=\"280\" height=\"164\" rx=\"10\" class=\"scr-card\"/>\n<text x=\"150\" y=\"90\" text-anchor=\"middle\" class=\"scr-ink scr-serif\" font-size=\"22\" font-weight=\"700\">mean</text>\n<text x=\"150\" y=\"112\" text-anchor=\"middle\" class=\"scr-sub scr-sans\" font-size=\"8.5\">\u8a72\u5f53\u3059\u308b\u54c1\u8a5e\u3092\u3059\u3079\u3066\u9078\u629e</text>\n<g font-family=\"var(--sans)\">\n<rect x=\"24\" y=\"128\" width=\"46\" height=\"34\" rx=\"8\" fill=\"#fff\" stroke=\"var(--line)\" stroke-width=\"1.3\"/><text x=\"47\" y=\"149\" text-anchor=\"middle\" class=\"scr-ink\" font-size=\"8\">\u81ea\u52d5\u8a5e</text>\n<rect x=\"76\" y=\"128\" width=\"46\" height=\"34\" rx=\"8\" fill=\"#fff\" stroke=\"var(--line)\" stroke-width=\"1.3\"/><text x=\"99\" y=\"149\" text-anchor=\"middle\" class=\"scr-ink\" font-size=\"8\">\u4ed6\u52d5\u8a5e</text>\n<rect x=\"128\" y=\"128\" width=\"44\" height=\"34\" rx=\"8\" fill=\"#fff\" stroke=\"var(--line)\" stroke-width=\"1.3\"/><text x=\"150\" y=\"149\" text-anchor=\"middle\" class=\"scr-ink\" font-size=\"8\">\u540d\u8a5e</text>\n<rect x=\"178\" y=\"128\" width=\"46\" height=\"34\" rx=\"8\" fill=\"#fff\" stroke=\"var(--line)\" stroke-width=\"1.3\"/><text x=\"201\" y=\"149\" text-anchor=\"middle\" class=\"scr-ink\" font-size=\"8\">\u5f62\u5bb9\u8a5e</text>\n<rect x=\"230\" y=\"128\" width=\"46\" height=\"34\" rx=\"8\" fill=\"#fff\" stroke=\"var(--line)\" stroke-width=\"1.3\"/><text x=\"253\" y=\"149\" text-anchor=\"middle\" class=\"scr-ink\" font-size=\"8\">\u526f\u8a5e</text>\n</g>\n<rect x=\"24\" y=\"176\" width=\"252\" height=\"26\" rx=\"8\" fill=\"var(--line)\"/>\n<text x=\"150\" y=\"193\" text-anchor=\"middle\" class=\"scr-sub scr-sans\" font-size=\"9.5\" font-weight=\"700\">\u89e3\u7b54</text>\n</svg>"
+};
+const QUOTES = [
+  "継続は力なり。",
+  "Practice makes perfect. — 習うより慣れよ。",
+  "単語は出会った回数だけ強くなる。",
+  "忘れかけた頃の復習が、いちばん記憶に残る。",
+  "英語で最も使われる単語は the。",
+  "set は英語で語義が最も多い単語のひとつ。",
+  "間違いは記憶のフック。恐れず解答しよう。",
+  "1日30語、1年で1万語以上の出会いになる。",
+  "声に出して読むと、目と耳の両方で覚えられる。",
+  "昨日の自分より、1語だけ多く。",
+  "英単語の過半はラテン語・フランス語に由来するといわれる。",
+  "接頭辞 re- は「再び・後ろへ」。知れば語彙が広がる。",
+  "Little by little, one goes far. — 少しずつ、遠くへ。",
+  "コアイメージをつかむと、多義語は1本の芯でつながる。"
+];
+/* ==== 品詞モード（判定・集計なし） ==== */
+const POS5 = ["自動","他動","名","形","副"];
+const POS5_LABEL = {"自動":"自動詞","他動":"他動詞","名":"名詞","形":"形容詞","副":"副詞"};
+function posEligibleWords(){
+  return allWords().filter(w=>normEntries(w).some(e=>POS5.includes(e.pos)));
+}
+function correctPosSet(w){
+  const s=new Set();
+  normEntries(w).forEach(e=>{ if(POS5.includes(e.pos)) s.add(e.pos); });
+  return s;
+}
+function startPosSession(fresh){
+  if(fresh || !state.posSession){
+    const n = Math.max(5, Math.min(100, state.settings.posChunk||30));
+    const ids = shuffle(posEligibleWords().slice()).slice(0,n).map(w=>w.i);
+    state.posSession = { ids, pos:0, sel:[], checked:false, ok:null, confirming:false };
+  }
+  scheduleSave();
+  renderPosCard();
+}
+function renderPosCard(){
+  const ps = state.posSession;
+  if(!ps || ps.pos >= ps.ids.length){ return renderPosDone(); }
+  const w = byId(ps.ids[ps.pos]);
+  const correct = correctPosSet(w);
+  let body="";
+  if(ps.confirming){
+    const wrongHtml = `<div class="wrong-line">✕ あなたの選択：${ps.sel.length?ps.sel.map(p=>POS5_LABEL[p]).join("・"):"（なし）"}</div>
+      <div class="ok-line">正解：${[...correct].map(p=>POS5_LABEL[p]).join("・")}</div>`;
+    body = `${confirmCardBody(w, wrongHtml)}
+      <button class="btn-primary" data-pact="next">Next</button>`;
+  }else{
+    const btns = POS5.map(p=>{
+      let cls="pos-toggle"+(ps.sel.includes(p)?" on":"");
+      if(ps.checked){ if(correct.has(p)) cls+=" correct"; else if(ps.sel.includes(p)) cls+=" wrong"; }
+      return `<button class="${cls}" data-pact="tog" data-p="${p}" ${ps.checked?"disabled":""}>${POS5_LABEL[p]}</button>`;
+    }).join("");
+    let footer;
+    if(ps.checked){
+      footer = `<div class="dict-result ${ps.ok?"ok":"ng"}">${ps.ok?"◎ 正解":"✕ 不正解"}</div>
+        ${ps.ok?`<button class="btn-primary" data-pact="next">Next</button>`:`<button class="btn-primary" data-pact="check">Check</button>`}`;
+    }else{
+      footer = `<button class="btn-primary" data-pact="ans" ${ps.sel.length?"":"disabled"}>解答</button>`;
+    }
+    body = `<div class="word-display">${esc(w.w)}</div>
+      <div class="hint" style="text-align:center">該当する品詞をすべて選択</div>
+      <div class="pos-toggle-row">${btns}</div>
+      ${footer}`;
+  }
+  app.innerHTML = `
+    <div class="session-head">
+      <button class="home-ico" data-pact="exit" title="ホームに戻る（進捗保存）"><svg viewBox="0 0 24 24" class="home-svg" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5V20a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg></button>
+      <span>${ps.pos+1} / ${ps.ids.length}</span>
+      <span class="tag mode">品詞モード（判定なし）</span>
+    </div>
+    <div class="wcard">${body}</div>`;
+  app.querySelectorAll("[data-pact]").forEach(el=>{ el.onclick=(ev)=>{ ev.preventDefault(); posHandle(el.dataset.pact, el); }; });
+  app.querySelectorAll('[data-act="speak"]').forEach(el=>{ el.onclick=(ev)=>{ ev.preventDefault(); speak(w.w); }; });
+}
+function posHandle(act, el){
+  const ps = state.posSession;
+  if(!ps) return;
+  const w = byId(ps.ids[ps.pos]);
+  if(act==="exit"){ flushSave(); renderHome(); return; }
+  if(act==="tog"){
+    if(ps.checked) return;
+    const p = el.dataset.p;
+    const i = ps.sel.indexOf(p);
+    if(i>=0) ps.sel.splice(i,1); else ps.sel.push(p);
+    renderPosCard(); return;
+  }
+  if(act==="ans"){
+    if(!ps.sel.length) return;
+    const correct = correctPosSet(w);
+    ps.checked = true;
+    ps.ok = ps.sel.length===correct.size && ps.sel.every(p=>correct.has(p));
+    scheduleSave(); renderPosCard(); speak(w.w); return;
+  }
+  if(act==="check"){ ps.confirming = true; scheduleSave(); renderPosCard(); return; }
+  if(act==="next"){
+    ps.pos++; ps.sel=[]; ps.checked=false; ps.ok=null; ps.confirming=false;
+    scheduleSave(); renderPosCard(); return;
+  }
+}
+function renderPosDone(){
+  state.posSession = null; saveState();
+  app.innerHTML = `<div class="panel done-card"><div class="stamp">完了</div>
+    <h2 style="font-family:var(--serif);font-size:1.1rem;margin-bottom:8px">品詞モードが終了</h2>
+    <button class="btn-primary" id="homeBtn">ホームに戻る</button></div>`;
+  document.getElementById("homeBtn").onclick = renderHome;
+}
+/* ==== 設定画面 ==== */
+function renderSettings(){
+  session = null;
+  app.innerHTML = `
+  <header><div><h1>設定</h1></div>
+    <a class="streak" href="#" id="backHome" style="text-decoration:underline">戻る</a></header>
+  <div class="panel"><div class="inner">
+    <div class="setting-row"><span>学習モード：1日に増える新しい単語の数</span>
+      <input type="number" id="setNew" min="5" max="100" value="${state.settings.newPerDay}"></div>
+    <div class="setting-row"><span>難易度（☆が高いほど難しい単語まで出題）</span>
+      <select id="setDiff">${[1,2,3,4,5].map(n=>`<option value="${n}" ${chunkStars()===n?"selected":""}>${"★".repeat(n)}${"☆".repeat(5-n)}</option>`).join("")}</select></div>
+    <div class="setting-row"><span>音声の読み上げ速度</span>
+      <select id="setRate">${[0.5,0.6,0.7,0.8,0.9,0.95,1.0,1.1,1.2].map(r=>`<option value="${r}" ${Math.abs((state.settings.rate||0.95)-r)<0.001?"selected":""}>${r}</option>`).join("")}</select></div>
+    <div class="setting-row"><span>品詞モード：1回に出題する問題数</span>
+      <input type="number" id="setPos" min="5" max="100" value="${state.settings.posChunk||30}"></div>
+    <p class="note" style="margin-top:8px">各設定の詳しい意味は「アプリの説明」を参照してください。</p>
+    <button class="btn-sub" id="saveSet">設定を保存</button>
+    <span class="msg" id="setMsg"></span>
+  </div></div>`;
+  document.getElementById("backHome").onclick = (e)=>{ e.preventDefault(); renderHome(); };
+  document.getElementById("saveSet").onclick = async ()=>{
+    state.settings.newPerDay = Math.max(5, Math.min(100, parseInt(document.getElementById("setNew").value)||30));
+    state.settings.difficulty = Math.max(1, Math.min(5, parseInt(document.getElementById("setDiff").value)||1));
+    state.settings.rate = Math.max(0.5, Math.min(1.2, parseFloat(document.getElementById("setRate").value)||0.95));
+    state.settings.posChunk = Math.max(5, Math.min(100, parseInt(document.getElementById("setPos").value)||30));
+    await saveState();
+    document.getElementById("setMsg").textContent = "保存しました";
+    setTimeout(renderHome, 600);
+  };
+}
+/* ==== アプリの説明 ==== */
+function renderAbout(){
+  session = null;
+  const shot = (key,cap)=> SVG_IMG[key] ? `<figure class="shot">${SVG_IMG[key]}<figcaption>${esc(cap)}</figcaption></figure>` : "";
+  app.innerHTML = `
+  <header><div><h1>アプリの説明</h1></div>
+    <a class="streak" href="#" id="backHome" style="text-decoration:underline">戻る</a></header>
+  <div class="panel about">
+
+    <h2>アプリについて</h2>
+    <p class="note">大学入試レベルの英単語を、テスト形式のくり返しで長期記憶に定着させるアプリです。毎日少しずつ新しい単語が追加され、忘れた頃に復習が出るように設計されています。</p>
+
+    <h2>ホーム画面</h2>
+    ${shot("home_top","ホーム画面（上部）")}
+    <p class="note"><strong>左上の本アイコン</strong>＝単語帳（参照モード）を開きます。<br>
+    <strong>右上の☰</strong>＝メニュー（設定・単語データの追加・アプリの説明）。<br>
+    <strong>日付の下</strong>＝格言や豆知識（毎回変わります）。<br>
+    <strong>「学習」</strong>＝1日のノルマ。今日の復習対象とストック総数、開始ボタンが並びます。</p>
+    ${shot("home_bottom","ホーム画面（下部）")}
+    <p class="note"><strong>品詞モード</strong>と<strong>レベル別進捗</strong>。進捗バーの数字は左から「定着済／復習中／出題済／収録」です。</p>
+
+    <h2>モードの種類</h2>
+    <p class="note"><strong>学習</strong>＝1日のノルマ。選択式と記述式で定着を判定します。<br>
+    <strong>苦手モード</strong>＝正答率60%未満の単語を集中的に演習（復習期日とは無関係）。<br>
+    <strong>品詞モード</strong>＝品詞をすべて選ぶモード。記録なし。<br>
+    <strong>参照モード</strong>＝単語帳として全単語を閲覧。</p>
+
+    <h2>学習の流れ</h2>
+    <svg viewBox="0 0 360 66" class="about-svg" role="img">
+      <rect x="4" y="14" width="86" height="30" rx="7" class="ab-box"/><text x="47" y="33" class="ab-t">① 選択式</text>
+      <text x="100" y="33" class="ab-a">&#8594;</text>
+      <rect x="116" y="14" width="86" height="30" rx="7" class="ab-box"/><text x="159" y="33" class="ab-t">② 記述式</text>
+      <text x="212" y="33" class="ab-a">&#8594;</text>
+      <rect x="228" y="14" width="86" height="30" rx="7" class="ab-box on"/><text x="271" y="33" class="ab-t">判定</text>
+      <text x="47" y="60" class="ab-s">誤答→その場で確認</text>
+      <text x="271" y="60" class="ab-s">両方正解＝定着</text>
+    </svg>
+    <p class="note">1回の学習は「選択式を全問 → 記述式を全問」の順です。間違えた単語は、各パートの最後にもう一度出ます（2回目）。</p>
+
+    <h2>復習の間隔（忘却曲線）</h2>
+    <svg viewBox="0 0 360 52" class="about-svg" role="img">
+      <line x1="14" y1="24" x2="346" y2="24" class="ab-line"/>
+      <circle cx="14" cy="24" r="5" class="ab-dot"/><text x="14" y="46" class="ab-s">1日</text>
+      <circle cx="70" cy="24" r="5" class="ab-dot"/><text x="70" y="46" class="ab-s">3日</text>
+      <circle cx="140" cy="24" r="5" class="ab-dot"/><text x="140" y="46" class="ab-s">7日</text>
+      <circle cx="220" cy="24" r="5" class="ab-dot"/><text x="220" y="46" class="ab-s">14日</text>
+      <circle cx="346" cy="24" r="5" class="ab-dot on"/><text x="340" y="46" class="ab-s">30日</text>
+    </svg>
+    <p class="note">定着するたびに、次の復習までの間隔が延びていきます（1→3→7→14→30日）。忘れかけた頃に思い出すほうが記憶に残りやすい、という「間隔をあけた反復」の考え方です。</p>
+
+    <h2>選択式の画面</h2>
+    ${shot("quiz_choice","選択式（解答前）")}
+    <p class="note">英単語を見て、各品詞に合う日本語訳を選びます。<strong>左上の家アイコン</strong>で中断してホームへ（進みは保存）。<strong>カード左上の☆</strong>は難易度、その右は出題回数と正答率（選択式・記述式それぞれ）。空欄〔？〕の数は復習が進むほど増えます。</p>
+    ${shot("quiz_confirm","選択式（誤答後の確認）")}
+    <p class="note">間違えると、その場で正解・コアイメージ・全語義が確認できます。自分の誤答は赤字で表示されます。</p>
+
+    <h2>記述式の画面</h2>
+    ${shot("quiz_write","記述式")}
+    <p class="note">日本語の意味を見て、英単語をスペルまで正確に入力します（Enterでも判定）。分からなければ「スキップ」。</p>
+
+    <h2>定着判定</h2>
+    <p class="note">選択式・記述式の<strong>両方が2回目までに正解</strong>で「定着」を1回獲得。片方でも2回間違えると「未定着」となり、翌日もう一度出題されます。<strong>3回連続で定着</strong>すると、その単語は「定着済」になります。</p>
+
+    <h2>苦手モード</h2>
+    ${shot("weak","苦手モード（選択式）")}
+    <p class="note">正答率60%未満の単語を集中的に演習するモードです。復習期日とは無関係にいつでも挑戦できます。ホーム画面の「苦手モード」ボタンから始められます。カード右上の<strong>赤い「苦手」タグ</strong>で、通常の学習と区別されます。</p>
+
+    <h2>品詞モード</h2>
+    ${shot("pos","品詞モード")}
+    <p class="note">英単語を見て、当てはまる品詞（自動詞・他動詞・名詞・形容詞・副詞）をすべて選ぶモードです。過不足なく選べば正解。記録も定着判定もしません。1回の問題数は設定で変更できます。</p>
+
+    <h2>参照モード（単語帳）</h2>
+    ${shot("reference","参照モード")}
+    <p class="note">収録する全単語を閲覧できます。レベルでの絞り込み、単語・意味での検索、正答率での並べ替えが可能。各単語には正答率のゲージが表示されます。</p>
+
+    <h2>単語のステータス（4段階）</h2>
+    <p class="note"><strong>未学習</strong>＝まだ一度も解答していない。<br>
+    <strong>出題済</strong>＝解答したことはあるが、復習の対象ではない。<br>
+    <strong>復習中</strong>＝ノルマに入り、復習スケジュールで回っている。<br>
+    <strong>定着済</strong>＝3回連続で定着判定を受けた。</p>
+
+    <h2>コアイメージについて</h2>
+    <p class="note">単語の中心にある「核となるイメージ」のこと。たとえば run の「連続して流れ動く」というイメージをつかむと、「走る／経営する／（機械が）動く」といった複数の意味が1本の芯でつながって覚えやすくなります。</p>
+
+    <h2>設定について</h2>
+    ${shot("settings","設定")}
+    <p class="note"><strong>1日に増える新しい単語の数</strong>＝学習モードで毎日あらたに学習対象へ加わる単語の数。<br>
+    <strong>難易度</strong>＝出題される単語のレベルの上限（☆が高いほど難しい単語まで）。<br>
+    <strong>音声の読み上げ速度</strong>＝発音を聞くときの速さ。<br>
+    <strong>品詞モードの1回の問題数</strong>＝品詞モードを1回始めたときの出題数。学習モードの「新しい単語の数」とは別の、品詞モード専用の設定です。</p>
+
+    <h2>難易度と空欄について</h2>
+    <p class="note">難易度☆を設定すると、そのレベル以下の単語が出題されます（☆が高いほど、より難しい単語まで含まれます）。設定した範囲の単語をすべて学習し終えると、自動的に次のレベルへ上がります。なお<strong>復習は、難易度の設定に関係なく</strong>出題されます。<br>
+    選択式の空欄の数は、その単語の復習が進むほど増えていきます（最初は1つ→最終的にすべての品詞へ）。</p>
+
+    <h2>単語追加について</h2>
+    ${shot("data","単語データの追加")}
+    <p class="note">メニューから開きます。決まった形式の JSON を貼り付けると、自分で単語を追加できます。バックアップの書き出し・復元もここから行えます。</p>
+
+  </div>`;
+  document.getElementById("backHome").onclick = (e)=>{ e.preventDefault(); renderHome(); };
+}
+
+/* ---- 起動 ---- */
+/* ====================== ログインUI ====================== */
+function ensureAuthDom(){
+  if(document.getElementById("authbar")) return;
+  const style = document.createElement("style");
+  style.textContent = `
+    #authbar{position:fixed;top:8px;right:10px;z-index:50;font-family:var(--sans)}
+    #authbar .who{font-size:.72rem;color:var(--sub);margin-right:6px}
+    #authbar button{font-size:.74rem;padding:5px 10px;border:1px solid var(--line);
+      border-radius:6px;background:#fff;color:var(--ink);font-weight:700}
+    #authmodal{position:fixed;inset:0;z-index:60;background:rgba(31,44,56,.45);
+      display:flex;align-items:center;justify-content:center;padding:16px}
+    #authmodal.auth-hidden{display:none}
+    #authmodal .card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+      width:100%;max-width:340px;padding:22px 20px}
+    #authmodal h3{font-family:var(--serif);font-size:1.05rem;margin-bottom:4px}
+    #authmodal p.sub{font-size:.74rem;color:var(--sub);margin-bottom:16px}
+    #authmodal .oauth{display:block;width:100%;padding:11px;border:1px solid var(--line);
+      border-radius:8px;background:#fff;color:var(--ink);font-weight:700;font-size:.9rem;margin-bottom:9px}
+    #authmodal .sep{text-align:center;font-size:.7rem;color:var(--sub);margin:10px 0}
+    #authmodal input{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;
+      font-size:.9rem;margin-bottom:9px;font-family:var(--sans)}
+    #authmodal .send{width:100%;padding:11px;border-radius:8px;background:var(--ink);color:#fff;
+      font-weight:700;font-size:.9rem}
+    #authmodal .msg{font-size:.74rem;color:var(--midori);margin-top:10px;min-height:1em}
+    #authmodal .close{position:absolute;top:14px;right:16px;font-size:1.3rem;color:var(--sub)}
+    #authmodal .cardwrap{position:relative;width:100%;max-width:340px}
+  `;
+  document.head.appendChild(style);
+
+  const bar = document.createElement("div"); bar.id = "authbar"; document.body.appendChild(bar);
+
+  const modal = document.createElement("div");
+  modal.id = "authmodal"; modal.className = "auth-hidden";
+  modal.innerHTML = `
+    <div class="cardwrap">
+      <button class="close" id="authClose">×</button>
+      <div class="card">
+        <h3>ログイン</h3>
+        <p class="sub">進捗をアカウントに保存し、どの端末からでも続きから学習できます。</p>
+        <button class="oauth" id="authGoogle">Googleでログイン</button>
+        <button class="oauth" id="authApple">Appleでログイン</button>
+        <div class="sep">または メールで</div>
+        <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email">
+        <button class="send" id="authSend">ログインリンクを送る</button>
+        <div class="msg" id="authMsg"></div>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  document.getElementById("authClose").onclick = closeAuthModal;
+  modal.addEventListener("click", (e)=>{ if(e.target === modal) closeAuthModal(); });
+
+  document.getElementById("authGoogle").onclick = ()=> oauthLogin("google");
+  document.getElementById("authApple").onclick  = ()=> oauthLogin("apple");
+  document.getElementById("authSend").onclick   = emailLogin;
+}
+function openAuthModal(){
+  if(!cloudConfigured()){ alert("クラウド保存は未設定です。SUPABASE_URL と SUPABASE_ANON_KEY を設定すると有効になります。"); return; }
+  document.getElementById("authMsg").textContent = "";
+  document.getElementById("authmodal").className = "";
+}
+function closeAuthModal(){ document.getElementById("authmodal").className = "auth-hidden"; }
+
+function redirectTarget(){ return location.href.split("#")[0]; }
+
+async function oauthLogin(provider){
+  if(!sb) return;
+  await sb.auth.signInWithOAuth({ provider, options:{ redirectTo: redirectTarget() } });
+}
+async function emailLogin(){
+  if(!sb) return;
+  const email = (document.getElementById("authEmail").value || "").trim();
+  const msg = document.getElementById("authMsg");
+  if(!email){ msg.style.color = "var(--shu)"; msg.textContent = "メールアドレスを入力してください。"; return; }
+  msg.style.color = "var(--sub)"; msg.textContent = "送信中…";
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: redirectTarget() } });
+  if(error){ msg.style.color = "var(--shu)"; msg.textContent = "送信に失敗しました：" + error.message; }
+  else{ msg.style.color = "var(--midori)"; msg.textContent = "ログインリンクを送りました。メールを確認してください。"; }
+}
+async function doLogout(){
+  if(sb) await sb.auth.signOut();
+}
+function renderAuthBar(){
+  const bar = document.getElementById("authbar");
+  if(!bar) return;
+  if(!cloudConfigured()){ bar.innerHTML = ""; return; }
+  if(currentUser){
+    const label = currentUser.email || "ログイン中";
+    bar.innerHTML = `<span class="who">${esc(label)}</span><button id="authLogout">ログアウト</button>`;
+    document.getElementById("authLogout").onclick = doLogout;
+  }else{
+    bar.innerHTML = `<button id="authLogin">ログイン</button>`;
+    document.getElementById("authLogin").onclick = openAuthModal;
+  }
+}
+
+/* ログイン／ログアウト時：クラウドが空でローカルに進捗があれば初回だけ移行 → 読み直して再描画 */
+async function syncOnAuthChange(){
+  if(sb && currentUser){
+    try{
+      const { data } = await sb.from("user_data").select("data").eq("user_id", currentUser.id).maybeSingle();
+      if(!data){
+        let local = null;
+        try{ local = localStorage.getItem(STORE_KEY); }catch(_){}
+        if(local){
+          await sb.from("user_data").upsert({ user_id: currentUser.id, data: local, updated_at: new Date().toISOString() });
+        }
+      }
+    }catch(e){}
+  }
+  state = { settings:{ newPerDay:30, rate:0.95, difficulty:1 }, words:{}, log:{}, custom:[], activeSession:null };
+  await loadState();
+  renderHome();
+}
+
+/* ---- 起動 ---- */
+(async ()=>{
+  await initSupabase();
+  ensureAuthDom();
+  renderAuthBar();
+  await loadState();
+  renderHome();
+})();
+</script>
+</body>
+</html>
