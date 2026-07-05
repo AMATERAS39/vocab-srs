@@ -499,6 +499,7 @@ async function initSupabase(){
       const before = currentUser ? currentUser.id : null;
       currentUser = sess ? sess.user : null;
       const after  = currentUser ? currentUser.id : null;
+      renderAuthBar();
       if(before !== after) syncOnAuthChange();
     });
     return sb;
@@ -780,11 +781,8 @@ function renderHome(){
     <button class="menu-btn" id="menuBtn" title="メニュー">${MENU_SVG}</button>
     <div class="menu-drop" id="menuDrop">
       <button id="menuSet">設定</button>
-      <button id="menuAbout">アプリの説明</button>
       <button id="menuData">単語データの追加</button>
-      ${cloudConfigured() ? (currentUser
-        ? `<button id="menuLogout">ログアウト${currentUser.email ? "（"+esc(currentUser.email)+"）" : ""}</button>`
-        : `<button id="menuLogin">ログイン</button>`) : ``}
+      <button id="menuAbout">アプリの説明</button>
     </div>
   </header>
   <div class="quote-line">${esc(quote)}</div>
@@ -830,8 +828,6 @@ function renderHome(){
   document.getElementById("menuData").onclick = ()=>renderData();
   document.getElementById("menuAbout").onclick = ()=>renderAbout();
   document.getElementById("refBtn").onclick = ()=>renderReference();
-  const mLogin = document.getElementById("menuLogin"); if(mLogin) mLogin.onclick = ()=>{ menuDrop.classList.remove("open"); openAuthModal(); };
-  const mLogout = document.getElementById("menuLogout"); if(mLogout) mLogout.onclick = ()=>{ menuDrop.classList.remove("open"); doLogout(); };
 
   if(hasActive){
     document.getElementById("resumeBtn").onclick = ()=>resumeSession();
@@ -1764,9 +1760,13 @@ function renderAbout(){
 /* ---- 起動 ---- */
 /* ====================== ログインUI ====================== */
 function ensureAuthDom(){
-  if(document.getElementById("authmodal")) return;
+  if(document.getElementById("authbar")) return;
   const style = document.createElement("style");
   style.textContent = `
+    #authbar{position:fixed;top:8px;right:10px;z-index:50;font-family:var(--sans)}
+    #authbar .who{font-size:.72rem;color:var(--sub);margin-right:6px}
+    #authbar button{font-size:.74rem;padding:5px 10px;border:1px solid var(--line);
+      border-radius:6px;background:#fff;color:var(--ink);font-weight:700}
     #authmodal{position:fixed;inset:0;z-index:60;background:rgba(31,44,56,.45);
       display:flex;align-items:center;justify-content:center;padding:16px}
     #authmodal.auth-hidden{display:none}
@@ -1787,6 +1787,8 @@ function ensureAuthDom(){
   `;
   document.head.appendChild(style);
 
+  const bar = document.createElement("div"); bar.id = "authbar"; document.body.appendChild(bar);
+
   const modal = document.createElement("div");
   modal.id = "authmodal"; modal.className = "auth-hidden";
   modal.innerHTML = `
@@ -1796,6 +1798,7 @@ function ensureAuthDom(){
         <h3>ログイン</h3>
         <p class="sub">進捗をアカウントに保存し、どの端末からでも続きから学習できます。</p>
         <button class="oauth" id="authGoogle">Googleでログイン</button>
+        <button class="oauth" id="authApple">Appleでログイン</button>
         <div class="sep">または メールで</div>
         <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email">
         <button class="send" id="authSend">ログインリンクを送る</button>
@@ -1808,6 +1811,7 @@ function ensureAuthDom(){
   modal.addEventListener("click", (e)=>{ if(e.target === modal) closeAuthModal(); });
 
   document.getElementById("authGoogle").onclick = ()=> oauthLogin("google");
+  document.getElementById("authApple").onclick  = ()=> oauthLogin("apple");
   document.getElementById("authSend").onclick   = emailLogin;
 }
 function openAuthModal(){
@@ -1836,6 +1840,20 @@ async function emailLogin(){
 async function doLogout(){
   if(sb) await sb.auth.signOut();
 }
+function renderAuthBar(){
+  const bar = document.getElementById("authbar");
+  if(!bar) return;
+  if(!cloudConfigured()){ bar.innerHTML = ""; return; }
+  if(currentUser){
+    const label = currentUser.email || "ログイン中";
+    bar.innerHTML = `<span class="who">${esc(label)}</span><button id="authLogout">ログアウト</button>`;
+    document.getElementById("authLogout").onclick = doLogout;
+  }else{
+    bar.innerHTML = `<button id="authLogin">ログイン</button>`;
+    document.getElementById("authLogin").onclick = openAuthModal;
+  }
+}
+
 /* ログイン／ログアウト時：クラウドが空でローカルに進捗があれば初回だけ移行 → 読み直して再描画 */
 async function syncOnAuthChange(){
   if(sb && currentUser){
@@ -1859,6 +1877,7 @@ async function syncOnAuthChange(){
 (async ()=>{
   await initSupabase();
   ensureAuthDom();
+  renderAuthBar();
   await loadState();
   renderHome();
 })();
