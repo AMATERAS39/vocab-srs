@@ -492,7 +492,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026-07-08-01";
+const APP_VERSION = "2026-07-08-02";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -1389,6 +1389,13 @@ function jaPoolByPos(excludeId, sameLv){
    各区分から候補(items)を1つランダムに選んで正解とし、
    誤答肢3つは「同じ品詞」の他語の訳から（不足時は他品詞で補充）。
    正解候補がパターン付きなら、そのパターンを問題文表示用に保持 */
+/* 訳語文字列を「意味の単位」に分解する（「・」「；」区切り＋先頭の〜／助詞を除去）。
+   誤答選択肢が正解と同じ意味を含んでいないかを判定するために使う。 */
+function coreSegments(str){
+  return String(str).split(/[・;；]/)
+    .map(s=>s.replace(/^[〜～]/,"").replace(/^(を|は|が|に|と|も)/,"").trim())
+    .filter(Boolean);
+}
 function makePosQuiz(w){
   const norm = normEntries(w);
   const st = state.words[w.i];
@@ -1403,12 +1410,18 @@ function makePosQuiz(w){
     const pos = norm[k].pos;
     const it = norm[k].items[Math.floor(Math.random()*norm[k].items.length)]; // 候補を1つ
     const correct = it.ja;
-    /* 誤答肢：同品詞・同レベル → 同品詞・全レベル → 全品詞、の順で補充 */
+    const correctSegs = coreSegments(correct);
+    /* 誤答肢：同品詞・同レベル → 同品詞・全レベル → 全品詞、の順で補充。
+       正解と同じ意味の単位（「・」区切りの断片）を含む候補は、
+       他の単語の訳であっても誤答として出さない（例：include「含む」の誤答に
+       involve「含む・伴う」を出さない） */
     const distractors = [];
     const tryPush = (arr)=>{
       for(const cand of shuffle(arr.slice())){
         if(distractors.length >= 3) break;
         if(cand === correct || ownJa.has(cand) || distractors.includes(cand)) continue;
+        const candSegs = coreSegments(cand);
+        if(candSegs.some(cs=>correctSegs.includes(cs))) continue;
         distractors.push(cand);
       }
     };
@@ -1928,7 +1941,9 @@ const NICK_QUOTES = [
 const POS5 = ["自動","他動","名","形","副"];
 const POS5_LABEL = {"自動":"自動詞","他動":"他動詞","名":"名詞","形":"形容詞","副":"副詞"};
 function posEligibleWords(){
-  return allWords().filter(w=>normEntries(w).some(e=>POS5.includes(e.pos)));
+  /* メインモードのノルマで既に導入された単語（state.wordsに記録がある語）のみを対象にする。
+     未学習（メインモードで一度も出題されていない）語は品詞モードにも出題しない。 */
+  return allWords().filter(w=> state.words[w.i] && normEntries(w).some(e=>POS5.includes(e.pos)));
 }
 function correctPosSet(w){
   const s=new Set();
