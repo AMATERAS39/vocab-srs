@@ -129,6 +129,14 @@ code{background:var(--paper);padding:1px 5px;border-radius:4px;font-size:.78rem}
 .opt-btn.correct{border-color:var(--midori);color:var(--midori);background:#EDF5F1}
 .opt-btn.wrong{border-color:var(--shu);color:var(--shu);background:var(--shu-soft)}
 .opt-btn:disabled{cursor:default}
+.opt-num{display:inline-block;min-width:1.4em;font-weight:700;color:var(--sub);margin-right:6px}
+.blank-block.confirmed .blank-slot{color:var(--midori)}
+.choice-hint{font-size:.72rem;color:var(--sub);text-align:center;margin-bottom:8px}
+/* ==== バッチB：解説の隠し→判定時スクロール表示 ==== */
+.reveal-zone{max-height:0;overflow:hidden;opacity:0;transition:opacity .25s ease}
+.reveal-zone.open{max-height:none;overflow:visible;opacity:1;margin-top:12px;padding-top:14px;border-top:1px dashed var(--line)}
+.reveal-next{display:flex;justify-content:flex-end;margin-top:12px}
+.reveal-next .btn-primary{width:auto;display:inline-block;padding:12px 30px}
 .btn-ghost{display:block;width:100%;padding:12px;border:1.5px solid var(--ink);border-radius:8px;font-size:.95rem;font-weight:700;background:#fff;margin-top:10px}
 /* 参照モード */
 .ref-controls{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
@@ -492,7 +500,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026-07-08-04";
+const APP_VERSION = "2026-07-09-01";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -1460,9 +1468,9 @@ function buildQueue(mode){
     return {
       id:x.id,
       quiz: makePosQuiz(w),
-      picks:{}, choiceDone:false, choiceOk:null, confirming:false,
+      picks:{}, confirmed:{}, choiceDone:false, choiceOk:null,
       cTries:0, cPassed:false, cFailed:false,
-      answeredWrite:false, writeOk:null, confirmingW:false,
+      answeredWrite:false, writeOk:null,
       wTries:0, wPassed:false, wFailed:false
     };
   });
@@ -1542,6 +1550,7 @@ function renderCard(){
   const s = session;
   const item = curItem();
   if(!item){ return; }
+  if(!item.confirmed) item.confirmed = {};   // 旧セッション復元時の保険
   const w = byId(item.id);
   const retryTag = s.phase==="retry" ? "（2回目）" : "";
   const blockLabel = (s.block==="choice" ? "① 選択式" : "② 記述式") + retryTag;
@@ -1549,23 +1558,9 @@ function renderCard(){
 
   let body = "";
   if(s.block === "choice"){
-    if(item.confirming){
-      const wrongC = item.quiz.blanks
-        .filter(k=>item.picks[k] && item.picks[k] !== item.quiz.quizzes[k].correct)
-        .map(k=>`<div class="wrong-line">✕ あなたの解答：${esc(item.picks[k])}</div>`).join("");
-      body = `${confirmCardBody(w, wrongC)}
-        <button class="btn-primary" data-act="choiceConfirmNext">Next</button>`;
-    }else{
-      body = renderChoiceBody(item, w, false);
-    }
+    body = renderChoiceBody(item, w);
   }else{
-    if(item.confirmingW){
-      const wrongW = `<div class="wrong-line">✕ あなたの解答：${esc(item.lastInput||"（スキップ）")}</div>`;
-      body = `${confirmCardBody(w, wrongW)}
-        <button class="btn-primary" data-act="writeConfirmNext">Next</button>`;
-    }else{
-      body = renderWriteBody(item, w);
-    }
+    body = renderWriteBody(item, w);
   }
 
   const modeTag = s.mode==="weak" ? '<span class="tag" style="background:var(--shu)">苦手</span>' : '';
@@ -1601,10 +1596,27 @@ function renderCard(){
       handleAct("writeCheck");
     };
   }
+  /* 判定済みなら、下に隠していた解説へスムーズスクロールして表示 */
+  const judged = (s.block==="choice" && item.choiceDone) || (s.block==="write" && item.answeredWrite);
+  if(judged){
+    requestAnimationFrame(()=>{
+      const rz = app.querySelector(".reveal-zone.open");
+      if(rz && rz.scrollIntoView) rz.scrollIntoView({behavior:"smooth", block:"start"});
+    });
+  }
+}
+
+/* ---- 解説（下に隠す→判定時に開く）共通本体 ---- */
+function revealBody(w, resultHtml, nextAct){
+  return `${resultHtml||""}
+    ${w.c ? `<div class="core-line"><span class="core-label">コア</span>${esc(w.c)}</div>` : ""}
+    <div class="prompt-zone">${promptEntries(w)}</div>
+    <button class="audio-btn" data-act="speak">🔊 発音を確認</button>
+    <div class="reveal-next"><button class="btn-primary" data-act="${nextAct}">Next</button></div>`;
 }
 
 /* ---- 選択式（品詞別・訳選択）の本体 ---- */
-function renderChoiceBody(item, w, strict){
+function renderChoiceBody(item, w){
   const q = item.quiz;
   const norm = normEntries(w);
   const rows = norm.map((e,k)=>{
@@ -1613,37 +1625,108 @@ function renderChoiceBody(item, w, strict){
       return `<div class="entry"><span class="pos-badge">${esc(e.pos)}</span><span class="meaning">${esc(e.ja.join("／"))}</span></div>`;
     }
     const picked = item.picks[k];
+    const confirmed = !!item.confirmed[k];
     const correct = q.quizzes[k].correct;
-    const pat = q.quizzes[k].pat;
-    const optHtml = q.quizzes[k].opts.map(o=>{
+    const optHtml = q.quizzes[k].opts.map((o,oi)=>{
       let cls = "opt-btn";
       if(item.choiceDone){
         if(o===correct) cls += " correct";
         else if(o===picked) cls += " wrong";
       }else if(o===picked){ cls += " picked"; }
-      return `<button class="${cls}" data-act="pick" data-k="${k}" data-val="${esc(o)}" ${item.choiceDone?"disabled":""}>${esc(o)}</button>`;
+      const dis = (item.choiceDone || confirmed) ? "disabled" : "";
+      return `<button class="${cls}" data-act="pick" data-k="${k}" data-val="${esc(o)}" ${dis}><span class="opt-num">${oi+1}</span>${esc(o)}</button>`;
     }).join("");
+    const slot = confirmed ? `✓ ${esc(picked)}` : (picked?esc(picked):"〔　？　〕");
     const label = `<span class="pos-badge">${esc(e.pos)}</span>`;
-    return `<div class="blank-block">
-      <div class="entry">${label}<span class="meaning blank-slot">${picked?esc(picked):"〔　？　〕"}</span></div>
+    return `<div class="blank-block${confirmed?" confirmed":""}">
+      <div class="entry">${label}<span class="meaning blank-slot">${slot}</span></div>
       <div class="opt-list">${optHtml}</div>
     </div>`;
   }).join("");
 
-  const allPicked = q.blanks.every(k=>item.picks[k]);
-  let footer = "";
+  const hint = item.choiceDone ? "" :
+    `<div class="hint choice-hint">選択肢を2回タップで確定（PCは数字キー→もう一度／Enter）</div>`;
+
+  let resultHtml = "";
   if(item.choiceDone){
-    footer = `<div class="dict-result ${item.choiceOk?"ok":"ng"}">${item.choiceOk?"◎ 正解":"✕ 不正解"}</div>
-      <button class="audio-btn" data-act="speak">🔊 発音を確認</button>
-      ${item.choiceOk
-        ? `<button class="btn-primary" data-act="choiceNext">Next</button>`
-        : `<button class="btn-primary" data-act="choiceCheckWord">Check</button>`}`;
-  }else{
-    footer = `<button class="btn-primary" data-act="choiceCheck" ${allPicked?"":"disabled"}>解答</button>`;
+    const wrong = q.blanks
+      .filter(k=>item.picks[k] !== q.quizzes[k].correct)
+      .map(k=>`<div class="wrong-line">✕ あなたの解答：${esc(item.picks[k]||"（未選択）")}</div>`).join("");
+    resultHtml = `<div class="dict-result ${item.choiceOk?"ok":"ng"}">${item.choiceOk?"◎ 正解":"✕ 不正解"}</div>${wrong}`;
   }
+
   return `<div class="word-display">${esc(w.w)}</div>
+    ${hint}
     <div class="prompt-zone">${rows}</div>
-    ${footer}`;
+    <div class="reveal-zone ${item.choiceDone?"open":""}">
+      ${revealBody(w, resultHtml, "choiceNext")}
+    </div>`;
+}
+
+/* ---- 選択式：2タップ確定ロジック（クリック／キーボード共通） ---- */
+function choiceSelect(k, o){
+  const item = curItem();
+  if(!item || item.choiceDone) return;
+  if(!item.confirmed) item.confirmed = {};
+  if(item.confirmed[k]) return;            // 確定済みブランクは触れない
+  if(item.picks[k] === o){                 // 同じ肢を2回目 → このブランクを確定
+    choiceConfirmBlank(k);
+  }else{                                   // 別の肢／初回 → 選択（乗り換え）
+    item.picks[k] = o;
+    saveSession();
+    renderCard();
+  }
+}
+function choiceConfirmBlank(k){
+  const item = curItem();
+  if(!item || item.choiceDone) return;
+  if(!item.picks[k]) return;               // 何も選んでいなければ確定不可
+  item.confirmed[k] = true;
+  const q = item.quiz;
+  if(q.blanks.every(b=>item.confirmed[b])){ // 全ブランク確定 → 採点
+    gradeChoice();
+  }else{
+    saveSession();
+    renderCard();
+  }
+}
+function gradeChoice(){
+  const item = curItem();
+  if(!item) return;
+  const q = item.quiz;
+  const w = byId(item.id);
+  item.choiceDone = true;
+  item.choiceOk = q.blanks.every(k=>item.picks[k] === q.quizzes[k].correct);
+  item.cTries++;
+  recordAnswer(item.id, "c", item.choiceOk);   // 回答回数に必ずカウント（リトライ含む）
+  if(item.choiceOk) item.cPassed = true;
+  else if(item.cTries >= 2) item.cFailed = true;
+  saveSession();
+  renderCard();
+  speak(w.w);
+}
+/* PCキーボード：数字で先頭の未確定ブランクを選択、同数字／Enterで確定 */
+function choiceKeydown(e){
+  const s = session;
+  if(!s || s.block !== "choice") return;
+  const ae = document.activeElement;
+  if(ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) return; // 入力欄フォーカス中は無反応
+  if(!app.querySelector(".opt-list")) return;                            // 選択式カード表示中のみ
+  const item = curItem();
+  if(!item || item.choiceDone) return;
+  if(!item.confirmed) item.confirmed = {};
+  const q = item.quiz;
+  const activeK = q.blanks.find(k=>!item.confirmed[k]);
+  if(activeK === undefined) return;
+  if(e.key === "Enter"){
+    if(item.picks[activeK]){ e.preventDefault(); choiceConfirmBlank(activeK); }
+    return;
+  }
+  if(/^[1-9]$/.test(e.key)){
+    const idx = parseInt(e.key) - 1;
+    const opts = q.quizzes[activeK].opts;
+    if(idx < opts.length){ e.preventDefault(); choiceSelect(activeK, opts[idx]); }
+  }
 }
 
 /* ---- 確認カード共通本体 ---- */
@@ -1662,9 +1745,14 @@ function confirmCardBody(w, wrongHtml){
 function renderWriteBody(item, w){
   const secondFail = session && session.mode==="review" && item.wTries>=2;
   const yourAnswer = item.lastInput ? esc(item.lastInput) : "（スキップ）";
-  const resultInner = item.writeOk
-    ? "◎ 正解"
-    : `✕ 不正解<div class="sub-line">あなたの解答：${yourAnswer}　→　正解：${esc(w.w)}</div><div class="sub-line">${secondFail ? "翌日やり直し" : "確認しよう"}</div>`;
+  let resultHtml = "";
+  if(item.answeredWrite){
+    const inner = item.writeOk
+      ? "◎ 正解"
+      : `✕ 不正解<div class="sub-line">あなたの解答：${yourAnswer}　→　正解：${esc(w.w)}</div><div class="sub-line">${secondFail ? "翌日やり直し" : "確認しよう"}</div>`;
+    resultHtml = `<div class="dict-result ${item.writeOk?"ok":"ng"}">${inner}</div>
+      <div class="word-display" style="font-size:1.4rem;margin:0 0 8px">${esc(w.w)}</div>`;
+  }
   return `<div class="hint">意味に合う英単語をスペルまで正確に入力（Enterで判定）</div>
     <div class="prompt-zone">${jaOnlyEntries(w)}</div>
     <div class="dict-row">
@@ -1672,17 +1760,9 @@ function renderWriteBody(item, w){
       <button class="btn-sub" data-act="writeCheck" ${item.answeredWrite?"disabled":""}>判定</button>
       <button class="btn-sub" data-act="writeSkip" ${item.answeredWrite?"disabled":""}>スキップ</button>
     </div>
-    ${item.answeredWrite ? `
-      <div class="dict-result ${item.writeOk?"ok":"ng"}">${resultInner}</div>
-      <div class="answer-zone" style="border:none;padding-top:6px">
-        <div class="word-display" style="font-size:1.4rem;margin:0 0 8px">${esc(w.w)}</div>
-        ${w.c ? `<div class="core-line"><span class="core-label">コア</span>${esc(w.c)}</div>` : ""}
-        ${promptEntries(w)}
-      </div>
-      <button class="audio-btn" data-act="speak">🔊 発音を確認</button>
-      ${item.writeOk
-        ? `<button class="btn-primary" data-act="writeNext">Next</button>`
-        : `<button class="btn-primary" data-act="writeCheckWord">Check</button>`}` : ""}`;
+    <div class="reveal-zone ${item.answeredWrite?"open":""}">
+      ${revealBody(w, resultHtml, "writeNext")}
+    </div>`;
 }
 function handleAct(act, el){
   const s = session;
@@ -1692,42 +1772,18 @@ function handleAct(act, el){
   if(act==="speak"){ speak(w.w); return; }
   if(act==="exit"){ saveSession(); flushSave(); renderHome(); return; }
 
-  /* ==== ブロックA：選択式 ==== */
+  /* ==== ブロックA：選択式（2タップ確定） ==== */
   if(act==="pick"){
-    if(item.choiceDone) return;
-    const k = parseInt(el.dataset.k);
-    item.picks[k] = el.dataset.val;
-    renderCard();
+    choiceSelect(parseInt(el.dataset.k), el.dataset.val);
     return;
   }
-  if(act==="choiceCheck"){ // 「解答する」
-    const q = item.quiz;
-    if(!q.blanks.every(k=>item.picks[k])) return;
-    item.choiceDone = true;
-    item.choiceOk = q.blanks.every(k=>item.picks[k] === q.quizzes[k].correct);
-    item.cTries++;
-    recordAnswer(item.id, "c", item.choiceOk);       // 回答回数に必ずカウント（リトライ含む）
-    if(item.choiceOk) item.cPassed = true;
-    else if(item.cTries >= 2) item.cFailed = true;   // 2回失敗確定
-    saveSession();
-    renderCard();
-    speak(w.w);
-    return;
-  }
-
-  if(act==="choiceCheckWord"){ // 不正解時の「Check」→確認画面
-    item.confirming = true;
-    saveSession();
-    renderCard();
-    return;
-  }
-  if(act==="choiceConfirmNext" || act==="choiceNext"){
+  if(act==="choiceNext"){
     /* 選択式の1問終了。誤答かつ1回目(main)なら retry に積む */
     if(!item.choiceOk && s.phase==="main" && !item.cPassed){
       s.retry.push(s.order[s.pos]);
     }
     // 次問へ進む前に、選択式の状態をリセット（2回目再挑戦に備える）
-    item.choiceDone = false; item.choiceOk = null; item.picks = {}; item.confirming = false;
+    item.choiceDone = false; item.choiceOk = null; item.picks = {}; item.confirmed = {};
     if(s.phase==="retry"){ item.quiz = makePosQuiz(w); } // 2回目は新しい問題を作る
     advance();
     return;
@@ -1762,22 +1818,17 @@ function handleAct(act, el){
     renderCard();
     return;
   }
-  if(act==="writeCheckWord"){ // 不正解時の「Check」→確認画面
-    item.confirmingW = true;
-    saveSession();
-    renderCard();
-    return;
-  }
-  if(act==="writeConfirmNext" || act==="writeNext"){
+  if(act==="writeNext"){
     if(!item.writeOk && s.phase==="main" && !item.wPassed){
       s.retry.push(s.order[s.pos]);
     }
-    item.answeredWrite = false; item.writeOk = null; item.confirmingW = false;
+    item.answeredWrite = false; item.writeOk = null;
     advance();
     return;
   }
 }
-/* キー操作は使わない。入力欄のEnterのみ有効。 */
+/* 選択式のPCキーボード操作を登録（選択式ブロック中のみ作動） */
+document.addEventListener("keydown", choiceKeydown);
 function renderDone(){
   const c = session.counts;
   const mode = session.mode;
