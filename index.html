@@ -500,7 +500,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026-07-09-01";
+const APP_VERSION = "2026-07-09-02-authdbg";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -528,15 +528,105 @@ function isOwner(){ return ownerFlag; }
 function cloudConfigured(){
   return !SUPABASE_URL.includes("YOUR-PROJECT") && !SUPABASE_ANON_KEY.includes("YOUR-PUBLIC");
 }
+/* ============================================================
+   ===== 一時診断ブロック（C-1：時間経過ログアウト）／診断後に必ず削除 =====
+   URL末尾に ?authdebug=1 が付いているときだけ動作。通常ユーザーには一切表示・影響しない。
+   認証フローそのものは変更せず、イベントを「観測」するだけ。
+   getSession()／refreshSession() は画面のボタンを押したときだけ実行する（自動では呼ばない
+   ＝放置→復帰の"素の壊れ方"をリフレッシュで隠さないため）。
+   ============================================================ */
+const AUTH_DBG = /[?&]authdebug=1(?:&|$)/.test(location.search);
+let __dbgLoadTs = Date.now();
+let __dbgLog = [];
+let __dbgLastSession = null;
+function __dbgPad(n){ return String(n).padStart(2,"0"); }
+function __dbgClock(){ const d=new Date(); return __dbgPad(d.getHours())+":"+__dbgPad(d.getMinutes())+":"+__dbgPad(d.getSeconds()); }
+function __dbgElapsed(){ return "+"+Math.round((Date.now()-__dbgLoadTs)/1000)+"s"; }
+function __dbgSessInfo(s){
+  if(!s) return "session=null";
+  const exp = s.expires_at ? s.expires_at : null;
+  const left = exp ? Math.round(exp - Date.now()/1000) : null;
+  return "session=有 expires_at="+(exp||"?")+" 残り"+(left!=null?left+"s":"?");
+}
+function __dbgWrite(line){
+  __dbgLog.push(line);
+  if(__dbgLog.length>300) __dbgLog.shift();
+  try{ localStorage.setItem("__authdbg", JSON.stringify(__dbgLog)); }catch(_){}
+  __dbgRender();
+}
+function dbgLog(tag, detail){ __dbgWrite(__dbgClock()+" ("+__dbgElapsed()+") "+tag+(detail?(" "+detail):"")); }
+function dbgSetSession(s, why){ __dbgLastSession = s || null; dbgLog("[SESSION]", (why||"")+" "+__dbgSessInfo(s)); }
+function dbgOnAuth(evt, sess){ __dbgLastSession = sess || __dbgLastSession; dbgLog("[AUTH_EVENT] "+String(evt), __dbgSessInfo(sess)); }
+function __dbgHeartbeat(){ dbgLog("[HEARTBEAT]", __dbgSessInfo(__dbgLastSession)); }
+function __dbgRender(){
+  const pre = document.getElementById("__authdbgLog");
+  if(pre){ pre.textContent = __dbgLog.slice(-80).join("\n"); pre.scrollTop = pre.scrollHeight; }
+}
+async function __dbgProbeGetSession(){
+  if(!sb){ dbgLog("[PROBE] sbが無い（クラウド未設定/初期化失敗）"); return; }
+  dbgLog("[PROBE] getSession()呼び出し…");
+  try{
+    const { data, error } = await sb.auth.getSession();
+    if(error){ dbgLog("[PROBE] getSession error", error.message); return; }
+    dbgLog("[PROBE] getSession結果", __dbgSessInfo(data && data.session));
+  }catch(e){ dbgLog("[PROBE] getSession例外", String(e)); }
+}
+async function __dbgProbeRefresh(){
+  if(!sb){ dbgLog("[PROBE] sbが無い（クラウド未設定/初期化失敗）"); return; }
+  dbgLog("[PROBE] refreshSession()呼び出し…");
+  try{
+    const { data, error } = await sb.auth.refreshSession();
+    if(error){ dbgLog("[PROBE] refreshSession error", error.message); return; }
+    dbgLog("[PROBE] refreshSession結果", __dbgSessInfo(data && data.session));
+  }catch(e){ dbgLog("[PROBE] refreshSession例外", String(e)); }
+}
+function startAuthDbg(){
+  try{ const saved = localStorage.getItem("__authdbg"); if(saved){ __dbgLog = JSON.parse(saved)||[]; } }catch(_){}
+  dbgLog("[LOAD] ページ読み込み", "URL="+location.href);
+  dbgLog("[STATE] 現在ユーザー", currentUser? ("id="+String(currentUser.id).slice(0,8)+"…") : "未ログイン");
+  const style = document.createElement("style");
+  style.textContent = "#__authdbg{position:fixed;left:0;right:0;bottom:0;z-index:99999;background:rgba(20,24,28,.93);color:#e8f0f5;font:11px/1.45 monospace;padding:8px;max-height:48vh;display:flex;flex-direction:column}#__authdbg .r{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px}#__authdbg b{margin-right:4px}#__authdbg button{font:11px monospace;padding:6px 9px;border:1px solid #567;border-radius:6px;background:#2a3540;color:#e8f0f5}#__authdbgLog{white-space:pre-wrap;overflow:auto;flex:1;margin:0}";
+  document.head.appendChild(style);
+  const box = document.createElement("div");
+  box.id="__authdbg";
+  box.innerHTML =
+    '<div class="r">'
+    + '<b>認証診断(C-1)</b>'
+    + '<button id="__dbgGet">getSession試行</button>'
+    + '<button id="__dbgRef">refreshSession試行</button>'
+    + '<button id="__dbgCopy">ログをコピー</button>'
+    + '<button id="__dbgClr">クリア</button>'
+    + '<button id="__dbgHide">閉じる</button>'
+    + '</div><pre id="__authdbgLog"></pre>';
+  document.body.appendChild(box);
+  document.getElementById("__dbgGet").onclick = __dbgProbeGetSession;
+  document.getElementById("__dbgRef").onclick = __dbgProbeRefresh;
+  document.getElementById("__dbgCopy").onclick = ()=>{
+    const t = __dbgLog.join("\n");
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(()=>dbgLog("[INFO] ログをコピーしました")).catch(()=>dbgLog("[INFO] コピー不可。ログ本文を手動選択してください")); }
+    else { dbgLog("[INFO] このブラウザは自動コピー不可。ログ本文を手動で選択してコピーしてください"); }
+  };
+  document.getElementById("__dbgClr").onclick = ()=>{ __dbgLog=[]; try{localStorage.removeItem("__authdbg");}catch(_){ } __dbgRender(); };
+  document.getElementById("__dbgHide").onclick = ()=>{ box.style.display="none"; };
+  __dbgRender();
+  setInterval(__dbgHeartbeat, 60000);
+  document.addEventListener("visibilitychange", ()=>{ dbgLog("[VISIBILITY]", document.visibilityState); });
+  window.addEventListener("focus", ()=>{ dbgLog("[FOCUS] タブがフォーカスされた"); });
+  window.addEventListener("online", ()=>{ dbgLog("[NET] オンライン復帰"); });
+  window.addEventListener("offline", ()=>{ dbgLog("[NET] オフライン"); });
+}
+/* ===== 一時診断ブロックここまで（このブロック全体と、下記2つの診断フック行を削除すれば元通り） ===== */
 async function initSupabase(){
   if(!cloudConfigured()) return null;
   try{
     const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
     sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const { data:{ session } } = await sb.auth.getSession();
+    if(AUTH_DBG) dbgSetSession(session, "initial getSession");   /* 一時診断フック（C-1）／削除可 */
     currentUser = session ? session.user : null;
     await refreshOwnerFlag();
     sb.auth.onAuthStateChange(async (_evt, sess)=>{
+      if(AUTH_DBG) dbgOnAuth(_evt, sess);                        /* 一時診断フック（C-1）／削除可 */
       const before = currentUser ? currentUser.id : null;
       currentUser = sess ? sess.user : null;
       await refreshOwnerFlag();
@@ -2348,6 +2438,7 @@ async function syncOnAuthChange(){
 /* ---- 起動 ---- */
 (async ()=>{
   await initSupabase();
+  if(AUTH_DBG) startAuthDbg();    /* 一時診断（C-1）：?authdebug=1 のときだけ動作／削除可 */
   await migrateGuestProgress();   // ログイン済みなら未ログイン中の進捗を統合（OAuth再読込後にも対応）
   await loadSharedWords();
   ensureAuthDom();
