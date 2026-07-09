@@ -492,7 +492,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026-07-08-02";
+const APP_VERSION = "2026-07-08-03";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -1663,7 +1663,7 @@ function renderWriteBody(item, w){
   return `<div class="hint">意味に合う英単語をスペルまで正確に入力（Enterで判定）</div>
     <div class="prompt-zone">${jaOnlyEntries(w)}</div>
     <div class="dict-row">
-      <input id="writeIn" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="英単語を入力" value="${item.answeredWrite?esc(item.lastInput||""):""}" class="${item.answeredWrite?(item.writeOk?"ok":"ng"):""}" ${item.answeredWrite?"disabled":""}>
+      <input id="writeIn" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" placeholder="英単語を入力" value="${item.answeredWrite?esc(item.lastInput||""):""}" class="${item.answeredWrite?(item.writeOk?"ok":"ng"):""}" ${item.answeredWrite?"disabled":""}>
       <button class="btn-sub" data-act="writeCheck" ${item.answeredWrite?"disabled":""}>判定</button>
       <button class="btn-sub" data-act="writeSkip" ${item.answeredWrite?"disabled":""}>スキップ</button>
     </div>
