@@ -87,6 +87,15 @@ textarea{width:100%;min-height:110px;border:1px solid var(--line);border-radius:
 .save-badge.err{color:var(--shu);font-weight:700}
 code{background:var(--paper);padding:1px 5px;border-radius:4px;font-size:.78rem}
 .note{font-size:.76rem;color:var(--sub);line-height:1.7}
+.pw-card{margin:16px 0;padding:14px;border:1px solid var(--line);border-radius:10px;background:linear-gradient(180deg,#fff, #FAFBFC)}
+.pw-card .pw-head{display:flex;align-items:center;gap:7px;font-size:.9rem;font-weight:600;color:var(--ink);margin-bottom:4px}
+.pw-card .pw-sub{font-size:.72rem;color:var(--sub);margin-bottom:10px}
+.pw-card .pw-field{display:flex;gap:8px;align-items:stretch}
+.pw-card input[type=password]{flex:1;font-family:var(--sans);padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:.9rem;background:#fff}
+.pw-card input[type=password]:focus{outline:none;border-color:var(--shu);box-shadow:0 0 0 2px var(--shu-soft)}
+.pw-card .pw-btn{white-space:nowrap;padding:9px 16px;border:none;border-radius:8px;background:var(--shu);color:#fff;font-size:.85rem;font-weight:600;cursor:pointer}
+.pw-card .pw-btn:active{opacity:.85}
+.pw-card .msg{margin-top:8px}
 
 /* ---------- 学習カード（単語カード風） ---------- */
 .session-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:.8rem;color:var(--sub)}
@@ -500,7 +509,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026-07-10-02";
+const APP_VERSION = "2026-07-10-03";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -2131,10 +2140,15 @@ function renderSettings(){
       <select id="setRate">${[0.5,0.6,0.7,0.8,0.9,0.95,1.0,1.1,1.2].map(r=>`<option value="${r}" ${Math.abs((state.settings.rate||0.95)-r)<0.001?"selected":""}>${r}</option>`).join("")}</select></div>
     <div class="setting-row"><span>品詞モード：1回に出題する問題数</span>
       <input type="number" id="setPos" min="5" max="100" value="${state.settings.posChunk||30}"></div>
-    ${(sb && currentUser) ? `<div class="setting-row"><span>パスワードを設定／変更（次回から生体認証でログインできます）</span>
-      <input type="password" id="setPw" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）">
-      <button class="btn-sub" id="setPwBtn" style="margin-top:6px">パスワードを設定／変更</button>
-      <span class="msg" id="setPwMsg"></span></div>` : ``}
+    ${(sb && currentUser) ? `<div class="pw-card">
+      <div class="pw-head">🔐 パスワードを設定／変更</div>
+      <div class="pw-sub">次回から生体認証（Face ID等）でログインできます。</div>
+      <div class="pw-field">
+        <input type="password" id="setPw" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）">
+        <button class="pw-btn" id="setPwBtn">設定</button>
+      </div>
+      <span class="msg" id="setPwMsg"></span>
+    </div>` : ``}
     <p class="note" style="margin-top:8px">各設定の詳しい意味は「アプリの説明」を参照してください。</p>
     <button class="btn-sub" id="saveSet">設定を保存</button>
     <span class="msg" id="setMsg"></span>
