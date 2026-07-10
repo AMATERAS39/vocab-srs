@@ -500,7 +500,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026-07-10-01";
+const APP_VERSION = "2026-07-10-02";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -510,6 +510,9 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 let sb = null;          // Supabase クライアント
 let currentUser = null; // ログイン中ユーザー（未ログインは null）
+/* P-4：パスワードリセットのリンクで戻ってきた読み込みかを、URLハッシュから早期に捕捉。
+   （Supabaseがハッシュを消す前にパース時点で確定させる。true の間は引き継ぎ確認を抑止する。） */
+const IS_RECOVERY = /type=recovery/.test(location.hash) || /[?&]type=recovery(?:&|$)/.test(location.search);
 /* オーナー判定：メールアドレスを直接コードに書かず、SHA-256ハッシュ照合で判定する（コード解析での漏洩防止） */
 const OWNER_EMAIL_HASH = "875fbc00129419cb8c24817638ec6a9a90be4b67415991f2115ace02d2c1ad6f";
 let ownerFlag = false;
@@ -537,6 +540,7 @@ async function initSupabase(){
     currentUser = session ? session.user : null;
     await refreshOwnerFlag();
     sb.auth.onAuthStateChange(async (_evt, sess)=>{
+      if(_evt === "PASSWORD_RECOVERY"){ openPwResetModal(); return; }  /* P-4：リセット時のみ。新PW入力UIを出し、通常同期/引き継ぎ確認は抑止して抜ける */
       const before = currentUser ? currentUser.id : null;
       currentUser = sess ? sess.user : null;
       await refreshOwnerFlag();
@@ -790,6 +794,7 @@ function clearLastUid(){ try{ localStorage.removeItem(LAST_UID_KEY); }catch(_){}
 /* ログイン時だけ引き継ぎ確認を行い、統合結果(merged|null)を返す。
    直接 migrateGuestProgress() を呼ばず、必ずこの関数経由にする（要件23の再発防止）。 */
 async function maybeMigrateOnLogin(){
+  if(IS_RECOVERY) return null;                        /* P-4：リセット到来時は引き継ぎ確認を出さない（通常ログインでは常にfalseなので不変） */
   if(!(sb && currentUser)) return null;
   if(currentUser.id === getLastUid()) return null;   /* 同じアカウントで挨拶済み → 開いただけでは出さない */
   const merged = await migrateGuestProgress();        /* ゲスト進捗がある時だけ確認モーダルが出る（既存ロジック） */
@@ -2126,11 +2131,27 @@ function renderSettings(){
       <select id="setRate">${[0.5,0.6,0.7,0.8,0.9,0.95,1.0,1.1,1.2].map(r=>`<option value="${r}" ${Math.abs((state.settings.rate||0.95)-r)<0.001?"selected":""}>${r}</option>`).join("")}</select></div>
     <div class="setting-row"><span>品詞モード：1回に出題する問題数</span>
       <input type="number" id="setPos" min="5" max="100" value="${state.settings.posChunk||30}"></div>
+    ${(sb && currentUser) ? `<div class="setting-row"><span>パスワードを設定／変更（次回から生体認証でログインできます）</span>
+      <input type="password" id="setPw" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）">
+      <button class="btn-sub" id="setPwBtn" style="margin-top:6px">パスワードを設定／変更</button>
+      <span class="msg" id="setPwMsg"></span></div>` : ``}
     <p class="note" style="margin-top:8px">各設定の詳しい意味は「アプリの説明」を参照してください。</p>
     <button class="btn-sub" id="saveSet">設定を保存</button>
     <span class="msg" id="setMsg"></span>
   </div></div>`;
   document.getElementById("backHome").onclick = (e)=>{ e.preventDefault(); renderHome(); };
+  const setPwBtn = document.getElementById("setPwBtn");
+  if(setPwBtn) setPwBtn.onclick = async ()=>{
+    const m = document.getElementById("setPwMsg");
+    const pw = document.getElementById("setPw").value || "";
+    if(!sb || !currentUser){ m.style.color = "var(--shu)"; m.textContent = "ログイン中のみ設定できます。"; return; }
+    if(pw.length < 8){ m.style.color = "var(--shu)"; m.textContent = "パスワードは8文字以上にしてください。"; return; }
+    m.style.color = "var(--sub)"; m.textContent = "更新中…";
+    const { error } = await sb.auth.updateUser({ password: pw });
+    if(error){ m.style.color = "var(--shu)"; m.textContent = jaAuthError(error); return; }
+    m.style.color = "var(--midori)"; m.textContent = "パスワードを設定しました。次回からパスワード（生体認証）でログインできます。";
+    document.getElementById("setPw").value = "";
+  };
   document.getElementById("saveSet").onclick = async ()=>{
     state.settings.nickname = document.getElementById("setNick").value.trim().slice(0,20);
     state.settings.newPerDay = Math.max(5, Math.min(100, parseInt(document.getElementById("setNew").value)||30));
@@ -2307,6 +2328,13 @@ function ensureAuthDom(){
     #authmodal .msg{font-size:.74rem;color:var(--midori);margin-top:10px;min-height:1em}
     #authmodal .close{position:absolute;top:14px;right:16px;font-size:1.3rem;color:var(--sub)}
     #authmodal .cardwrap{position:relative;width:100%;max-width:340px}
+    #authmodal .authtabs{display:flex;gap:6px;margin:4px 0 10px}
+    #authmodal .authtab{flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;
+      background:var(--paper);color:var(--sub);font-size:.8rem;font-weight:700}
+    #authmodal .authtab.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+    #authmodal .pwlinks{display:flex;justify-content:space-between;margin-top:2px}
+    #authmodal .linkbtn{background:none;border:none;color:var(--sub);font-size:.74rem;
+      text-decoration:underline;padding:2px}
   `;
   document.head.appendChild(style);
 
@@ -2321,10 +2349,33 @@ function ensureAuthDom(){
         <button class="oauth" id="authGoogle">Googleでログイン</button>
         <div class="sep">または メールで</div>
         <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email">
-        <button class="send" id="authSend">確認メールを送る</button>
-        <div id="authCodeRow" style="display:none">
-          <input id="authCode" inputmode="numeric" autocomplete="one-time-code" autocorrect="off" autocapitalize="off" spellcheck="false" maxlength="6" placeholder="メールの6桁コード">
-          <button class="send" id="authVerify">コードで確認してログイン</button>
+        <div class="authtabs">
+          <button class="authtab active" id="tabCode">コード／リンク</button>
+          <button class="authtab" id="tabPw">パスワード</button>
+        </div>
+        <div id="paneCode">
+          <button class="send" id="authSend">確認メールを送る</button>
+          <div id="authCodeRow" style="display:none">
+            <input id="authCode" inputmode="numeric" autocomplete="one-time-code" autocorrect="off" autocapitalize="off" spellcheck="false" maxlength="6" placeholder="メールの6桁コード">
+            <button class="send" id="authVerify">コードで確認してログイン</button>
+          </div>
+        </div>
+        <div id="panePw" style="display:none">
+          <div id="pwLoginForm">
+            <input type="password" id="authPw" autocomplete="current-password" placeholder="パスワード">
+            <button class="send" id="pwLoginBtn">パスワードでログイン</button>
+            <div class="pwlinks">
+              <button class="linkbtn" id="pwToSignup">新規登録</button>
+              <button class="linkbtn" id="pwForgot">パスワードを忘れた</button>
+            </div>
+          </div>
+          <div id="pwSignupForm" style="display:none">
+            <input type="password" id="authPwNew" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）">
+            <button class="send" id="pwSignupBtn">登録する（確認メールが届きます）</button>
+            <div class="pwlinks">
+              <button class="linkbtn" id="pwToLogin">ログインに戻る</button>
+            </div>
+          </div>
         </div>
         <div class="msg" id="authMsg"></div>
       </div>
@@ -2342,6 +2393,46 @@ function ensureAuthDom(){
   if(authCodeInput) authCodeInput.addEventListener("keydown", (e)=>{
     if(e.isComposing || e.keyCode === 229) return;   /* IME変換中は確定しない（副作用なしでreturn） */
     if(e.key === "Enter"){ e.preventDefault(); submitOtpCode(); }
+  });
+
+  /* --- C-P：方式タブ（コード/リンク ⇄ パスワード）と各サブフォーム --- */
+  const paneCode = document.getElementById("paneCode");
+  const panePw   = document.getElementById("panePw");
+  const tabCode  = document.getElementById("tabCode");
+  const tabPw    = document.getElementById("tabPw");
+  const pwLoginForm  = document.getElementById("pwLoginForm");
+  const pwSignupForm = document.getElementById("pwSignupForm");
+  function clearAuthMsg(){ const m = document.getElementById("authMsg"); if(m){ m.textContent = ""; } }
+  function showTab(which){
+    const codeOn = (which === "code");
+    tabCode.classList.toggle("active", codeOn);
+    tabPw.classList.toggle("active", !codeOn);
+    paneCode.style.display = codeOn ? "" : "none";
+    panePw.style.display   = codeOn ? "none" : "";
+    clearAuthMsg();
+  }
+  function showPwForm(which){
+    const login = (which === "login");
+    pwLoginForm.style.display  = login ? "" : "none";
+    pwSignupForm.style.display = login ? "none" : "";
+    clearAuthMsg();
+  }
+  tabCode.onclick = ()=> showTab("code");
+  tabPw.onclick   = ()=> showTab("pw");
+  document.getElementById("pwToSignup").onclick = ()=> showPwForm("signup");
+  document.getElementById("pwToLogin").onclick  = ()=> showPwForm("login");
+  document.getElementById("pwLoginBtn").onclick  = passwordLogin;
+  document.getElementById("pwSignupBtn").onclick = passwordSignup;
+  document.getElementById("pwForgot").onclick    = passwordForgot;
+  const pwInput = document.getElementById("authPw");
+  if(pwInput) pwInput.addEventListener("keydown", (e)=>{
+    if(e.isComposing || e.keyCode === 229) return;
+    if(e.key === "Enter"){ e.preventDefault(); passwordLogin(); }
+  });
+  const pwNewInput = document.getElementById("authPwNew");
+  if(pwNewInput) pwNewInput.addEventListener("keydown", (e)=>{
+    if(e.isComposing || e.keyCode === 229) return;
+    if(e.key === "Enter"){ e.preventDefault(); passwordSignup(); }
   });
 }
 function openAuthModal(){
@@ -2391,6 +2482,97 @@ async function submitOtpCode(){
   if(ok){ msg.style.color = "var(--midori)"; msg.textContent = "ログインしました。"; closeAuthModal(); }
   else{ msg.style.color = "var(--shu)"; msg.textContent = "コードが正しくないか、期限切れです。もう一度お試しください。"; }
 }
+/* ==== C-P：メール＋パスワード認証（既存のGoogle/コード方式に併用追加） ==== */
+/* Supabaseの英語エラーを日本語に寄せる（未知はそのまま添える） */
+function jaAuthError(err){
+  const m = (err && err.message) ? String(err.message) : "";
+  if(/Invalid login credentials/i.test(m)) return "メールアドレスかパスワードが正しくありません。";
+  if(/Email not confirmed/i.test(m)) return "メール確認が未完了です。確認メールのリンクを開いてください。";
+  if(/User already registered/i.test(m)) return "このメールアドレスは登録済みです。ログインするか、パスワードをお忘れの場合は再設定してください。";
+  if(/Password should be at least/i.test(m)) return "パスワードが短すぎます。8文字以上にしてください。";
+  if(/rate limit|too many/i.test(m)) return "回数制限に達しました。しばらく待ってから再度お試しください。";
+  return "うまくいきませんでした：" + m;
+}
+async function passwordLogin(){
+  if(!sb) return;
+  const msg = document.getElementById("authMsg");
+  const email = (document.getElementById("authEmail").value || "").trim();
+  const pw = document.getElementById("authPw").value || "";
+  if(!email || !pw){ msg.style.color = "var(--shu)"; msg.textContent = "メールアドレスとパスワードを入力してください。"; return; }
+  msg.style.color = "var(--sub)"; msg.textContent = "ログイン中…";
+  const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+  if(error){ msg.style.color = "var(--shu)"; msg.textContent = jaAuthError(error); return; }
+  msg.style.color = "var(--midori)"; msg.textContent = "ログインしました。"; closeAuthModal();
+  /* 以降は既存の onAuthStateChange → syncOnAuthChange → maybeMigrateOnLogin に自動で乗る（C-3不変） */
+}
+async function passwordSignup(){
+  if(!sb) return;
+  const msg = document.getElementById("authMsg");
+  const email = (document.getElementById("authEmail").value || "").trim();
+  const pw = document.getElementById("authPwNew").value || "";
+  if(!email){ msg.style.color = "var(--shu)"; msg.textContent = "メールアドレスを入力してください。"; return; }
+  if(pw.length < 8){ msg.style.color = "var(--shu)"; msg.textContent = "パスワードは8文字以上にしてください。"; return; }
+  msg.style.color = "var(--sub)"; msg.textContent = "登録中…";
+  const { error } = await sb.auth.signUp({ email, password: pw, options:{ emailRedirectTo: redirectTarget() } });
+  if(error){ msg.style.color = "var(--shu)"; msg.textContent = jaAuthError(error); return; }
+  msg.style.color = "var(--midori)"; msg.textContent = "確認メールを送りました。メール内のリンクで確認するとログインできます。";
+}
+async function passwordForgot(){
+  if(!sb) return;
+  const msg = document.getElementById("authMsg");
+  const email = (document.getElementById("authEmail").value || "").trim();
+  if(!email){ msg.style.color = "var(--shu)"; msg.textContent = "メールアドレスを入力してから「パスワードを忘れた」を押してください。"; return; }
+  msg.style.color = "var(--sub)"; msg.textContent = "送信中…";
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: redirectTarget() });
+  if(error){ msg.style.color = "var(--shu)"; msg.textContent = jaAuthError(error); return; }
+  msg.style.color = "var(--midori)"; msg.textContent = "パスワード再設定用のメールを送りました。メール内のリンクを開いてください。";
+}
+/* P-4：リセットリンクで戻ってきたときの新パスワード入力UI */
+function ensurePwResetDom(){
+  if(document.getElementById("pwresetmodal")) return;
+  const style = document.createElement("style");
+  style.textContent = `
+    #pwresetmodal{position:fixed;inset:0;z-index:70;background:rgba(31,44,56,.45);
+      display:flex;align-items:center;justify-content:center;padding:16px}
+    #pwresetmodal.pr-hidden{display:none}
+    #pwresetmodal .card{background:var(--card);border:1px solid var(--line);border-radius:12px;width:100%;max-width:340px;padding:22px 20px}
+    #pwresetmodal h3{font-family:var(--serif);font-size:1.05rem;margin-bottom:4px}
+    #pwresetmodal p.sub{font-size:.74rem;color:var(--sub);margin-bottom:16px}
+    #pwresetmodal input{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font-size:.9rem;margin-bottom:9px;font-family:var(--sans)}
+    #pwresetmodal .send{width:100%;padding:11px;border-radius:8px;background:var(--ink);color:#fff;font-weight:700;font-size:.9rem}
+    #pwresetmodal .msg{font-size:.74rem;color:var(--midori);margin-top:10px;min-height:1em}
+  `;
+  document.head.appendChild(style);
+  const modal = document.createElement("div");
+  modal.id = "pwresetmodal";
+  modal.innerHTML = `
+    <div class="card">
+      <h3>新しいパスワードの設定</h3>
+      <p class="sub">再設定リンクから開きました。新しいパスワードを入力してください。</p>
+      <input type="password" id="pwResetInput" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）">
+      <button class="send" id="pwResetBtn">パスワードを更新する</button>
+      <div class="msg" id="pwResetMsg"></div>
+    </div>`;
+  document.body.appendChild(modal);
+  document.getElementById("pwResetBtn").onclick = submitPwReset;
+  const inp = document.getElementById("pwResetInput");
+  inp.addEventListener("keydown", (e)=>{
+    if(e.isComposing || e.keyCode === 229) return;
+    if(e.key === "Enter"){ e.preventDefault(); submitPwReset(); }
+  });
+}
+function openPwResetModal(){ ensurePwResetDom(); const m = document.getElementById("pwresetmodal"); if(m) m.classList.remove("pr-hidden"); }
+async function submitPwReset(){
+  if(!sb) return;
+  const msg = document.getElementById("pwResetMsg");
+  const pw = document.getElementById("pwResetInput").value || "";
+  if(pw.length < 8){ msg.style.color = "var(--shu)"; msg.textContent = "パスワードは8文字以上にしてください。"; return; }
+  msg.style.color = "var(--sub)"; msg.textContent = "更新中…";
+  const { error } = await sb.auth.updateUser({ password: pw });
+  if(error){ msg.style.color = "var(--shu)"; msg.textContent = jaAuthError(error); return; }
+  msg.style.color = "var(--midori)"; msg.textContent = "パスワードを更新しました。ログインします…";
+  setTimeout(()=>{ location.reload(); }, 900);   /* 更新後は通常ログインとして進める（reloadでIS_RECOVERYが解け、以降はC-3が通常どおり働く） */
+}
 async function doLogout(){
   clearLastUid();                 /* C-3：ログアウトで記録を消し、再ログイン時に再度確認できるようにする */
   if(sb) await sb.auth.signOut();
@@ -2407,13 +2589,15 @@ async function syncOnAuthChange(){
 /* ---- 起動 ---- */
 (async ()=>{
   await initSupabase();
-  const merged = await maybeMigrateOnLogin();   /* C-3：id変化時だけ確認（開いただけでは出さない）／統合結果を受け取る */
+  let merged = null;
+  if(!IS_RECOVERY) merged = await maybeMigrateOnLogin();   /* C-3：id変化時だけ確認（リセット到来時は出さない）／統合結果を受け取る */
   await loadSharedWords();
   ensureAuthDom();
   await loadState();
   if(merged){ state = merged; scheduleSave(); }  /* (A-safe) 統合結果を確実に反映し、失敗時も次回saveでクラウドへ */
   renderHome();
   startUpdateWatcher();           // 新バージョン公開の監視を開始
+  if(IS_RECOVERY) openPwResetModal();   /* P-4：リセットリンク到来時は新PW入力UIを出す（イベント取りこぼしの保険） */
 })();
 </script>
 </body>
