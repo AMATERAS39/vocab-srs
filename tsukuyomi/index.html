@@ -751,7 +751,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-10j";
+const APP_VERSION = "2026-07-10k";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -5793,14 +5793,23 @@ function jaPoolByPos(excludeId, level) {
   return pool;
 }
 
+/* 誤答肢の「意味核」重複を除くための分割（AMATERAS coreSegments を古文向けに調整：
+   区切りは ・；;／/ のみ。先頭の〜のみ除去。英語訳向けの助詞除去は行わない
+   （古文の言い切り訳を過剰に削らないため）。 */
+function coreSegments(str){
+  return String(str).split(/[・;；／/]/).map(function(s){ return s.replace(/^[〜～]/,"").trim(); }).filter(Boolean);
+}
+
 function pickDummies(w, sense) {
   const correct = sense.ja;
+  const correctSegs = coreSegments(correct);
   const ownJa = new Set(flatSenses(w).map(s => s.ja));
   const dummies = [];
   const tryAdd = (arr) => {
     for (const cand of shuffle(arr.slice())) {
       if (dummies.length >= 3) break;
       if (cand === correct || ownJa.has(cand) || dummies.includes(cand)) continue;
+      if (coreSegments(cand).some(function(cs){ return correctSegs.includes(cs); })) continue; // 意味核が重なる誤答を除外
       dummies.push(cand);
     }
   };
@@ -5835,12 +5844,14 @@ function jaPoolByPosPol(excludeId, level, pol) {
    補充順：①同極性・同品詞・同レベル → ②同極性・同品詞・全レベル → ③同極性・全品詞 → ④neu語義。 */
 function pickDummiesPol(w, sense, pol) {
   const correct = sense.ja;
+  const correctSegs = coreSegments(correct);
   const ownJa = new Set(flatSenses(w).map(s => s.ja));  // 自分の全訳は使わない
   const dummies = [];
   const tryAdd = (arr) => {
     for (const cand of shuffle(arr.slice())) {
       if (dummies.length >= 3) break;
       if (cand === correct || ownJa.has(cand) || dummies.includes(cand)) continue;
+      if (coreSegments(cand).some(function(cs){ return correctSegs.includes(cs); })) continue; // 意味核が重なる誤答を除外
       dummies.push(cand);
     }
   };
