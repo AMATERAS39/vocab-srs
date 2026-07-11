@@ -522,6 +522,192 @@ let currentUser = null; // ログイン中ユーザー（未ログインは null
 /* P-4：パスワードリセットのリンクで戻ってきた読み込みかを、URLハッシュから早期に捕捉。
    （Supabaseがハッシュを消す前にパース時点で確定させる。true の間は引き継ぎ確認を抑止する。） */
 const IS_RECOVERY = /type=recovery/.test(location.hash) || /[?&]type=recovery(?:&|$)/.test(location.search);
+/* ============================================================
+   C-4 診断レイヤー（authdiag）※観測専用・通常挙動は不変
+   ・?authdiag=1 でON（専用キー amateras_authdiag に記憶）／=0 でOFF
+   ・PWA(standalone)ではURLを付けられないため localStorage フラグで維持
+   ・トークン本体は出さない（有無・期限・長さのみ）
+   ・AUTHDIAG が false のときは全機能が no-op（誤ONでも実害なし）
+   ============================================================ */
+const AUTHDIAG_KEY = "amateras_authdiag";
+function _authdiagUrlFlag(){
+  const m = /[?&]authdiag=([01])(?:&|$)/.exec(location.search);
+  return m ? m[1] : null;
+}
+let AUTHDIAG = false;
+(function _initAuthdiag(){
+  const u = _authdiagUrlFlag();
+  try{
+    if(u === "1") localStorage.setItem(AUTHDIAG_KEY, "1");
+    else if(u === "0") localStorage.removeItem(AUTHDIAG_KEY);
+    AUTHDIAG = (localStorage.getItem(AUTHDIAG_KEY) === "1");
+  }catch(e){ AUTHDIAG = (u === "1"); } /* localStorage不可でもURLならON */
+})();
+const _diagLogs = [];
+let _authDiagStarted = false;
+function diagLog(tag, obj){
+  if(!AUTHDIAG) return;
+  const rec = Object.assign({ t: new Date().toISOString(), tag: tag }, obj || {});
+  _diagLogs.push(rec);
+  try{ console.log("[authdiag]", tag, rec); }catch(_){}
+  try{ diagRenderPanel(); }catch(_){}
+}
+function _diagStandalone(){
+  let navStandalone = null, mm = null;
+  try{ if(typeof navigator.standalone === "boolean") navStandalone = navigator.standalone; }catch(_){}
+  try{ mm = !!(window.matchMedia && window.matchMedia("(display-mode: standalone)").matches); }catch(_){}
+  return { navStandalone: navStandalone, displayModeStandalone: mm };
+}
+function _diagFlagOrigin(){
+  const u = _authdiagUrlFlag();
+  let ls = null;
+  try{ ls = localStorage.getItem(AUTHDIAG_KEY); }catch(_){}
+  return {
+    urlFlag: u, localStorageFlag: ls, active: AUTHDIAG,
+    inferredSource: (u === "1") ? "url" : (ls === "1" ? "localStorage(shared?)" : "none")
+  };
+}
+function _sbStorageKey(){
+  try{ const ref = (SUPABASE_URL.match(/https?:\/\/([^.]+)\./) || [])[1] || ""; return ref ? ("sb-" + ref + "-auth-token") : null; }catch(_){ return null; }
+}
+function _diagInspectStorage(){
+  const key = _sbStorageKey();
+  let present = false, len = 0, tokenExp = null;
+  try{
+    const raw = key ? localStorage.getItem(key) : null;
+    if(raw){ present = true; len = raw.length;
+      try{ const j = JSON.parse(raw); tokenExp = (j && (j.expires_at || (j.currentSession && j.currentSession.expires_at))) || null; }catch(_){}
+    }
+  }catch(_){}
+  let roundTrip = "?";
+  try{
+    const probe = "__authdiag_probe__";
+    localStorage.setItem(probe, "1");
+    roundTrip = (localStorage.getItem(probe) === "1") ? "ok" : "readback_fail";
+    localStorage.removeItem(probe);
+  }catch(e){ roundTrip = "throw:" + ((e && e.name) || "err"); }
+  return { sbKey: key, present: present, len: len, tokenExp: tokenExp, roundTrip: roundTrip };
+}
+function _safeSession(session){
+  if(!session) return { hasSession: false };
+  const now = Math.floor(Date.now() / 1000);
+  const exp = session.expires_at || null;
+  return {
+    hasSession: true,
+    userId: session.user ? (String(session.user.id).slice(0, 8) + "…") : null,
+    expires_at: exp,
+    expires_in_sec: exp ? (exp - now) : null,
+    at_len: session.access_token ? session.access_token.length : 0,
+    rt_len: session.refresh_token ? session.refresh_token.length : 0
+  };
+}
+function diagSnapshot(){
+  if(!AUTHDIAG) return;
+  diagLog("snapshot", Object.assign({ url: location.href }, _diagStandalone(), { flag: _diagFlagOrigin(), storage: _diagInspectStorage() }));
+  try{ if(sb) sb.auth.getSession().then(function(r){ diagLog("getSession_snap", _safeSession(r && r.data && r.data.session)); }).catch(function(e){ diagLog("getSession_snap_err", { err: String(e) }); }); }catch(_){}
+}
+function _diagCopyFallback(txt){
+  try{
+    const ta = document.createElement("textarea");
+    ta.value = txt; ta.style.cssText = "position:fixed;top:0;left:0;width:100%;height:40vh;z-index:100001;";
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    try{ document.execCommand && document.execCommand("copy"); }catch(_){}
+    setTimeout(function(){ try{ ta.remove(); }catch(_){} }, 2000);
+    try{ alert("下に出た枠を全選択してコピーし、司令塔へ貼り付けてください。"); }catch(_){}
+  }catch(_){}
+}
+function diagCopy(){
+  const txt = JSON.stringify(_diagLogs, null, 2);
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(function(){ try{ alert("診断ログをコピーしました。司令塔へ貼り付けてください。"); }catch(_){} }).catch(function(){ _diagCopyFallback(txt); });
+    }else{ _diagCopyFallback(txt); }
+  }catch(_){ _diagCopyFallback(txt); }
+}
+function diagRenderPanel(){
+  if(!AUTHDIAG) return;
+  if(!document.body) return;
+  let el = document.getElementById("authdiagPanel");
+  if(!el){
+    el = document.createElement("div");
+    el.id = "authdiagPanel";
+    el.style.cssText = "position:fixed;left:6px;right:6px;bottom:6px;max-height:46vh;overflow:auto;z-index:99999;background:#0b0b0b;color:#7CFC7C;font:11px/1.45 ui-monospace,Menlo,Consolas,monospace;padding:8px;border:1px solid #2f7d5b;border-radius:8px;opacity:0.96;box-shadow:0 4px 16px rgba(0,0,0,.4);";
+    document.body.appendChild(el);
+  }
+  const btn = "display:inline-block;margin-left:6px;padding:2px 8px;background:#1b1b1b;color:#fff;border:1px solid #555;border-radius:6px;font:11px monospace;cursor:pointer;";
+  const head = '<div style="position:sticky;top:0;background:#0b0b0b;padding-bottom:6px;margin-bottom:4px;border-bottom:1px solid #333;">'
+    + '<b style="color:#fff;">authdiag</b>'
+    + '<button data-diag="snap" style="' + btn + '">再取得</button>'
+    + '<button data-diag="copy" style="' + btn + '">コピー</button>'
+    + '<button data-diag="hide" style="' + btn + '">隠す</button>'
+    + '<button data-diag="off" style="' + btn + '">OFF</button>'
+    + '</div>';
+  const body = _diagLogs.map(function(r){ return '<div style="white-space:pre-wrap;word-break:break-all;margin:2px 0;">' + esc(JSON.stringify(r)) + '</div>'; }).join("");
+  el.innerHTML = head + body;
+  el.scrollTop = el.scrollHeight;
+}
+function startAuthDiag(){
+  if(!AUTHDIAG) return;
+  if(_authDiagStarted) return;
+  _authDiagStarted = true;
+  document.addEventListener("visibilitychange", function(){
+    if(document.visibilityState === "visible"){
+      diagLog("visible", Object.assign(_diagStandalone(), { storage: _diagInspectStorage() }));
+      try{ if(sb) sb.auth.getSession().then(function(r){ diagLog("getSession_visible", _safeSession(r && r.data && r.data.session)); }).catch(function(e){ diagLog("getSession_visible_err", { err: String(e) }); }); }catch(_){}
+    }else{ diagLog("hidden", {}); }
+  });
+  window.addEventListener("pageshow", function(e){ diagLog("pageshow", { persisted: !!(e && e.persisted) }); });
+  window.addEventListener("pagehide", function(e){ diagLog("pagehide", { persisted: !!(e && e.persisted) }); });
+  document.addEventListener("click", function(ev){
+    const b = ev.target && ev.target.closest && ev.target.closest("[data-diag]");
+    if(!b) return;
+    const act = b.getAttribute("data-diag");
+    if(act === "snap") diagSnapshot();
+    else if(act === "copy") diagCopy();
+    else if(act === "hide"){ const p = document.getElementById("authdiagPanel"); if(p) p.style.display = "none"; }
+    else if(act === "off"){ try{ localStorage.removeItem(AUTHDIAG_KEY); }catch(_){}; AUTHDIAG = false; const p = document.getElementById("authdiagPanel"); if(p) p.remove(); try{ alert("診断をOFFにしました。次回起動から通常表示です。"); }catch(_){} }
+  });
+}
+/* 隠しトグル：画面右下隅を素早く7回タップで診断ON/OFF。
+   PWA(standalone)でlocalStorageフラグが共有されない場合でも、standalone内で直接ONにできる手段。
+   通常利用では発火せず、誤ってONにしても診断表示が出るだけで通常挙動は不変。 */
+(function _diagHiddenToggle(){
+  let cnt = 0, last = 0, tHandled = false;
+  function corner(x, y){
+    if(x == null || y == null) return false;
+    return (x >= (window.innerWidth - 80) && y >= (window.innerHeight - 80));
+  }
+  function onTap(x, y){
+    if(!corner(x, y)){ cnt = 0; return; }
+    const now = Date.now();
+    if(now - last > 600) cnt = 0;
+    last = now; cnt++;
+    if(cnt < 7) return;
+    cnt = 0;
+    try{
+      const on = (localStorage.getItem(AUTHDIAG_KEY) === "1");
+      if(on){
+        localStorage.removeItem(AUTHDIAG_KEY); AUTHDIAG = false;
+        const p = document.getElementById("authdiagPanel"); if(p) p.remove();
+        try{ alert("診断をOFFにしました。"); }catch(_){}
+      }else{
+        localStorage.setItem(AUTHDIAG_KEY, "1"); AUTHDIAG = true;
+        diagLog("toggle_on_by_tap", _diagFlagOrigin());
+        diagRenderPanel(); startAuthDiag(); diagSnapshot();
+        try{ alert("診断をONにしました（右下隅を7回タップで再度OFF）。"); }catch(_){}
+      }
+    }catch(_){}
+  }
+  try{
+    document.addEventListener("touchend", function(e){
+      tHandled = true; setTimeout(function(){ tHandled = false; }, 500);
+      const t = e.changedTouches && e.changedTouches[0];
+      if(t) onTap(t.clientX, t.clientY);
+    }, { passive:true });
+    document.addEventListener("click", function(e){ if(tHandled) return; onTap(e.clientX, e.clientY); });
+  }catch(_){}
+})();
+/* ===== C-4 診断レイヤーここまで ===== */
 /* オーナー判定：メールアドレスを直接コードに書かず、SHA-256ハッシュ照合で判定する（コード解析での漏洩防止） */
 const OWNER_EMAIL_HASH = "875fbc00129419cb8c24817638ec6a9a90be4b67415991f2115ace02d2c1ad6f";
 let ownerFlag = false;
@@ -543,12 +729,16 @@ function cloudConfigured(){
 async function initSupabase(){
   if(!cloudConfigured()) return null;
   try{
+    const _diagT0 = Date.now();
     const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    if(AUTHDIAG) diagLog("import_ok", { ms: Date.now() - _diagT0 });
     sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }});
     const { data:{ session } } = await sb.auth.getSession();
+    if(AUTHDIAG) diagLog("getSession_boot", _safeSession(session));
     currentUser = session ? session.user : null;
     await refreshOwnerFlag();
     sb.auth.onAuthStateChange(async (_evt, sess)=>{
+      if(AUTHDIAG) diagLog("authEvent", Object.assign({ evt:_evt }, _safeSession(sess)));
       if(_evt === "PASSWORD_RECOVERY"){ openPwResetModal(); return; }  /* P-4：リセット時のみ。新PW入力UIを出し、通常同期/引き継ぎ確認は抑止して抜ける */
       const before = currentUser ? currentUser.id : null;
       currentUser = sess ? sess.user : null;
@@ -557,7 +747,7 @@ async function initSupabase(){
       if(before !== after) syncOnAuthChange();
     });
     return sb;
-  }catch(e){ sb = null; return null; }
+  }catch(e){ if(AUTHDIAG) diagLog("init_error", { err:String((e&&e.message)||e) }); sb = null; return null; }
 }
 
 let state = {
@@ -2602,6 +2792,7 @@ async function syncOnAuthChange(){
 
 /* ---- 起動 ---- */
 (async ()=>{
+  if(AUTHDIAG){ try{ diagLog("boot", Object.assign({ url:location.href, hash:location.hash, search:location.search, isRecovery:IS_RECOVERY }, _diagStandalone(), { flag:_diagFlagOrigin(), storage:_diagInspectStorage() })); }catch(_){} }
   await initSupabase();
   let merged = null;
   if(!IS_RECOVERY) merged = await maybeMigrateOnLogin();   /* C-3：id変化時だけ確認（リセット到来時は出さない）／統合結果を受け取る */
@@ -2612,6 +2803,7 @@ async function syncOnAuthChange(){
   renderHome();
   startUpdateWatcher();           // 新バージョン公開の監視を開始
   if(IS_RECOVERY) openPwResetModal();   /* P-4：リセットリンク到来時は新PW入力UIを出す（イベント取りこぼしの保険） */
+  if(AUTHDIAG){ try{ diagRenderPanel(); startAuthDiag(); diagSnapshot(); }catch(_){} }
 })();
 </script>
 </body>
