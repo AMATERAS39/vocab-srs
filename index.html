@@ -89,9 +89,8 @@ code{background:var(--paper);padding:1px 5px;border-radius:4px;font-size:.78rem}
 .note{font-size:.76rem;color:var(--sub);line-height:1.7}
 .pw-card{margin:16px 0;padding:14px;border:1px solid var(--line);border-radius:10px;background:linear-gradient(180deg,#fff, #FAFBFC)}
 .pw-card .pw-head{display:flex;align-items:center;gap:7px;font-size:.9rem;font-weight:600;color:var(--ink);margin-bottom:4px}
-.pw-card .pw-sub{font-size:.72rem;color:var(--sub);margin-bottom:10px}
 .pw-card .pw-field{display:flex;gap:8px;align-items:stretch}
-.pw-card input[type=password]{flex:1;font-family:var(--sans);padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:.9rem;background:#fff}
+.pw-card input[type=password]{flex:1;min-width:0;font-family:var(--sans);padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:.9rem;background:#fff}
 .pw-card input[type=password]:focus{outline:none;border-color:var(--shu);box-shadow:0 0 0 2px var(--shu-soft)}
 .pw-card .pw-btn{white-space:nowrap;padding:9px 16px;border:none;border-radius:8px;background:var(--shu);color:#fff;font-size:.85rem;font-weight:600;cursor:pointer}
 .pw-card .pw-btn:active{opacity:.85}
@@ -141,11 +140,10 @@ code{background:var(--paper);padding:1px 5px;border-radius:4px;font-size:.78rem}
 .opt-num{display:inline-block;min-width:1.4em;font-weight:700;color:var(--sub);margin-right:6px}
 .blank-block.confirmed .blank-slot{color:var(--midori)}
 .choice-hint{font-size:.72rem;color:var(--sub);text-align:center;margin-bottom:8px}
-/* ==== バッチB：解説の隠し→判定時スクロール表示 ==== */
-.reveal-zone{max-height:0;overflow:hidden;opacity:0;transition:opacity .25s ease}
-.reveal-zone.open{max-height:none;overflow:visible;opacity:1;margin-top:12px;padding-top:14px;border-top:1px dashed var(--line)}
+/* ==== バッチJ：解説は独立画面。Nextは右下、選択式解説には見出し語を小さく添える ==== */
 .reveal-next{display:flex;justify-content:flex-end;margin-top:12px}
 .reveal-next .btn-primary{width:auto;display:inline-block;padding:12px 30px}
+.explain-word{font-size:1.05rem;font-weight:700;color:var(--sub);text-align:center;margin-bottom:6px;font-family:var(--serif)}
 .btn-ghost{display:block;width:100%;padding:12px;border:1.5px solid var(--ink);border-radius:8px;font-size:.95rem;font-weight:700;background:#fff;margin-top:10px}
 /* 参照モード */
 .ref-controls{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
@@ -199,9 +197,13 @@ body{font-size:clamp(13px,1.9vh,16px)}
 .dict-row .btn-sub{flex:0 0 auto;white-space:nowrap;padding:6px 10px}
 .home-ico{cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;border:1px solid var(--line);border-radius:9px;background:var(--card)}
 .home-svg{width:19px;height:19px;fill:var(--ink)}
-.copyright-wrap{max-width:580px;margin:0 auto;padding:0 16px 18px;text-align:right}
+.copyright-wrap{max-width:580px;margin:0 auto;padding:0 16px 18px;display:flex;justify-content:space-between;align-items:center}
 .copyright{font-size:.62rem;color:var(--sub);opacity:.75}
+.version-tag{font-size:.62rem;color:var(--sub);opacity:.75}
 .menu-btn{background:var(--card);border:1px solid var(--line);border-radius:9px;cursor:pointer;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:0}
+.update-ico{position:relative;background:var(--card);border:1px solid var(--line);border-radius:9px;cursor:pointer;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:0;margin-right:6px}
+.update-svg{width:20px;height:20px;fill:var(--ink)}
+.update-dot{display:none;position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:var(--shu);border:1.5px solid var(--card)}
 .menu-svg{width:19px;height:19px;fill:var(--ink);display:block}
 .menu-drop{display:none;position:absolute;top:110%;right:0;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 4px 14px rgba(0,0,0,.12);z-index:50;min-width:150px;overflow:hidden}
 .menu-drop.open{display:block}
@@ -275,15 +277,11 @@ h1{font-size:clamp(1.05rem,3vh,1.5rem);white-space:nowrap;overflow:hidden;text-o
 #fbFile{display:block;margin:8px 0}
 #fbNick{display:block;width:100%;box-sizing:border-box;margin-bottom:8px}
 .fb-reply-box{display:block;width:100%;box-sizing:border-box;min-height:60px;margin:8px 0}
-.update-banner{position:fixed;left:0;right:0;bottom:0;z-index:9999;background:var(--ink);color:#fff;display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:.82rem;box-shadow:0 -2px 10px rgba(0,0,0,.2)}
-.update-banner span{flex:1;line-height:1.4}
-.update-banner button#updateReloadBtn{flex:0 0 auto;background:var(--shu);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:700;font-size:.82rem;cursor:pointer}
-.update-banner button#updateDismissBtn{flex:0 0 auto;background:transparent;color:#fff;border:none;font-size:1.1rem;cursor:pointer;padding:0 4px}
 </style>
 </head>
 <body>
 <div class="wrap" id="app"></div>
-<div class="copyright-wrap"><div class="copyright">©2026 AMATERAS</div></div>
+<div class="copyright-wrap"><span class="version-tag" id="versionTag"></span><span class="copyright">©2026 AMATERAS</span></div>
 
 <script>
 /* =========================================================
@@ -509,7 +507,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026-07-10-03";
+const APP_VERSION = "2026.07.11.09.42";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -522,192 +520,6 @@ let currentUser = null; // ログイン中ユーザー（未ログインは null
 /* P-4：パスワードリセットのリンクで戻ってきた読み込みかを、URLハッシュから早期に捕捉。
    （Supabaseがハッシュを消す前にパース時点で確定させる。true の間は引き継ぎ確認を抑止する。） */
 const IS_RECOVERY = /type=recovery/.test(location.hash) || /[?&]type=recovery(?:&|$)/.test(location.search);
-/* ============================================================
-   C-4 診断レイヤー（authdiag）※観測専用・通常挙動は不変
-   ・?authdiag=1 でON（専用キー amateras_authdiag に記憶）／=0 でOFF
-   ・PWA(standalone)ではURLを付けられないため localStorage フラグで維持
-   ・トークン本体は出さない（有無・期限・長さのみ）
-   ・AUTHDIAG が false のときは全機能が no-op（誤ONでも実害なし）
-   ============================================================ */
-const AUTHDIAG_KEY = "amateras_authdiag";
-function _authdiagUrlFlag(){
-  const m = /[?&]authdiag=([01])(?:&|$)/.exec(location.search);
-  return m ? m[1] : null;
-}
-let AUTHDIAG = false;
-(function _initAuthdiag(){
-  const u = _authdiagUrlFlag();
-  try{
-    if(u === "1") localStorage.setItem(AUTHDIAG_KEY, "1");
-    else if(u === "0") localStorage.removeItem(AUTHDIAG_KEY);
-    AUTHDIAG = (localStorage.getItem(AUTHDIAG_KEY) === "1");
-  }catch(e){ AUTHDIAG = (u === "1"); } /* localStorage不可でもURLならON */
-})();
-const _diagLogs = [];
-let _authDiagStarted = false;
-function diagLog(tag, obj){
-  if(!AUTHDIAG) return;
-  const rec = Object.assign({ t: new Date().toISOString(), tag: tag }, obj || {});
-  _diagLogs.push(rec);
-  try{ console.log("[authdiag]", tag, rec); }catch(_){}
-  try{ diagRenderPanel(); }catch(_){}
-}
-function _diagStandalone(){
-  let navStandalone = null, mm = null;
-  try{ if(typeof navigator.standalone === "boolean") navStandalone = navigator.standalone; }catch(_){}
-  try{ mm = !!(window.matchMedia && window.matchMedia("(display-mode: standalone)").matches); }catch(_){}
-  return { navStandalone: navStandalone, displayModeStandalone: mm };
-}
-function _diagFlagOrigin(){
-  const u = _authdiagUrlFlag();
-  let ls = null;
-  try{ ls = localStorage.getItem(AUTHDIAG_KEY); }catch(_){}
-  return {
-    urlFlag: u, localStorageFlag: ls, active: AUTHDIAG,
-    inferredSource: (u === "1") ? "url" : (ls === "1" ? "localStorage(shared?)" : "none")
-  };
-}
-function _sbStorageKey(){
-  try{ const ref = (SUPABASE_URL.match(/https?:\/\/([^.]+)\./) || [])[1] || ""; return ref ? ("sb-" + ref + "-auth-token") : null; }catch(_){ return null; }
-}
-function _diagInspectStorage(){
-  const key = _sbStorageKey();
-  let present = false, len = 0, tokenExp = null;
-  try{
-    const raw = key ? localStorage.getItem(key) : null;
-    if(raw){ present = true; len = raw.length;
-      try{ const j = JSON.parse(raw); tokenExp = (j && (j.expires_at || (j.currentSession && j.currentSession.expires_at))) || null; }catch(_){}
-    }
-  }catch(_){}
-  let roundTrip = "?";
-  try{
-    const probe = "__authdiag_probe__";
-    localStorage.setItem(probe, "1");
-    roundTrip = (localStorage.getItem(probe) === "1") ? "ok" : "readback_fail";
-    localStorage.removeItem(probe);
-  }catch(e){ roundTrip = "throw:" + ((e && e.name) || "err"); }
-  return { sbKey: key, present: present, len: len, tokenExp: tokenExp, roundTrip: roundTrip };
-}
-function _safeSession(session){
-  if(!session) return { hasSession: false };
-  const now = Math.floor(Date.now() / 1000);
-  const exp = session.expires_at || null;
-  return {
-    hasSession: true,
-    userId: session.user ? (String(session.user.id).slice(0, 8) + "…") : null,
-    expires_at: exp,
-    expires_in_sec: exp ? (exp - now) : null,
-    at_len: session.access_token ? session.access_token.length : 0,
-    rt_len: session.refresh_token ? session.refresh_token.length : 0
-  };
-}
-function diagSnapshot(){
-  if(!AUTHDIAG) return;
-  diagLog("snapshot", Object.assign({ url: location.href }, _diagStandalone(), { flag: _diagFlagOrigin(), storage: _diagInspectStorage() }));
-  try{ if(sb) sb.auth.getSession().then(function(r){ diagLog("getSession_snap", _safeSession(r && r.data && r.data.session)); }).catch(function(e){ diagLog("getSession_snap_err", { err: String(e) }); }); }catch(_){}
-}
-function _diagCopyFallback(txt){
-  try{
-    const ta = document.createElement("textarea");
-    ta.value = txt; ta.style.cssText = "position:fixed;top:0;left:0;width:100%;height:40vh;z-index:100001;";
-    document.body.appendChild(ta); ta.focus(); ta.select();
-    try{ document.execCommand && document.execCommand("copy"); }catch(_){}
-    setTimeout(function(){ try{ ta.remove(); }catch(_){} }, 2000);
-    try{ alert("下に出た枠を全選択してコピーし、司令塔へ貼り付けてください。"); }catch(_){}
-  }catch(_){}
-}
-function diagCopy(){
-  const txt = JSON.stringify(_diagLogs, null, 2);
-  try{
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(txt).then(function(){ try{ alert("診断ログをコピーしました。司令塔へ貼り付けてください。"); }catch(_){} }).catch(function(){ _diagCopyFallback(txt); });
-    }else{ _diagCopyFallback(txt); }
-  }catch(_){ _diagCopyFallback(txt); }
-}
-function diagRenderPanel(){
-  if(!AUTHDIAG) return;
-  if(!document.body) return;
-  let el = document.getElementById("authdiagPanel");
-  if(!el){
-    el = document.createElement("div");
-    el.id = "authdiagPanel";
-    el.style.cssText = "position:fixed;left:6px;right:6px;bottom:6px;max-height:46vh;overflow:auto;z-index:99999;background:#0b0b0b;color:#7CFC7C;font:11px/1.45 ui-monospace,Menlo,Consolas,monospace;padding:8px;border:1px solid #2f7d5b;border-radius:8px;opacity:0.96;box-shadow:0 4px 16px rgba(0,0,0,.4);";
-    document.body.appendChild(el);
-  }
-  const btn = "display:inline-block;margin-left:6px;padding:2px 8px;background:#1b1b1b;color:#fff;border:1px solid #555;border-radius:6px;font:11px monospace;cursor:pointer;";
-  const head = '<div style="position:sticky;top:0;background:#0b0b0b;padding-bottom:6px;margin-bottom:4px;border-bottom:1px solid #333;">'
-    + '<b style="color:#fff;">authdiag</b>'
-    + '<button data-diag="snap" style="' + btn + '">再取得</button>'
-    + '<button data-diag="copy" style="' + btn + '">コピー</button>'
-    + '<button data-diag="hide" style="' + btn + '">隠す</button>'
-    + '<button data-diag="off" style="' + btn + '">OFF</button>'
-    + '</div>';
-  const body = _diagLogs.map(function(r){ return '<div style="white-space:pre-wrap;word-break:break-all;margin:2px 0;">' + esc(JSON.stringify(r)) + '</div>'; }).join("");
-  el.innerHTML = head + body;
-  el.scrollTop = el.scrollHeight;
-}
-function startAuthDiag(){
-  if(!AUTHDIAG) return;
-  if(_authDiagStarted) return;
-  _authDiagStarted = true;
-  document.addEventListener("visibilitychange", function(){
-    if(document.visibilityState === "visible"){
-      diagLog("visible", Object.assign(_diagStandalone(), { storage: _diagInspectStorage() }));
-      try{ if(sb) sb.auth.getSession().then(function(r){ diagLog("getSession_visible", _safeSession(r && r.data && r.data.session)); }).catch(function(e){ diagLog("getSession_visible_err", { err: String(e) }); }); }catch(_){}
-    }else{ diagLog("hidden", {}); }
-  });
-  window.addEventListener("pageshow", function(e){ diagLog("pageshow", { persisted: !!(e && e.persisted) }); });
-  window.addEventListener("pagehide", function(e){ diagLog("pagehide", { persisted: !!(e && e.persisted) }); });
-  document.addEventListener("click", function(ev){
-    const b = ev.target && ev.target.closest && ev.target.closest("[data-diag]");
-    if(!b) return;
-    const act = b.getAttribute("data-diag");
-    if(act === "snap") diagSnapshot();
-    else if(act === "copy") diagCopy();
-    else if(act === "hide"){ const p = document.getElementById("authdiagPanel"); if(p) p.style.display = "none"; }
-    else if(act === "off"){ try{ localStorage.removeItem(AUTHDIAG_KEY); }catch(_){}; AUTHDIAG = false; const p = document.getElementById("authdiagPanel"); if(p) p.remove(); try{ alert("診断をOFFにしました。次回起動から通常表示です。"); }catch(_){} }
-  });
-}
-/* 隠しトグル：画面右下隅を素早く7回タップで診断ON/OFF。
-   PWA(standalone)でlocalStorageフラグが共有されない場合でも、standalone内で直接ONにできる手段。
-   通常利用では発火せず、誤ってONにしても診断表示が出るだけで通常挙動は不変。 */
-(function _diagHiddenToggle(){
-  let cnt = 0, last = 0, tHandled = false;
-  function corner(x, y){
-    if(x == null || y == null) return false;
-    return (x >= (window.innerWidth - 80) && y >= (window.innerHeight - 80));
-  }
-  function onTap(x, y){
-    if(!corner(x, y)){ cnt = 0; return; }
-    const now = Date.now();
-    if(now - last > 600) cnt = 0;
-    last = now; cnt++;
-    if(cnt < 7) return;
-    cnt = 0;
-    try{
-      const on = (localStorage.getItem(AUTHDIAG_KEY) === "1");
-      if(on){
-        localStorage.removeItem(AUTHDIAG_KEY); AUTHDIAG = false;
-        const p = document.getElementById("authdiagPanel"); if(p) p.remove();
-        try{ alert("診断をOFFにしました。"); }catch(_){}
-      }else{
-        localStorage.setItem(AUTHDIAG_KEY, "1"); AUTHDIAG = true;
-        diagLog("toggle_on_by_tap", _diagFlagOrigin());
-        diagRenderPanel(); startAuthDiag(); diagSnapshot();
-        try{ alert("診断をONにしました（右下隅を7回タップで再度OFF）。"); }catch(_){}
-      }
-    }catch(_){}
-  }
-  try{
-    document.addEventListener("touchend", function(e){
-      tHandled = true; setTimeout(function(){ tHandled = false; }, 500);
-      const t = e.changedTouches && e.changedTouches[0];
-      if(t) onTap(t.clientX, t.clientY);
-    }, { passive:true });
-    document.addEventListener("click", function(e){ if(tHandled) return; onTap(e.clientX, e.clientY); });
-  }catch(_){}
-})();
-/* ===== C-4 診断レイヤーここまで ===== */
 /* オーナー判定：メールアドレスを直接コードに書かず、SHA-256ハッシュ照合で判定する（コード解析での漏洩防止） */
 const OWNER_EMAIL_HASH = "875fbc00129419cb8c24817638ec6a9a90be4b67415991f2115ace02d2c1ad6f";
 let ownerFlag = false;
@@ -729,16 +541,12 @@ function cloudConfigured(){
 async function initSupabase(){
   if(!cloudConfigured()) return null;
   try{
-    const _diagT0 = Date.now();
     const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
-    if(AUTHDIAG) diagLog("import_ok", { ms: Date.now() - _diagT0 });
     sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }});
     const { data:{ session } } = await sb.auth.getSession();
-    if(AUTHDIAG) diagLog("getSession_boot", _safeSession(session));
     currentUser = session ? session.user : null;
     await refreshOwnerFlag();
     sb.auth.onAuthStateChange(async (_evt, sess)=>{
-      if(AUTHDIAG) diagLog("authEvent", Object.assign({ evt:_evt }, _safeSession(sess)));
       if(_evt === "PASSWORD_RECOVERY"){ openPwResetModal(); return; }  /* P-4：リセット時のみ。新PW入力UIを出し、通常同期/引き継ぎ確認は抑止して抜ける */
       const before = currentUser ? currentUser.id : null;
       currentUser = sess ? sess.user : null;
@@ -747,7 +555,7 @@ async function initSupabase(){
       if(before !== after) syncOnAuthChange();
     });
     return sb;
-  }catch(e){ if(AUTHDIAG) diagLog("init_error", { err:String((e&&e.message)||e) }); sb = null; return null; }
+  }catch(e){ sb = null; return null; }
 }
 
 let state = {
@@ -881,19 +689,11 @@ async function loadState(){
 /* ===== 新バージョン公開の検知と通知 =====
    稼働中の APP_VERSION と、公開中のHTMLに埋め込まれた APP_VERSION を比較し、
    異なれば「更新があります」バナーを表示する（進捗・ログイン状態には一切触れない）。 */
-let updateBannerShown = false;
-let lastUpdateCheck = 0;
-function showUpdateBanner(){
-  if(updateBannerShown) return;
-  updateBannerShown = true;
-  const bar = document.createElement("div");
-  bar.className = "update-banner";
-  bar.innerHTML = `<span>新しいバージョンがあります。更新すると最新の内容になります（進捗・ログインは保持されます）。</span>
-    <button id="updateReloadBtn">更新する</button>
-    <button id="updateDismissBtn" aria-label="閉じる">×</button>`;
-  document.body.appendChild(bar);
-  document.getElementById("updateReloadBtn").onclick = ()=>{ location.reload(); };
-  document.getElementById("updateDismissBtn").onclick = ()=>{ bar.remove(); };
+let updateAvailable = false;
+function showUpdateBanner(){ updateAvailable = true; reflectUpdateDot(); }  /* E-3：バナーは出さず、更新ボタンの赤ドットを立てる役に置換 */
+function reflectUpdateDot(){
+  const b = document.getElementById("updateBtn"); if(!b) return;
+  const d = b.querySelector(".update-dot"); if(d) d.style.display = updateAvailable ? "block" : "none";
 }
 async function checkForUpdate(){
   if(!navigator.onLine) return;
@@ -1193,6 +993,7 @@ function renderHome(){
         <div class="date-line">${todayStr().replace(/-/g,"/")}・連続 ${streak()} 日</div>
       </div>
     </div>
+    <button class="update-ico" id="updateBtn" title="最新の状態に更新">${UPDATE_SVG}<span class="update-dot"></span></button>
     <button class="menu-btn" id="menuBtn" title="メニュー">${MENU_SVG}</button>
     <div class="menu-drop" id="menuDrop">
       <button id="menuSet">設定</button>
@@ -1203,6 +1004,7 @@ function renderHome(){
       ${cloudConfigured() ? (currentUser
         ? `<button id="menuLogout">ログアウト${currentUser.email ? "（"+esc(currentUser.email)+"）" : ""}</button>`
         : `<button id="menuLogin">ログイン</button>`) : ``}
+      <button id="menuTsukuyomi">TSUKUYOMI（古文）</button>
     </div>
   </header>
   <div class="quote-line">${esc(quote)}</div>
@@ -1249,6 +1051,8 @@ function renderHome(){
   const menuBtn = document.getElementById("menuBtn");
   const menuDrop = document.getElementById("menuDrop");
   menuBtn.onclick = ()=>{ menuDrop.classList.toggle("open"); };
+  const updateBtn = document.getElementById("updateBtn"); if(updateBtn) updateBtn.onclick = ()=>location.reload();
+  const mTsuku = document.getElementById("menuTsukuyomi"); if(mTsuku) mTsuku.onclick = ()=>{ location.href = "https://amaterasu-vocab.com/tsukuyomi/"; };
   document.getElementById("menuSet").onclick = ()=>renderSettings();
   document.getElementById("menuData").onclick = ()=>renderData();
   document.getElementById("menuAbout").onclick = ()=>renderAbout();
@@ -1272,6 +1076,7 @@ function renderHome(){
   }else{
     document.getElementById("posStart").onclick = ()=>startPosSession(true);
   }
+  reflectUpdateDot();   /* E-3：ホーム描画後に赤ドット状態を反映 */
 }
 /* ==== データ追加ページ（メニューから） ==== */
 function renderData(){
@@ -1694,7 +1499,7 @@ function buildQueue(mode){
     return {
       id:x.id,
       quiz: makePosQuiz(w),
-      picks:{}, confirmed:{}, choiceDone:false, choiceOk:null,
+      stage:"quiz", picks:{}, confirmed:{}, choiceDone:false, choiceOk:null,
       cTries:0, cPassed:false, cFailed:false,
       answeredWrite:false, writeOk:null,
       wTries:0, wPassed:false, wFailed:false
@@ -1777,16 +1582,24 @@ function renderCard(){
   const item = curItem();
   if(!item){ return; }
   if(!item.confirmed) item.confirmed = {};   // 旧セッション復元時の保険
+  /* 旧セッション復元時の stage 補完（新規アイテムは buildQueue で "quiz"） */
+  if(item.stage === undefined){
+    if(item.choiceDone) item.stage = item.choiceOk ? "explain" : "marked";
+    else if(item.answeredWrite) item.stage = "explain";
+    else item.stage = "quiz";
+  }
   const w = byId(item.id);
   const retryTag = s.phase==="retry" ? "（2回目）" : "";
   const blockLabel = (s.block==="choice" ? "① 選択式" : "② 記述式") + retryTag;
   const pct = Math.round(s.pos / Math.max(1,s.order.length) * 100);
 
   let body = "";
-  if(s.block === "choice"){
-    body = renderChoiceBody(item, w);
+  if(item.stage === "explain"){
+    body = renderExplain(item, w, s.block==="choice" ? "choiceNext" : "writeNext");
+  }else if(s.block === "choice"){
+    body = renderChoiceBody(item, w);   // "quiz"（回答中）／"marked"（誤答の色分け＋Next）
   }else{
-    body = renderWriteBody(item, w);
+    body = renderWriteBody(item, w);    // "quiz"（入力中）
   }
 
   const modeTag = s.mode==="weak" ? '<span class="tag" style="background:var(--shu)">苦手</span>' : '';
@@ -1822,19 +1635,41 @@ function renderCard(){
       handleAct("writeCheck");
     };
   }
-  /* 判定済みなら、下に隠していた解説へスムーズスクロールして表示 */
-  const judged = (s.block==="choice" && item.choiceDone) || (s.block==="write" && item.answeredWrite);
-  if(judged){
-    requestAnimationFrame(()=>{
-      const rz = app.querySelector(".reveal-zone.open");
-      if(rz && rz.scrollIntoView) rz.scrollIntoView({behavior:"smooth", block:"start"});
-    });
-  }
 }
 
-/* ---- 解説（下に隠す→判定時に開く）共通本体 ---- */
-function revealBody(w, resultHtml, nextAct){
-  return `${resultHtml||""}
+/* ---- 結果テキスト（ラベルを外し、内容だけを示す：バッチJ 4-4） ---- */
+function choiceResultHtml(item){
+  const q = item.quiz;
+  if(item.choiceOk){
+    /* J-①：正解の訳を「／」で並記（正答は確認目的なので簡潔に） */
+    const corrects = q.blanks.map(k=>esc(q.quizzes[k].correct)).join("／");
+    return `<div class="dict-result ok">${corrects}</div>`;
+  }
+  /* 誤答の空欄ごとに「あなたの選択→正解訳」 */
+  const lines = q.blanks
+    .filter(k=>item.picks[k] !== q.quizzes[k].correct)
+    .map(k=>`<div class="sub-line">${esc(item.picks[k]||"（未選択）")}→${esc(q.quizzes[k].correct)}</div>`).join("");
+  return `<div class="dict-result ng">${lines}</div>`;
+}
+function writeResultHtml(item, w){
+  const yourAnswer = item.lastInput ? esc(item.lastInput) : "（スキップ）";
+  if(item.writeOk){
+    return `<div class="dict-result ok">${esc(w.w)}</div>`;   // 正解の英単語のみ
+  }
+  /* J-②：補助行は残すが前向き・中立の文言に */
+  const secondFail = session && session.mode==="review" && item.wTries>=2;
+  const sub = secondFail ? "明日もう一度出題されます" : "確認しよう";
+  return `<div class="dict-result ng">${yourAnswer}→${esc(w.w)}<div class="sub-line">${sub}</div></div>`;
+}
+
+/* ---- 解説画面（独立画面）本体：結果／コア／訳一覧／🔊発音／Next ---- */
+function renderExplain(item, w, nextAct){
+  const isChoice = (nextAct === "choiceNext");
+  const resultHtml = isChoice ? choiceResultHtml(item) : writeResultHtml(item, w);
+  /* J-③：選択式の解説にのみ見出し語 w.w を小さく添える（記述式は結果に ×× が出るので不要） */
+  const head = isChoice ? `<div class="explain-word">${esc(w.w)}</div>` : "";
+  return `${head}
+    ${resultHtml}
     ${w.c ? `<div class="core-line"><span class="core-label">コア</span>${esc(w.c)}</div>` : ""}
     <div class="prompt-zone">${promptEntries(w)}</div>
     <button class="audio-btn" data-act="speak">🔊 発音を確認</button>
@@ -1870,23 +1705,18 @@ function renderChoiceBody(item, w){
     </div>`;
   }).join("");
 
-  const hint = item.choiceDone ? "" :
-    `<div class="hint choice-hint">選択肢を2回タップで確定（PCは数字キー→もう一度／Enter）</div>`;
-
-  let resultHtml = "";
+  /* marked 画面（誤答時のみ到達）：色分けグリッド＋Next（→解説画面 choiceReveal） */
   if(item.choiceDone){
-    const wrong = q.blanks
-      .filter(k=>item.picks[k] !== q.quizzes[k].correct)
-      .map(k=>`<div class="wrong-line">✕ あなたの解答：${esc(item.picks[k]||"（未選択）")}</div>`).join("");
-    resultHtml = `<div class="dict-result ${item.choiceOk?"ok":"ng"}">${item.choiceOk?"◎ 正解":"✕ 不正解"}</div>${wrong}`;
+    return `<div class="word-display">${esc(w.w)}</div>
+      <div class="prompt-zone">${rows}</div>
+      <div class="reveal-next"><button class="btn-primary" data-act="choiceReveal">Next</button></div>`;
   }
 
+  /* quiz 画面（回答中） */
+  const hint = `<div class="hint choice-hint">選択肢を2回タップで確定（PCは数字キー→もう一度／Enter）</div>`;
   return `<div class="word-display">${esc(w.w)}</div>
     ${hint}
-    <div class="prompt-zone">${rows}</div>
-    <div class="reveal-zone ${item.choiceDone?"open":""}">
-      ${revealBody(w, resultHtml, "choiceNext")}
-    </div>`;
+    <div class="prompt-zone">${rows}</div>`;
 }
 
 /* ---- 選択式：2タップ確定ロジック（クリック／キーボード共通） ---- */
@@ -1927,6 +1757,8 @@ function gradeChoice(){
   recordAnswer(item.id, "c", item.choiceOk);   // 回答回数に必ずカウント（リトライ含む）
   if(item.choiceOk) item.cPassed = true;
   else if(item.cTries >= 2) item.cFailed = true;
+  /* 全問正解→解説画面へ直行／誤答→色分け画面(marked)で一旦止める */
+  item.stage = item.choiceOk ? "explain" : "marked";
   saveSession();
   renderCard();
   speak(w.w);
@@ -1967,27 +1799,14 @@ function confirmCardBody(w, wrongHtml){
     <div class="prompt-zone">${promptEntries(w)}</div>`;
 }
 
-/* ---- 記述式の本体 ---- */
+/* ---- 記述式の本体（回答中のみ。判定後は解説画面 renderExplain へ） ---- */
 function renderWriteBody(item, w){
-  const secondFail = session && session.mode==="review" && item.wTries>=2;
-  const yourAnswer = item.lastInput ? esc(item.lastInput) : "（スキップ）";
-  let resultHtml = "";
-  if(item.answeredWrite){
-    const inner = item.writeOk
-      ? "◎ 正解"
-      : `✕ 不正解<div class="sub-line">あなたの解答：${yourAnswer}　→　正解：${esc(w.w)}</div><div class="sub-line">${secondFail ? "翌日やり直し" : "確認しよう"}</div>`;
-    resultHtml = `<div class="dict-result ${item.writeOk?"ok":"ng"}">${inner}</div>
-      <div class="word-display" style="font-size:1.4rem;margin:0 0 8px">${esc(w.w)}</div>`;
-  }
   return `<div class="hint">意味に合う英単語をスペルまで正確に入力（Enterで判定）</div>
     <div class="prompt-zone">${jaOnlyEntries(w)}</div>
     <div class="dict-row">
-      <input id="writeIn" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" placeholder="英単語を入力" value="${item.answeredWrite?esc(item.lastInput||""):""}" class="${item.answeredWrite?(item.writeOk?"ok":"ng"):""}" ${item.answeredWrite?"disabled":""}>
-      <button class="btn-sub" data-act="writeCheck" ${item.answeredWrite?"disabled":""}>判定</button>
-      <button class="btn-sub" data-act="writeSkip" ${item.answeredWrite?"disabled":""}>スキップ</button>
-    </div>
-    <div class="reveal-zone ${item.answeredWrite?"open":""}">
-      ${revealBody(w, resultHtml, "writeNext")}
+      <input id="writeIn" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" placeholder="英単語を入力">
+      <button class="btn-sub" data-act="writeCheck">判定</button>
+      <button class="btn-sub" data-act="writeSkip">スキップ</button>
     </div>`;
 }
 function handleAct(act, el){
@@ -2003,13 +1822,19 @@ function handleAct(act, el){
     choiceSelect(parseInt(el.dataset.k), el.dataset.val);
     return;
   }
+  if(act==="choiceReveal"){ // marked（色分け）→ 解説画面へ
+    item.stage = "explain";
+    saveSession();
+    renderCard();
+    return;
+  }
   if(act==="choiceNext"){
     /* 選択式の1問終了。誤答かつ1回目(main)なら retry に積む */
     if(!item.choiceOk && s.phase==="main" && !item.cPassed){
       s.retry.push(s.order[s.pos]);
     }
     // 次問へ進む前に、選択式の状態をリセット（2回目再挑戦に備える）
-    item.choiceDone = false; item.choiceOk = null; item.picks = {}; item.confirmed = {};
+    item.stage = "quiz"; item.choiceDone = false; item.choiceOk = null; item.picks = {}; item.confirmed = {};
     if(s.phase==="retry"){ item.quiz = makePosQuiz(w); } // 2回目は新しい問題を作る
     advance();
     return;
@@ -2027,6 +1852,7 @@ function handleAct(act, el){
     recordAnswer(item.id, "w", item.writeOk);
     if(item.writeOk) item.wPassed = true;
     else if(item.wTries >= 2) item.wFailed = true;
+    item.stage = "explain";   // 記述式は正誤とも解説画面へ直行
     saveSession();
     renderCard();
     speak(w.w);
@@ -2040,6 +1866,7 @@ function handleAct(act, el){
     item.wTries++;
     recordAnswer(item.id, "w", false);
     if(item.wTries >= 2) item.wFailed = true;
+    item.stage = "explain";   // スキップも解説画面へ
     saveSession();
     renderCard();
     return;
@@ -2048,7 +1875,7 @@ function handleAct(act, el){
     if(!item.writeOk && s.phase==="main" && !item.wPassed){
       s.retry.push(s.order[s.pos]);
     }
-    item.answeredWrite = false; item.writeOk = null;
+    item.stage = "quiz"; item.answeredWrite = false; item.writeOk = null;
     advance();
     return;
   }
@@ -2184,6 +2011,7 @@ function wordStatus(w){
 }
 const BOOK_SVG = "<svg viewBox=\"0 0 24 24\" class=\"book-svg\" aria-hidden=\"true\"><path d=\"M7 3h11a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H7a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3z\"/><path d=\"M7 5.2h9.3a0 0 0 0 1 0 0v2.1a0 0 0 0 1 0 0H7a1.05 1.05 0 0 1 0-2.1z\" fill=\"#fff\"/></svg>";
 const MENU_SVG = "<svg viewBox=\"0 0 24 24\" class=\"menu-svg\" aria-hidden=\"true\"><rect x=\"3\" y=\"5.5\" width=\"18\" height=\"2.4\" rx=\"1.2\"/><rect x=\"3\" y=\"10.8\" width=\"18\" height=\"2.4\" rx=\"1.2\"/><rect x=\"3\" y=\"16.1\" width=\"18\" height=\"2.4\" rx=\"1.2\"/></svg>";
+const UPDATE_SVG = "<svg viewBox=\"0 0 24 24\" class=\"update-svg\" aria-hidden=\"true\"><path d=\"M17.65 6.35A8 8 0 1 0 19.5 12h-2.1a6 6 0 1 1-1.6-4.05L13 10.5h6.5V4z\"/></svg>";
 const SVG_IMG = {
   "home_top": "<svg viewBox=\"0 0 300 250\" class=\"screen-svg\" role=\"img\" aria-label=\"\u30db\u30fc\u30e0\u753b\u9762\u4e0a\u90e8\u306e\u6a21\u5f0f\u56f3\">\n<rect x=\"0\" y=\"0\" width=\"300\" height=\"250\" class=\"scr-bg\"/>\n<rect x=\"10\" y=\"10\" width=\"24\" height=\"24\" rx=\"6\" class=\"scr-btn-dark\"/>\n<rect x=\"15.5\" y=\"17.5\" width=\"13\" height=\"2\" fill=\"#fff\"/>\n<rect x=\"15.5\" y=\"22.5\" width=\"9\" height=\"2\" fill=\"#fff\"/>\n<text x=\"42\" y=\"24\" class=\"scr-ink scr-serif\" font-size=\"13\" font-weight=\"700\">English Vocabulary</text>\n<text x=\"42\" y=\"35\" class=\"scr-sub scr-sans\" font-size=\"7.5\">2026/07/05\u30fb\u9023\u7d9a 2\u65e5</text>\n<rect x=\"262\" y=\"9\" width=\"26\" height=\"26\" rx=\"7\" fill=\"none\" stroke=\"var(--line)\"/>\n<rect x=\"270\" y=\"17.5\" width=\"10\" height=\"1.8\" rx=\"0.9\" class=\"scr-ink\"/>\n<rect x=\"270\" y=\"21.3\" width=\"10\" height=\"1.8\" rx=\"0.9\" class=\"scr-ink\"/>\n<rect x=\"270\" y=\"25.1\" width=\"10\" height=\"1.8\" rx=\"0.9\" class=\"scr-ink\"/>\n<line x1=\"10\" y1=\"46\" x2=\"290\" y2=\"46\" stroke=\"var(--ink)\" stroke-width=\"2\"/>\n<text x=\"10\" y=\"58\" font-style=\"italic\" class=\"scr-sub scr-sans\" font-size=\"7\">\u63a5\u982d\u8f9e re- \u306f\u300c\u518d\u3073\u30fb\u5f8c\u308d\u3078\u300d\u3002\u77e5\u308c\u3070\u8a9e\u5f59\u304c\u5e83\u304c\u308b\u3002</text>\n<rect x=\"10\" y=\"68\" width=\"280\" height=\"172\" rx=\"10\" class=\"scr-card\"/>\n<text x=\"24\" y=\"90\" class=\"scr-ink scr-serif\" font-size=\"12\" font-weight=\"700\">\u5b66\u7fd2</text>\n<rect x=\"24\" y=\"100\" width=\"122\" height=\"62\" rx=\"8\" fill=\"none\" stroke=\"var(--line)\"/>\n<text x=\"85\" y=\"128\" text-anchor=\"middle\" class=\"scr-shu scr-serif\" font-size=\"20\" font-weight=\"700\">32</text>\n<text x=\"85\" y=\"146\" text-anchor=\"middle\" class=\"scr-sub scr-sans\" font-size=\"7\">\u4eca\u65e5\u306e\u5fa9\u7fd2\u5bfe\u8c61</text>\n<rect x=\"154\" y=\"100\" width=\"122\" height=\"62\" rx=\"8\" fill=\"none\" stroke=\"var(--line)\"/>\n<text x=\"215\" y=\"128\" text-anchor=\"middle\" class=\"scr-ink scr-serif\" font-size=\"20\" font-weight=\"700\">60</text>\n<text x=\"215\" y=\"146\" text-anchor=\"middle\" class=\"scr-sub scr-sans\" font-size=\"7\">\u30b9\u30c8\u30c3\u30af\u7dcf\u6570</text>\n<rect x=\"24\" y=\"176\" width=\"252\" height=\"30\" rx=\"8\" class=\"scr-btn-dark\"/>\n<text x=\"150\" y=\"195\" text-anchor=\"middle\" fill=\"#fff\" class=\"scr-sans\" font-size=\"9\" font-weight=\"700\">&#9654; \u7d9a\u304d\u304b\u3089\u518d\u958b\uff0814/32\uff09</text>\n<rect x=\"24\" y=\"214\" width=\"252\" height=\"24\" rx=\"8\" fill=\"none\" stroke=\"var(--ink)\" stroke-width=\"1.3\"/>\n<text x=\"150\" y=\"230\" text-anchor=\"middle\" class=\"scr-ink scr-sans\" font-size=\"9\" font-weight=\"700\">\u65b0\u898f\u958b\u59cb</text>\n</svg>",
   "home_bottom": "<svg viewBox=\"0 0 300 300\" class=\"screen-svg\" role=\"img\" aria-label=\"\u30db\u30fc\u30e0\u753b\u9762\u4e0b\u90e8\u306e\u6a21\u5f0f\u56f3\">\n<rect x=\"0\" y=\"0\" width=\"300\" height=\"300\" class=\"scr-bg\"/>\n<rect x=\"10\" y=\"6\" width=\"280\" height=\"102\" rx=\"10\" class=\"scr-card\"/>\n<text x=\"24\" y=\"26\" class=\"scr-ink scr-serif\" font-size=\"12\" font-weight=\"700\">\u54c1\u8a5e\u30e2\u30fc\u30c9</text>\n<rect x=\"24\" y=\"36\" width=\"252\" height=\"26\" rx=\"8\" class=\"scr-btn-dark\"/>\n<text x=\"150\" y=\"53\" text-anchor=\"middle\" fill=\"#fff\" class=\"scr-sans\" font-size=\"8.5\" font-weight=\"700\">&#9654; \u7d9a\u304d\u304b\u3089\uff083/30\uff09</text>\n<rect x=\"24\" y=\"70\" width=\"252\" height=\"24\" rx=\"8\" fill=\"none\" stroke=\"var(--ink)\" stroke-width=\"1.3\"/>\n<text x=\"150\" y=\"86\" text-anchor=\"middle\" class=\"scr-ink scr-sans\" font-size=\"8.5\" font-weight=\"700\">\u6700\u521d\u304b\u3089</text>\n<rect x=\"10\" y=\"118\" width=\"280\" height=\"172\" rx=\"10\" class=\"scr-card\"/>\n<text x=\"24\" y=\"138\" class=\"scr-ink scr-serif\" font-size=\"12\" font-weight=\"700\">\u30ec\u30d9\u30eb\u5225\u9032\u6357</text>\n<g font-family=\"var(--sans)\">\n<rect x=\"24\" y=\"150\" width=\"30\" height=\"14\" rx=\"4\" fill=\"#2F7D5B\"/><text x=\"39\" y=\"160\" text-anchor=\"middle\" fill=\"#fff\" font-size=\"7.5\" font-weight=\"700\">Lv.1</text>\n<rect x=\"60\" y=\"151\" width=\"180\" height=\"10\" rx=\"5\" fill=\"var(--line)\"/><rect x=\"60\" y=\"151\" width=\"118\" height=\"10\" rx=\"5\" fill=\"#C88569\"/>\n<text x=\"276\" y=\"160\" text-anchor=\"end\" class=\"scr-sub\" font-size=\"7\">0/31/0/40</text>\n<rect x=\"24\" y=\"172\" width=\"30\" height=\"14\" rx=\"4\" fill=\"#4A7BA6\"/><text x=\"39\" y=\"182\" text-anchor=\"middle\" fill=\"#fff\" font-size=\"7.5\" font-weight=\"700\">Lv.2</text>\n<rect x=\"60\" y=\"173\" width=\"180\" height=\"10\" rx=\"5\" fill=\"var(--line)\"/><rect x=\"60\" y=\"173\" width=\"88\" height=\"10\" rx=\"5\" fill=\"#C88569\"/>\n<text x=\"276\" y=\"182\" text-anchor=\"end\" class=\"scr-sub\" font-size=\"7\">0/20/0/40</text>\n<rect x=\"24\" y=\"194\" width=\"30\" height=\"14\" rx=\"4\" fill=\"#8B6BAE\"/><text x=\"39\" y=\"204\" text-anchor=\"middle\" fill=\"#fff\" font-size=\"7.5\" font-weight=\"700\">Lv.3</text>\n<rect x=\"60\" y=\"195\" width=\"180\" height=\"10\" rx=\"5\" fill=\"var(--line)\"/>\n<text x=\"276\" y=\"204\" text-anchor=\"end\" class=\"scr-sub\" font-size=\"7\">0/0/0/40</text>\n<rect x=\"24\" y=\"216\" width=\"30\" height=\"14\" rx=\"4\" fill=\"#A6822F\"/><text x=\"39\" y=\"226\" text-anchor=\"middle\" fill=\"#fff\" font-size=\"7.5\" font-weight=\"700\">Lv.4</text>\n<rect x=\"60\" y=\"217\" width=\"180\" height=\"10\" rx=\"5\" fill=\"var(--line)\"/>\n<text x=\"276\" y=\"226\" text-anchor=\"end\" class=\"scr-sub\" font-size=\"7\">0/0/0/40</text>\n<rect x=\"24\" y=\"238\" width=\"30\" height=\"14\" rx=\"4\" fill=\"#B5432A\"/><text x=\"39\" y=\"248\" text-anchor=\"middle\" fill=\"#fff\" font-size=\"7.5\" font-weight=\"700\">Lv.5</text>\n<rect x=\"60\" y=\"239\" width=\"180\" height=\"10\" rx=\"5\" fill=\"var(--line)\"/>\n<text x=\"276\" y=\"248\" text-anchor=\"end\" class=\"scr-sub\" font-size=\"7\">0/0/0/40</text>\n</g>\n<circle cx=\"28\" cy=\"262\" r=\"4\" fill=\"#2F7D5B\"/><text x=\"36\" y=\"265\" class=\"scr-sub\" font-size=\"7\">\u5b9a\u7740\u6e08</text>\n<circle cx=\"80\" cy=\"262\" r=\"4\" fill=\"#C88569\"/><text x=\"88\" y=\"265\" class=\"scr-sub\" font-size=\"7\">\u5fa9\u7fd2\u4e2d</text>\n<circle cx=\"132\" cy=\"262\" r=\"4\" fill=\"#B9B2A6\"/><text x=\"140\" y=\"265\" class=\"scr-sub\" font-size=\"7\">\u51fa\u984c\u6e08</text>\n<text x=\"24\" y=\"280\" class=\"scr-sub\" font-size=\"6.5\">\u6570\u5b57\u306f\u5de6\u304b\u3089\u300c\u5b9a\u7740\u6e08\uff0f\u5fa9\u7fd2\u4e2d\uff0f\u51fa\u984c\u6e08\uff0f\u53ce\u9332\u300d\u3002</text>\n<text x=\"276\" y=\"294\" text-anchor=\"end\" class=\"scr-sub\" font-size=\"6\" opacity=\"0.75\">&#169;2026 AMATERAS</text>\n</svg>",
@@ -2332,7 +2160,6 @@ function renderSettings(){
       <input type="number" id="setPos" min="5" max="100" value="${state.settings.posChunk||30}"></div>
     ${(sb && currentUser) ? `<div class="pw-card">
       <div class="pw-head">🔐 パスワードを設定／変更</div>
-      <div class="pw-sub">次回から生体認証（Face ID等）でログインできます。</div>
       <div class="pw-field">
         <input type="password" id="setPw" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）">
         <button class="pw-btn" id="setPwBtn">設定</button>
@@ -2353,7 +2180,7 @@ function renderSettings(){
     m.style.color = "var(--sub)"; m.textContent = "更新中…";
     const { error } = await sb.auth.updateUser({ password: pw });
     if(error){ m.style.color = "var(--shu)"; m.textContent = jaAuthError(error); return; }
-    m.style.color = "var(--midori)"; m.textContent = "パスワードを設定しました。次回からパスワード（生体認証）でログインできます。";
+    m.style.color = "var(--midori)"; m.textContent = "パスワードを設定しました。";
     document.getElementById("setPw").value = "";
   };
   document.getElementById("saveSet").onclick = async ()=>{
@@ -2792,7 +2619,6 @@ async function syncOnAuthChange(){
 
 /* ---- 起動 ---- */
 (async ()=>{
-  if(AUTHDIAG){ try{ diagLog("boot", Object.assign({ url:location.href, hash:location.hash, search:location.search, isRecovery:IS_RECOVERY }, _diagStandalone(), { flag:_diagFlagOrigin(), storage:_diagInspectStorage() })); }catch(_){} }
   await initSupabase();
   let merged = null;
   if(!IS_RECOVERY) merged = await maybeMigrateOnLogin();   /* C-3：id変化時だけ確認（リセット到来時は出さない）／統合結果を受け取る */
@@ -2802,8 +2628,8 @@ async function syncOnAuthChange(){
   if(merged){ state = merged; scheduleSave(); }  /* (A-safe) 統合結果を確実に反映し、失敗時も次回saveでクラウドへ */
   renderHome();
   startUpdateWatcher();           // 新バージョン公開の監視を開始
+  { const vt = document.getElementById("versionTag"); if(vt) vt.textContent = "v." + APP_VERSION.replace(/-/g,"."); }  /* E-2：バージョン表示（値は不変・表示のみ） */
   if(IS_RECOVERY) openPwResetModal();   /* P-4：リセットリンク到来時は新PW入力UIを出す（イベント取りこぼしの保険） */
-  if(AUTHDIAG){ try{ diagRenderPanel(); startAuthDiag(); diagSnapshot(); }catch(_){} }
 })();
 </script>
 </body>
