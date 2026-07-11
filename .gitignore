@@ -1,2 +1,28 @@
 .DS_Store
 node_modules/
+
+# ===== AMATERAS dev intermediates (not deployed / kept locally) =====
+# These patterns affect UNTRACKED files only.
+# Already-tracked production files are never ignored.
+
+# intermediate HTML (batch work, diagnostic builds, merge drafts)
+AMATERAS_*.html
+index_batch*.html
+index_B_plus_authdbg.html
+index_*_authdbg.html
+
+# dev tools / verification scripts
+amateras_dedupe.js
+amateras_validate.js
+verify_batch.js
+batchG_*.js
+
+# data / accepted list / target word list
+accepted_ids.txt
+*.tsv
+
+# instruction sheets / notes (README.md stays tracked, so not ignored)
+*.md
+
+# archives
+*.zip
