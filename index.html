@@ -858,13 +858,141 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.11.12.00";
+const APP_VERSION = "2026.07.11.15.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
    未設定のままなら、従来どおりブラウザ内保存（ゲスト）で動きます。 */
 const SUPABASE_URL      = "https://ljvawsfhyqznugodspla.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqdmF3c2ZoeXF6bnVnb2RzcGxhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyNTQ0NzEsImV4cCI6MjA5ODgzMDQ3MX0.guMiacP_9f3gKoLOGeJQFw-VEOGFXlzEjqqVVMt9GLM";
+
+/* ============================================================
+   C-4 診断計器（観測専用・非破壊）
+   ・?authdebug=1 でON。localStorage "vocab-srs-authdiag"="1" に記憶し、
+     PWA(ホーム画面起動)の放置→復帰やreloadをまたいでも診断を継続する。
+   ・OFFは診断パネルの「診断OFF」ボタン（フラグ＋ログのキーを削除）。
+   ・AUTH_DIAG=false（＝一般ユーザーの通常起動）では diagLog は即return、
+     診断ボタンもDOMに描画しない＝現行と1バイトも変わらない。
+   ・ログは "vocab-srs-authdiag-log" に最新200件のリングバッファで保存。
+   ・トークン全体は絶対に記録しない（access_token 末尾6文字のみ）。
+   ============================================================ */
+const AUTHDIAG_FLAG_KEY = "vocab-srs-authdiag";
+const AUTHDIAG_LOG_KEY  = "vocab-srs-authdiag-log";
+const AUTHDIAG_MAX = 200;
+const AUTH_DIAG = (function(){
+  const onUrl = /[?&]authdebug=1(?:&|$)/.test(location.search);
+  try{
+    if(onUrl) localStorage.setItem(AUTHDIAG_FLAG_KEY, "1");
+    return onUrl || (localStorage.getItem(AUTHDIAG_FLAG_KEY) === "1");
+  }catch(e){ return onUrl; }
+})();
+let AUTH_LOG = (function(){
+  if(!AUTH_DIAG) return [];
+  try{ const raw = localStorage.getItem(AUTHDIAG_LOG_KEY); const a = raw ? JSON.parse(raw) : []; return Array.isArray(a) ? a : []; }catch(e){ return []; }
+})();
+function diagLog(tag, obj){
+  if(!AUTH_DIAG) return;
+  try{
+    const rec = Object.assign({ t: new Date().toISOString(), tag: tag }, obj || {});
+    AUTH_LOG.push(rec);
+    if(AUTH_LOG.length > AUTHDIAG_MAX) AUTH_LOG.splice(0, AUTH_LOG.length - AUTHDIAG_MAX);
+    try{ localStorage.setItem(AUTHDIAG_LOG_KEY, JSON.stringify(AUTH_LOG)); }catch(_){}
+    try{ console.log("[diag]", tag, rec); }catch(_){}
+    try{ if(typeof refreshDiagPanel === "function") refreshDiagPanel(); }catch(_){}
+  }catch(_){}
+}
+function sessSummary(session){
+  const nowSec = Math.floor(Date.now() / 1000);
+  if(!session) return { has:false };
+  const exp = session.expires_at || null;
+  const at = session.access_token || "";
+  return {
+    has: true,
+    uid: (session.user && session.user.id) ? session.user.id : null,
+    exp: exp,
+    expInSec: exp ? (exp - nowSec) : null,   /* 放置復帰で既に失効しているかが一目で分かる */
+    tokenTail: at ? String(at).slice(-6) : null
+  };
+}
+const DIAG_BTN = "margin-left:4px;padding:4px 8px;background:#1b1b1b;color:#fff;border:1px solid #555;border-radius:6px;font:11px system-ui,sans-serif;cursor:pointer;";
+function ensureDiagButton(){
+  if(!AUTH_DIAG || !document.body) return;
+  if(document.getElementById("diagBtn")) return;
+  const b = document.createElement("button");
+  b.id = "diagBtn";
+  b.textContent = "🩺診断";
+  /* 右下に配置：左下のバージョン表示・更新ボタン(赤ドット)と重ならない */
+  b.style.cssText = "position:fixed;right:10px;bottom:10px;z-index:99998;padding:6px 10px;background:#1b1b1b;color:#fff;border:1px solid #2f7d5b;border-radius:8px;font:12px/1.2 system-ui,sans-serif;opacity:0.9;cursor:pointer;";
+  b.onclick = openDiagPanel;
+  document.body.appendChild(b);
+}
+function refreshDiagPanel(){
+  const ta = document.getElementById("diagText");
+  if(!ta) return;
+  let text = "";
+  try{ text = JSON.stringify(AUTH_LOG, null, 2); }catch(_){ text = "(ログ整形に失敗)"; }
+  ta.value = text;
+  ta.scrollTop = ta.scrollHeight;
+}
+function diagCopyFallback(){
+  const ta = document.getElementById("diagText");
+  if(!ta) return;
+  try{ ta.focus(); ta.select(); document.execCommand && document.execCommand("copy"); alert("テキストを選択しました。コピーして司令塔へ貼り付けてください。"); }catch(_){}
+}
+function diagCopy(){
+  let txt = ""; try{ txt = JSON.stringify(AUTH_LOG, null, 2); }catch(_){}
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(function(){ try{ alert("診断ログをコピーしました。司令塔へ貼り付けてください。"); }catch(_){} }).catch(diagCopyFallback);
+    }else{ diagCopyFallback(); }
+  }catch(_){ diagCopyFallback(); }
+}
+function openDiagPanel(){
+  if(!AUTH_DIAG || !document.body) return;
+  let ov = document.getElementById("diagPanel");
+  if(ov){ ov.style.display = "flex"; refreshDiagPanel(); return; }
+  ov = document.createElement("div");
+  ov.id = "diagPanel";
+  ov.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:12px;";
+  ov.innerHTML =
+    '<div style="background:#0b0b0b;color:#eee;border:1px solid #2f7d5b;border-radius:10px;width:100%;max-width:640px;max-height:86vh;display:flex;flex-direction:column;padding:12px;font:12px system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.5);">'
+    + '<div style="display:flex;align-items:center;gap:4px;margin-bottom:8px;">'
+    +   '<b style="flex:1;">🩺 認証診断ログ</b>'
+    +   '<button data-diag="copy" style="' + DIAG_BTN + '">コピー</button>'
+    +   '<button data-diag="clear" style="' + DIAG_BTN + '">ログ消去</button>'
+    +   '<button data-diag="off" style="' + DIAG_BTN + '">診断OFF</button>'
+    +   '<button data-diag="close" style="' + DIAG_BTN + '">閉じる</button>'
+    + '</div>'
+    + '<div style="color:#9f9;margin-bottom:6px;font-size:11px;line-height:1.4;">確認後、共有端末では「診断OFF」→（必要なら）「ログ消去」を実行してください。トークン識別のため末尾6文字を含みます。</div>'
+    + '<textarea id="diagText" readonly style="flex:1;min-height:52vh;width:100%;box-sizing:border-box;background:#111;color:#7CFC7C;border:1px solid #333;border-radius:6px;padding:6px;font:11px ui-monospace,Menlo,Consolas,monospace;white-space:pre;overflow:auto;"></textarea>'
+    + '</div>';
+  document.body.appendChild(ov);
+  ov.addEventListener("click", function(ev){
+    if(ev.target === ov){ ov.style.display = "none"; return; }
+    const b = ev.target && ev.target.closest && ev.target.closest("[data-diag]");
+    if(!b) return;
+    const act = b.getAttribute("data-diag");
+    if(act === "close"){ ov.style.display = "none"; }
+    else if(act === "copy"){ diagCopy(); }
+    else if(act === "clear"){ AUTH_LOG = []; try{ localStorage.removeItem(AUTHDIAG_LOG_KEY); }catch(_){}; refreshDiagPanel(); }
+    else if(act === "off"){
+      try{ localStorage.removeItem(AUTHDIAG_FLAG_KEY); }catch(_){}
+      try{ localStorage.removeItem(AUTHDIAG_LOG_KEY); }catch(_){}
+      ov.style.display = "none";
+      const bb = document.getElementById("diagBtn"); if(bb) bb.remove();
+      try{ alert("診断をOFFにしました（次回起動から通常表示）。"); }catch(_){}
+    }
+  });
+  refreshDiagPanel();
+}
+function startHiddenDiag(){
+  if(!AUTH_DIAG) return;
+  /* 1155行の既存ハンドラは触らず、hidden記録専用の別リスナーを追加（放置の開始時刻を記録） */
+  document.addEventListener("visibilitychange", function(){
+    if(document.visibilityState === "hidden") diagLog("hidden", {});
+  });
+}
+/* ===== C-4 診断計器ここまで ===== */
 
 let sb = null;          // Supabase クライアント
 let currentUser = null; // ログイン中ユーザー（未ログインは null）
@@ -895,9 +1023,11 @@ async function initSupabase(){
     const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
     sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }});
     const { data:{ session } } = await sb.auth.getSession();
+    if(AUTH_DIAG) diagLog("boot_getSession", sessSummary(session));
     currentUser = session ? session.user : null;
     await refreshOwnerFlag();
     sb.auth.onAuthStateChange(async (_evt, sess)=>{
+      if(AUTH_DIAG) diagLog("onAuthChange", Object.assign({ evt:_evt }, sessSummary(sess)));
       if(_evt === "PASSWORD_RECOVERY"){ openPwResetModal(); return; }  /* P-4：リセット時のみ。新PW入力UIを出し、通常同期/引き継ぎ確認は抑止して抜ける */
       const before = currentUser ? currentUser.id : null;
       currentUser = sess ? sess.user : null;
@@ -1068,7 +1198,17 @@ function startUpdateWatcher(){
       /* C-1保険：長時間放置からの復帰時にセッションを1回確認する。
          supabase-jsの自動リフレッシュが正常なら通常はno-opだが、
          万一失効していても操作前に気づける（害なし）。 */
-      if(sb){ sb.auth.getSession().catch(()=>{}); }
+      if(sb){
+        if(AUTH_DIAG){
+          /* C-4診断：復帰時のセッション状態とストレージ上のトークン有無を記録（主眼） */
+          sb.auth.getSession()
+            .then(function(r){ diagLog("getSession_visible", sessSummary(r && r.data && r.data.session)); })
+            .catch(function(e){ diagLog("getSession_visible_error", { msg: String((e && e.message) || e) }); });
+          diagLog("ls_token", { present: !!localStorage.getItem("sb-ljvawsfhyqznugodspla-auth-token") });
+        }else{
+          sb.auth.getSession().catch(()=>{});
+        }
+      }
     }
   });
 }
@@ -2981,6 +3121,7 @@ async function syncOnAuthChange(){
   startUpdateWatcher();           // 新バージョン公開の監視を開始
   { const vt = document.getElementById("versionTag"); if(vt) vt.textContent = "v." + APP_VERSION.replace(/-/g,"."); }  /* E-2：バージョン表示（値は不変・表示のみ） */
   if(IS_RECOVERY) openPwResetModal();   /* P-4：リセットリンク到来時は新PW入力UIを出す（イベント取りこぼしの保険） */
+  if(AUTH_DIAG){ try{ ensureDiagButton(); startHiddenDiag(); }catch(_){} }   /* C-4：診断オン時のみ計器を起動（オフ時は何も足さない） */
 })();
 </script>
 </body>
