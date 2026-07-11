@@ -87,14 +87,6 @@ textarea{width:100%;min-height:110px;border:1px solid var(--line);border-radius:
 .save-badge.err{color:var(--shu);font-weight:700}
 code{background:var(--paper);padding:1px 5px;border-radius:4px;font-size:.78rem}
 .note{font-size:.76rem;color:var(--sub);line-height:1.7}
-.pw-card{margin:16px 0;padding:14px;border:1px solid var(--line);border-radius:10px;background:linear-gradient(180deg,#fff, #FAFBFC)}
-.pw-card .pw-head{display:flex;align-items:center;gap:7px;font-size:.9rem;font-weight:600;color:var(--ink);margin-bottom:4px}
-.pw-card .pw-field{display:flex;gap:8px;align-items:stretch}
-.pw-card input[type=password]{flex:1;min-width:0;font-family:var(--sans);padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:.9rem;background:#fff}
-.pw-card input[type=password]:focus{outline:none;border-color:var(--shu);box-shadow:0 0 0 2px var(--shu-soft)}
-.pw-card .pw-btn{white-space:nowrap;padding:9px 16px;border:none;border-radius:8px;background:var(--shu);color:#fff;font-size:.85rem;font-weight:600;cursor:pointer}
-.pw-card .pw-btn:active{opacity:.85}
-.pw-card .msg{margin-top:8px}
 
 /* ---------- 学習カード（単語カード風） ---------- */
 .session-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:.8rem;color:var(--sub)}
@@ -137,13 +129,6 @@ code{background:var(--paper);padding:1px 5px;border-radius:4px;font-size:.78rem}
 .opt-btn.correct{border-color:var(--midori);color:var(--midori);background:#EDF5F1}
 .opt-btn.wrong{border-color:var(--shu);color:var(--shu);background:var(--shu-soft)}
 .opt-btn:disabled{cursor:default}
-.opt-num{display:inline-block;min-width:1.4em;font-weight:700;color:var(--sub);margin-right:6px}
-.blank-block.confirmed .blank-slot{color:var(--midori)}
-.choice-hint{font-size:.72rem;color:var(--sub);text-align:center;margin-bottom:8px}
-/* ==== バッチJ：解説は独立画面。Nextは右下、選択式解説には見出し語を小さく添える ==== */
-.reveal-next{display:flex;justify-content:flex-end;margin-top:12px}
-.reveal-next .btn-primary{width:auto;display:inline-block;padding:12px 30px}
-.explain-word{font-size:1.05rem;font-weight:700;color:var(--sub);text-align:center;margin-bottom:6px;font-family:var(--serif)}
 .btn-ghost{display:block;width:100%;padding:12px;border:1.5px solid var(--ink);border-radius:8px;font-size:.95rem;font-weight:700;background:#fff;margin-top:10px}
 /* 参照モード */
 .ref-controls{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
@@ -197,13 +182,9 @@ body{font-size:clamp(13px,1.9vh,16px)}
 .dict-row .btn-sub{flex:0 0 auto;white-space:nowrap;padding:6px 10px}
 .home-ico{cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;border:1px solid var(--line);border-radius:9px;background:var(--card)}
 .home-svg{width:19px;height:19px;fill:var(--ink)}
-.copyright-wrap{max-width:580px;margin:0 auto;padding:0 16px 18px;display:flex;justify-content:space-between;align-items:center}
+.copyright-wrap{max-width:580px;margin:0 auto;padding:0 16px 18px;text-align:right}
 .copyright{font-size:.62rem;color:var(--sub);opacity:.75}
-.version-tag{font-size:.62rem;color:var(--sub);opacity:.75}
 .menu-btn{background:var(--card);border:1px solid var(--line);border-radius:9px;cursor:pointer;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:0}
-.update-ico{position:relative;background:var(--card);border:1px solid var(--line);border-radius:9px;cursor:pointer;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:0;margin-right:6px}
-.update-svg{width:20px;height:20px;fill:var(--ink)}
-.update-dot{display:none;position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:var(--shu);border:1.5px solid var(--card)}
 .menu-svg{width:19px;height:19px;fill:var(--ink);display:block}
 .menu-drop{display:none;position:absolute;top:110%;right:0;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 4px 14px rgba(0,0,0,.12);z-index:50;min-width:150px;overflow:hidden}
 .menu-drop.open{display:block}
@@ -277,11 +258,15 @@ h1{font-size:clamp(1.05rem,3vh,1.5rem);white-space:nowrap;overflow:hidden;text-o
 #fbFile{display:block;margin:8px 0}
 #fbNick{display:block;width:100%;box-sizing:border-box;margin-bottom:8px}
 .fb-reply-box{display:block;width:100%;box-sizing:border-box;min-height:60px;margin:8px 0}
+.update-banner{position:fixed;left:0;right:0;bottom:0;z-index:9999;background:var(--ink);color:#fff;display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:.82rem;box-shadow:0 -2px 10px rgba(0,0,0,.2)}
+.update-banner span{flex:1;line-height:1.4}
+.update-banner button#updateReloadBtn{flex:0 0 auto;background:var(--shu);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:700;font-size:.82rem;cursor:pointer}
+.update-banner button#updateDismissBtn{flex:0 0 auto;background:transparent;color:#fff;border:none;font-size:1.1rem;cursor:pointer;padding:0 4px}
 </style>
 </head>
 <body>
 <div class="wrap" id="app"></div>
-<div class="copyright-wrap"><span class="version-tag" id="versionTag"></span><span class="copyright">©2026 AMATERAS</span></div>
+<div class="copyright-wrap"><div class="copyright">©2026 AMATERAS</div></div>
 
 <script>
 /* =========================================================
@@ -374,44 +359,44 @@ const BUILTIN = [
 {i:80,w:"knowledge",l:2,c:"know→「知られている中身」→知識",e:[["名",["知識"]]]},
 /* ---- Level 3: 中級（形容詞・動詞） ---- */
 {i:81,w:"significant",l:3,c:"signum(しるし)→「意味のしるしを帯びる」→重要な・意義深い",e:[["形","重要な；意義深い；かなりの"]]},
-{i:82,w:"essential",l:3,c:"「本質(essence)に関わる」→不可欠・本質的",e:[["形",["不可欠の","本質的な",["be essential to/for A","Aに不可欠"]]],["名",[["essentials で","必需品；要点"]]]]},
-{i:83,w:"obvious",l:3,c:"ob-(向かい)+via(道)→「道の真ん中にあり誰でも気づく」→明らか",e:[["形",["明らかな",["It is obvious that ...","〜は明白だ"]]]]},
-{i:84,w:"appropriate",l:3,c:"ad-+proprius(固有の)→「その場に固有=ぴったり合う」→適切",e:[["形",["適切な",["be appropriate for A","Aにふさわしい"]]]]},
+{i:82,w:"essential",l:3,c:"「本質(essence)に関わる」→不可欠・本質的",e:[["形","不可欠の（be essential to/for A：Aに不可欠）；本質的な"],["名","（essentials で）必需品；要点"]]},
+{i:83,w:"obvious",l:3,c:"ob-(向かい)+via(道)→「道の真ん中にあり誰でも気づく」→明らか",e:[["形","明らかな（It is obvious that ...：〜は明白だ）"]]},
+{i:84,w:"appropriate",l:3,c:"ad-+proprius(固有の)→「その場に固有=ぴったり合う」→適切",e:[["形","適切な（be appropriate for A：Aにふさわしい）"]]},
 {i:85,w:"available",l:3,c:"valere(力がある)→「役立つ状態でそこにある」→利用可能",e:[["形","利用できる；入手できる；手が空いている"]]},
-{i:86,w:"aware",l:3,c:"ware(見張る)→「用心して気づいている」",e:[["形",[["be aware of A","Aに気づいている"],["be aware that ...","〜だと気づいている"]]]]},
+{i:86,w:"aware",l:3,c:"ware(見張る)→「用心して気づいている」",e:[["形","be aware of A／be aware that ...：Aに・〜だと気づいている"]]},
 {i:87,w:"complex",l:3,c:"com-+plectere(編む)→「編み合わさった」→複雑；編み合わさった建物群=複合施設",e:[["形","複雑な"],["名","複合施設；コンプレックス"]]},
 {i:88,w:"considerable",l:3,c:"「considerする(考慮する)に値するほどの」→かなりの",e:[["形","かなりの"]]},
-{i:89,w:"crucial",l:3,c:"crux(十字路)→「分かれ道を決する」→決定的に重要",e:[["形",["決定的に重要な",["be crucial to/for A","Aにとって極めて重要"]]]]},
+{i:89,w:"crucial",l:3,c:"crux(十字路)→「分かれ道を決する」→決定的に重要",e:[["形","決定的に重要な（be crucial to/for A：Aにとって極めて重要）"]]},
 {i:90,w:"evident",l:3,c:"e-(外に)+videre(見える)→「外から見えている」→明白",e:[["形","明白な"]]},
-{i:91,w:"abandon",l:3,c:"a-+bandon(支配権)→「支配権を明け渡す」→捨てる・断念",e:[["他動",["〜を捨てる","〜を断念する",["abandon doing","〜するのをやめる"]]]]},
-{i:92,w:"absorb",l:3,c:"ab-+sorbere(吸う)→「吸い込む」→吸収；心を吸い込む=夢中にさせる",e:[["他動",["〜を吸収する",["be absorbed in A","Aに夢中である"]]]]},
-{i:93,w:"accompany",l:3,c:"com-+panis(パン)→「パンを共にする仲間として付き添う」",e:[["他動",["〜に同行する","〜に伴う",["be accompanied by A","Aを伴っている"]]]]},
+{i:91,w:"abandon",l:3,c:"a-+bandon(支配権)→「支配権を明け渡す」→捨てる・断念",e:[["他動","〜を捨てる；〜を断念する（abandon doing）"]]},
+{i:92,w:"absorb",l:3,c:"ab-+sorbere(吸う)→「吸い込む」→吸収；心を吸い込む=夢中にさせる",e:[["他動","〜を吸収する（be absorbed in A：Aに夢中である）"]]},
+{i:93,w:"accompany",l:3,c:"com-+panis(パン)→「パンを共にする仲間として付き添う」",e:[["他動","〜に同行する；〜に伴う（be accompanied by A：Aを伴っている）"]]},
 {i:94,w:"accomplish",l:3,c:"ad-+complere(満たす)→「最後まで満たし終える」→成し遂げる",e:[["他動","〜を成し遂げる"]]},
 {i:95,w:"acquire",l:3,c:"ad-+quaerere(求める)→「求めて自分のものにする」→習得・獲得",e:[["他動","〜を習得する；〜を獲得する"]]},
-{i:96,w:"adapt",l:3,c:"ad-+aptus(適した)→「合うように作り変える」→適応",e:[["自動",["適応する"]],["他動",["〜を適応させる","〜を改作する"]],["句動",[["adapt (oneself) to A","Aに適応する"]]]]},
-{i:97,w:"adjust",l:3,c:"ad-+justus(正しい)→「正しい位置に合わせる」→調整",e:[["他動",["〜を調整する"]],["句動",[["adjust to A","Aに適応する"]]]]},
-{i:98,w:"admit",l:3,c:"ad-+mittere(送る)→「中へ入れてやる」→入場許可；事実を中に入れる=認める",e:[["他動",["〜を〔しぶしぶ〕認める","〜の入場を許す",["admit doing","〜したことを認める"],["be admitted to A","Aへの入学を認められる"]]]]},
+{i:96,w:"adapt",l:3,c:"ad-+aptus(適した)→「合うように作り変える」→適応",e:[["自動","適応する"],["他動","〜を適応させる；〜を改作する"],["句動","adapt（oneself）to A：Aに適応する"]]},
+{i:97,w:"adjust",l:3,c:"ad-+justus(正しい)→「正しい位置に合わせる」→調整",e:[["他動","〜を調整する"],["句動","adjust to A：Aに適応する"]]},
+{i:98,w:"admit",l:3,c:"ad-+mittere(送る)→「中へ入れてやる」→入場許可；事実を中に入れる=認める",e:[["他動","〜を〔しぶしぶ〕認める（admit doing：〜したことを認める）；〜の入場を許す（be admitted to A：Aへの入学を認められる）"]]},
 {i:99,w:"adopt",l:3,c:"ad-+optare(選ぶ)→「選び取って自分のものにする」→採用・養子",e:[["他動","〜を採用する；〜を養子にする"]]},
 {i:100,w:"affect",l:3,c:"ad-+facere(作用する)→「働きかけて変化を及ぼす」→影響",e:[["他動","〜に影響を与える"]]},
 {i:101,w:"analyze",l:3,c:"ana-(細かく)+lyein(解く)→「分解してほどく」→分析",e:[["他動","〜を分析する"]]},
-{i:102,w:"anticipate",l:3,c:"ante-(前)+capere(取る)→「先取りする」→予期",e:[["他動",["〜を予期する",["anticipate doing","〜することを見込む"]]]]},
-{i:103,w:"appreciate",l:3,c:"ad-+pretium(価格)→「価値を正しく見積もる」→評価・感謝・鑑賞",e:[["他動",["〜を正しく評価する","〜に感謝する","〜を鑑賞する",["I would appreciate it if ...","〜していただけるとありがたい"]]]]},
-{i:104,w:"argue",l:3,c:"arguere(明らかにする)→「明らかにしようと論を交わす」→議論・主張",e:[["自動",["議論する",["argue with A about B","AとBについて言い争う"]]],["他動",[["argue that ...","〜と主張する"]]],["句動",[["argue for A","Aに賛成論を述べる"],["argue against A","Aに反対論を述べる"]]]]},
-{i:105,w:"arise",l:3,c:"a-+rise→「立ち上がって出てくる」→生じる",e:[["自動",["生じる"]],["句動",[["arise from A","Aから生じる"]]]]},
-{i:106,w:"assume",l:3,c:"ad-+sumere(取る)→「(検証せず)取り込む」→仮定；役目を取り込む=引き受ける",e:[["他動",["（責任など）を引き受ける",["assume that ...","〜と〔根拠なく〕仮定する"]]]]},
-{i:107,w:"attribute",l:3,c:"ad-+tribuere(割り当てる)→「〜に割り当てる」→帰属させる；割り当てられた性質=属性",e:[["他動",[["attribute A to B","AをBのせいにする・Bに帰する"]]],["名",["属性；特質"]]]},
-{i:108,w:"behave",l:3,c:"be-+have→「自分を保つ」→ふるまう",e:[["自動",["ふるまう"]],["他動",[["behave oneself","行儀よくする"]]]]},
+{i:102,w:"anticipate",l:3,c:"ante-(前)+capere(取る)→「先取りする」→予期",e:[["他動","〜を予期する（anticipate doing：〜することを見込む）"]]},
+{i:103,w:"appreciate",l:3,c:"ad-+pretium(価格)→「価値を正しく見積もる」→評価・感謝・鑑賞",e:[["他動","〜を正しく評価する；〜に感謝する（I would appreciate it if ...：〜していただけるとありがたい）；〜を鑑賞する"]]},
+{i:104,w:"argue",l:3,c:"arguere(明らかにする)→「明らかにしようと論を交わす」→議論・主張",e:[["自動","議論する（argue with A about B：AとBについて言い争う）"],["他動","argue that ...：〜と主張する"],["句動","argue for A：Aに賛成論を述べる／argue against A：Aに反対論を述べる"]]},
+{i:105,w:"arise",l:3,c:"a-+rise→「立ち上がって出てくる」→生じる",e:[["自動","生じる"],["句動","arise from A：Aから生じる"]]},
+{i:106,w:"assume",l:3,c:"ad-+sumere(取る)→「(検証せず)取り込む」→仮定；役目を取り込む=引き受ける",e:[["他動","〜と〔根拠なく〕仮定する（assume that ...）；（責任など）を引き受ける"]]},
+{i:107,w:"attribute",l:3,c:"ad-+tribuere(割り当てる)→「〜に割り当てる」→帰属させる；割り当てられた性質=属性",e:[["他動","attribute A to B：AをBのせいにする・Bに帰する"],["名","属性；特質"]]},
+{i:108,w:"behave",l:3,c:"be-+have→「自分を保つ」→ふるまう",e:[["自動","ふるまう"],["他動","behave oneself：行儀よくする"]]},
 {i:109,w:"calculate",l:3,c:"calculus(計算用の小石)→「小石を並べて数える」→計算",e:[["他動","〜を計算する"]]},
-{i:110,w:"conclude",l:3,c:"con-+claudere(閉じる)→「閉じて締めくくる」→結論・終える",e:[["他動",["〜を締めくくる",["conclude that ...","〜と結論づける"]]],["自動",["終わる"]]]},
-{i:111,w:"concern",l:3,c:"con-+cernere(ふるい分ける)→「互いに関わり合う」→関係；心に関わる=心配",e:[["他動",["〜に関係する","〜を心配させる",["be concerned about A","Aを心配している"],["be concerned with A","Aに関係している"]]],["名",["関心事；心配"]]]},
-{i:112,w:"confuse",l:3,c:"con-+fundere(注ぐ)→「一緒に注いで混ざってしまう」→混乱・混同",e:[["他動",["〜を混乱させる",["confuse A with B","AをBと混同する"]]]]},
-{i:113,w:"struggle",l:3,c:"「もがきながら争う」→奮闘",e:[["自動",["奮闘する",["struggle to do","〜しようともがく"]]],["名",["奮闘；闘争"]],["句動",[["struggle with/against A","Aと格闘する"]]]]},
+{i:110,w:"conclude",l:3,c:"con-+claudere(閉じる)→「閉じて締めくくる」→結論・終える",e:[["他動","〜と結論づける（conclude that ...）；〜を締めくくる"],["自動","終わる"]]},
+{i:111,w:"concern",l:3,c:"con-+cernere(ふるい分ける)→「互いに関わり合う」→関係；心に関わる=心配",e:[["他動","〜に関係する；〜を心配させる（be concerned about A：Aを心配している／be concerned with A：Aに関係している）"],["名","関心事；心配"]]},
+{i:112,w:"confuse",l:3,c:"con-+fundere(注ぐ)→「一緒に注いで混ざってしまう」→混乱・混同",e:[["他動","〜を混乱させる；confuse A with B：AをBと混同する"]]},
+{i:113,w:"struggle",l:3,c:"「もがきながら争う」→奮闘",e:[["自動","奮闘する（struggle to do：〜しようともがく）"],["名","奮闘；闘争"],["句動","struggle with/against A：Aと格闘する"]]},
 {i:114,w:"emphasize",l:3,c:"em-+phainein(見せる)→「中身を強く見せつける」→強調",e:[["他動","〜を強調する"]]},
 {i:115,w:"estimate",l:3,c:"aestimare(値踏みする)→「価値を見積もる」→見積もり・推定",e:[["他動","〜を見積もる・推定する"],["名","見積もり；推定"]]},
-{i:116,w:"identify",l:3,c:"idem(同じ)→「同一のものだと見定める」→特定；自分と同一視する",e:[["他動",["〜を特定する",["identify A as B","AをBだと確認する"]]],["句動",[["identify with A","Aに共感する・一体感を持つ"]]]]},
+{i:116,w:"identify",l:3,c:"idem(同じ)→「同一のものだと見定める」→特定；自分と同一視する",e:[["他動","〜を特定する；identify A as B：AをBだと確認する"],["句動","identify with A：Aに共感する・一体感を持つ"]]},
 {i:117,w:"ignore",l:3,c:"in-(否)+gnoscere(知る)→「知らないことにする」→無視",e:[["他動","〜を無視する"]]},
 {i:118,w:"imply",l:3,c:"in-+plicare(折る)→「中に折り込む」→暗に含む",e:[["他動","〜を暗に意味する；〜をほのめかす"]]},
-{i:119,w:"insist",l:3,c:"in-+sistere(立つ)→「その上に立って動かない」→強く主張・要求",e:[["他動",[["insist that S (should) do","〜すべきだと強く主張する"]]],["句動",[["insist on A/doing","Aを要求する；〜すると言い張る"]]]]},
+{i:119,w:"insist",l:3,c:"in-+sistere(立つ)→「その上に立って動かない」→強く主張・要求",e:[["他動","insist that S（should）do：〜すべきだと強く主張する"],["句動","insist on A／doing：Aを要求する；〜すると言い張る"]]},
 {i:120,w:"observe",l:3,c:"ob-+servare(注意を払う)→「注意を向け続ける」→観察；規則に注意を払う=遵守",e:[["他動","〜を観察する；〜と述べる；（規則）を守る"]]},
 /* ---- Level 4: 上級 ---- */
 {i:121,w:"abstract",l:4,c:"abs-(離す)+trahere(引く)→「具体から引き離す」→抽象；要点を引き出す=要約",e:[["形","抽象的な"],["名","要約"],["他動","〜を抽出する"]]},
@@ -422,32 +407,32 @@ const BUILTIN = [
 {i:126,w:"apparent",l:4,c:"ad-+parere(現れる)→「表に現れている」→明白な；表に見えるだけの=外見上の",e:[["形","明らかな；外見上の"]]},
 {i:127,w:"arbitrary",l:4,c:"arbiter(裁定者)→「裁定者の一存で決まる」→恣意的・気まぐれ",e:[["形","恣意的な；気まぐれな"]]},
 {i:128,w:"assess",l:4,c:"ad-+sedere(座る)→「(査定人が)隣に座って値踏みする」→評価・査定",e:[["他動","〜を評価する；〜を査定する"]]},
-{i:129,w:"assert",l:4,c:"ad-+serere(結びつける)→「自分の立場に結びつけて言い切る」→断言",e:[["他動",["（権利など）を主張する",["assert that ...","〜と断言する"]]]]},
+{i:129,w:"assert",l:4,c:"ad-+serere(結びつける)→「自分の立場に結びつけて言い切る」→断言",e:[["他動","assert that ...：〜と断言する；（権利など）を主張する"]]},
 {i:130,w:"cite",l:4,c:"citare(呼び出す)→「証拠として呼び出す」→引用・例示",e:[["他動","〜を引用する；〜を〔例として〕挙げる"]]},
 {i:131,w:"coherent",l:4,c:"co-+haerere(くっつく)→「互いにくっついて筋が通る」→首尾一貫",e:[["形","首尾一貫した；筋の通った"]]},
-{i:132,w:"compensate",l:4,c:"com-+pensare(量る)→「釣り合うように量って埋める」→補償・補う",e:[["句動",[["compensate for A","Aを補う"]]],["他動",[["compensate A for B","BのことでAに補償する"]]]]},
+{i:132,w:"compensate",l:4,c:"com-+pensare(量る)→「釣り合うように量って埋める」→補償・補う",e:[["句動","compensate for A：Aを補う"],["他動","compensate A for B：BのことでAに補償する"]]},
 {i:133,w:"comprehensive",l:4,c:"com-+prehendere(つかむ)→「全体をつかみ取る」→包括的",e:[["形","包括的な；総合的な"]]},
-{i:134,w:"conceive",l:4,c:"con-+capere(取る)→「心の中に取り込む」→思いつく・想像する",e:[["他動",["〜を思いつく"]],["句動",[["conceive of A","Aを想像する"]]]]},
-{i:135,w:"confront",l:4,c:"con-+frons(正面)→「正面を突き合わせる」→直面・対決",e:[["他動",["〜に立ち向かう",["be confronted with A","Aに直面している"]]]]},
-{i:136,w:"consent",l:4,c:"con-(共に)+sentire(感じる)→「同じ気持ちになる」→同意",e:[["名",["同意",["without consent","同意なく"]]],["句動",[["consent to A","Aに同意する"]]]]},
+{i:134,w:"conceive",l:4,c:"con-+capere(取る)→「心の中に取り込む」→思いつく・想像する",e:[["他動","〜を思いつく"],["句動","conceive of A：Aを想像する"]]},
+{i:135,w:"confront",l:4,c:"con-+frons(正面)→「正面を突き合わせる」→直面・対決",e:[["他動","〜に立ち向かう（be confronted with A：Aに直面している）"]]},
+{i:136,w:"consent",l:4,c:"con-(共に)+sentire(感じる)→「同じ気持ちになる」→同意",e:[["名","同意（without consent：同意なく）"],["句動","consent to A：Aに同意する"]]},
 {i:137,w:"constitute",l:4,c:"con-+statuere(立てる)→「部品を共に立てて組み上げる」→構成",e:[["他動","〜を構成する；〜に相当する"]]},
 {i:138,w:"contradict",l:4,c:"contra-(逆)+dicere(言う)→「逆のことを言う」→矛盾・反論",e:[["他動","〜と矛盾する；〜に反論する"]]},
 {i:139,w:"controversy",l:4,c:"contra-(逆)+vertere(向く)→「逆を向いて言い争う」→論争",e:[["名","論争"]]},
-{i:140,w:"convey",l:4,c:"con-+via(道)→「道づたいに運ぶ」→運搬；意味を運ぶ=伝達",e:[["他動",["〜を伝える","〜を運ぶ",["convey A to B","AをBに伝える"]]]]},
-{i:141,w:"correspond",l:4,c:"cor-(共に)+respondere(応じる)→「互いに応じ合う」→一致・相当・文通",e:[["句動",[["correspond to A","Aに一致する・相当する"],["correspond with A","Aと文通する"]]]]},
-{i:142,w:"criterion",l:4,c:"krinein(判断する)→「判定のためのものさし」→基準",e:[["名",["基準",["criteria","（複数形）基準"]]]]},
-{i:143,w:"deceive",l:4,c:"de-(離す)+capere(取る)→「こっそり取り上げる」→だます",e:[["他動",["〜をだます",["deceive A into doing","Aをだまして〜させる"]]]]},
-{i:144,w:"dedicate",l:4,c:"de-+dicare(宣言する)→「捧げると宣言する」→献身・捧げる",e:[["他動",[["dedicate A to B","AをBに捧げる"],["dedicate oneself to A","Aに身を捧げる"]]]]},
-{i:145,w:"deliberate",l:4,c:"de-+libra(天秤)→「天秤にかけて考え抜いた」→意図的・慎重；熟考する",e:[["形",["意図的な；慎重な"]],["自動",["熟考する",["deliberate on A","Aについて熟考する"]]]]},
-{i:146,w:"derive",l:4,c:"de-+rivus(川)→「川から水路を引く」→由来する・引き出す",e:[["句動",[["derive from A","Aに由来する"]]],["他動",[["derive A from B","BからA〔利益・知識など〕を引き出す"]]]]},
+{i:140,w:"convey",l:4,c:"con-+via(道)→「道づたいに運ぶ」→運搬；意味を運ぶ=伝達",e:[["他動","〜を伝える（convey A to B：AをBに伝える）；〜を運ぶ"]]},
+{i:141,w:"correspond",l:4,c:"cor-(共に)+respondere(応じる)→「互いに応じ合う」→一致・相当・文通",e:[["句動","correspond to A：Aに一致する・相当する／correspond with A：Aと文通する（自動詞）"]]},
+{i:142,w:"criterion",l:4,c:"krinein(判断する)→「判定のためのものさし」→基準",e:[["名","基準（複数形 criteria）"]]},
+{i:143,w:"deceive",l:4,c:"de-(離す)+capere(取る)→「こっそり取り上げる」→だます",e:[["他動","〜をだます（deceive A into doing：Aをだまして〜させる）"]]},
+{i:144,w:"dedicate",l:4,c:"de-+dicare(宣言する)→「捧げると宣言する」→献身・捧げる",e:[["他動","dedicate A to B：AをBに捧げる（dedicate oneself to A：Aに身を捧げる）"]]},
+{i:145,w:"deliberate",l:4,c:"de-+libra(天秤)→「天秤にかけて考え抜いた」→意図的・慎重；熟考する",e:[["形","意図的な；慎重な"],["自動","熟考する（deliberate on A：Aについて熟考する）"]]},
+{i:146,w:"derive",l:4,c:"de-+rivus(川)→「川から水路を引く」→由来する・引き出す",e:[["句動","derive from A：Aに由来する"],["他動","derive A from B：BからA〔利益・知識など〕を引き出す"]]},
 {i:147,w:"deteriorate",l:4,c:"deterior(より悪い)→「より悪い方へ進む」→悪化",e:[["自動","悪化する"]]},
 {i:148,w:"dilemma",l:4,c:"di-(二つ)+lemma(前提)→「二つの前提に挟まれる」→板挟み",e:[["名","ジレンマ；板挟み"]]},
 {i:149,w:"diminish",l:4,c:"de-+minuere(小さくする)→「小さくしていく」→減少",e:[["自動","減少する"],["他動","〜を減らす"]]},
 {i:150,w:"dispute",l:4,c:"dis-(別々に)+putare(考える)→「考えが割れて言い争う」→論争・異議",e:[["名","論争；紛争"],["他動","〜に異議を唱える"]]},
-{i:151,w:"distinct",l:4,c:"di-+stinguere(印をつける)→「区切りの印がはっきりある」→別個・明瞭",e:[["形",["はっきりした",["be distinct from A","Aとは別個の・明確に異なる"]]]]},
-{i:152,w:"distribute",l:4,c:"dis-(別々に)+tribuere(割り当てる)→「配り分ける」→分配・分布",e:[["他動",["〜を分配する","〜を分布させる",["distribute A to B","AをBに配る"]]]]},
+{i:151,w:"distinct",l:4,c:"di-+stinguere(印をつける)→「区切りの印がはっきりある」→別個・明瞭",e:[["形","明確に異なる（be distinct from A：Aとは別個の）；はっきりした"]]},
+{i:152,w:"distribute",l:4,c:"dis-(別々に)+tribuere(割り当てる)→「配り分ける」→分配・分布",e:[["他動","〜を分配する（distribute A to B：AをBに配る）；〜を分布させる"]]},
 {i:153,w:"embrace",l:4,c:"em-(中に)+brace(腕)→「腕の中に入れる」→抱擁；考えを抱き入れる=受容",e:[["他動","〜を抱きしめる；（考えなど）を受け入れる"],["名","抱擁"]]},
-{i:154,w:"emerge",l:4,c:"e-(外へ)+mergere(沈める)→「沈んだ状態から浮かび出る」→出現",e:[["自動",["現れる；明らかになる"]],["句動",[["emerge from A","Aから現れ出る"]]]]},
+{i:154,w:"emerge",l:4,c:"e-(外へ)+mergere(沈める)→「沈んだ状態から浮かび出る」→出現",e:[["自動","現れる；明らかになる"],["句動","emerge from A：Aから現れ出る"]]},
 {i:155,w:"enhance",l:4,c:"altus(高い)→「高く引き上げる」→高める",e:[["他動","〜を高める；〜を向上させる"]]},
 {i:156,w:"evaluate",l:4,c:"e-+value→「価値を引き出して定める」→評価",e:[["他動","〜を評価する"]]},
 {i:157,w:"exaggerate",l:4,c:"ex-+aggerare(積み上げる)→「盛りに盛る」→誇張",e:[["他動","〜を誇張する"]]},
@@ -455,29 +440,29 @@ const BUILTIN = [
 {i:159,w:"facilitate",l:4,c:"facilis(容易な)→「容易にしてやる」→促進",e:[["他動","〜を容易にする；〜を促進する"]]},
 {i:160,w:"fluctuate",l:4,c:"fluctus(波)→「波のように上下する」→変動",e:[["自動","変動する"]]},
 /* ---- Level 5: 難関大レベル ---- */
-{i:161,w:"aesthetic",l:5,c:"aisthesis(知覚)→「感覚で美を捉える」→美的",e:[["形",["美的な"]],["名",[["aesthetics で","美学"]]]]},
+{i:161,w:"aesthetic",l:5,c:"aisthesis(知覚)→「感覚で美を捉える」→美的",e:[["形","美的な"],["名","（aesthetics で）美学"]]},
 {i:162,w:"alleviate",l:5,c:"ad-+levis(軽い)→「重荷を軽くしてやる」→緩和",e:[["他動","（苦痛など）を緩和する"]]},
-{i:163,w:"ambivalent",l:5,c:"ambi-(両方)+valere(力がある)→「相反する二つの感情が同居する」",e:[["形",["相反する感情を持つ",["be ambivalent about A","Aに複雑な感情を抱く"]]]]},
+{i:163,w:"ambivalent",l:5,c:"ambi-(両方)+valere(力がある)→「相反する二つの感情が同居する」",e:[["形","相反する感情を持つ（be ambivalent about A：Aに複雑な感情を抱く）"]]},
 {i:164,w:"autonomy",l:5,c:"auto-(自分)+nomos(法)→「自分の法で立つ」→自律・自治",e:[["名","自律；自治"]]},
-{i:165,w:"coincide",l:5,c:"co-+incidere(落ちる)→「同じ所に落ち合う」→同時発生・一致",e:[["自動",["同時に起こる；一致する"]],["句動",[["coincide with A","Aと同時に起こる・一致する"]]]]},
-{i:166,w:"compassion",l:5,c:"com-(共に)+passio(苦しみ)→「苦しみを共にする」→思いやり",e:[["名",["思いやり","深い同情",["compassion for A","Aへの思いやり"]]]]},
-{i:167,w:"condemn",l:5,c:"con-+damnare(罰する)→「罰を宣告する」→強い非難・有罪判決",e:[["他動",["〜を強く非難する",["condemn A for B","BのことでAを非難する"],["condemn A to B","AにB〔刑〕を宣告する"]]]]},
-{i:168,w:"contemplate",l:5,c:"con-+templum(観測所)→「観測所からじっと見つめる」→熟視・熟考",e:[["他動",["〜をじっと見る",["contemplate doing","〜しようかと考える・熟考する"]]]]},
-{i:169,w:"cynical",l:5,c:"kyon(犬)→「犬儒学派のように世を斜めに見る」→冷笑的",e:[["形",["皮肉な；冷笑的な",["be cynical about A","Aを斜めに見ている"]]]]},
+{i:165,w:"coincide",l:5,c:"co-+incidere(落ちる)→「同じ所に落ち合う」→同時発生・一致",e:[["自動","同時に起こる；一致する"],["句動","coincide with A：Aと同時に起こる；Aと一致する"]]},
+{i:166,w:"compassion",l:5,c:"com-(共に)+passio(苦しみ)→「苦しみを共にする」→思いやり",e:[["名","思いやり；深い同情（compassion for A：Aへの思いやり）"]]},
+{i:167,w:"condemn",l:5,c:"con-+damnare(罰する)→「罰を宣告する」→強い非難・有罪判決",e:[["他動","〜を強く非難する（condemn A for B：BのことでAを非難する）；condemn A to B：AにB〔刑〕を宣告する"]]},
+{i:168,w:"contemplate",l:5,c:"con-+templum(観測所)→「観測所からじっと見つめる」→熟視・熟考",e:[["他動","〜を熟考する（contemplate doing：〜しようかと考える）；〜をじっと見る"]]},
+{i:169,w:"cynical",l:5,c:"kyon(犬)→「犬儒学派のように世を斜めに見る」→冷笑的",e:[["形","皮肉な；冷笑的な（be cynical about A：Aを斜めに見ている）"]]},
 {i:170,w:"eloquent",l:5,c:"e-(外へ)+loqui(話す)→「言葉が流れ出る」→雄弁",e:[["形","雄弁な"]]},
-{i:171,w:"empathy",l:5,c:"em-(中へ)+pathos(感情)→「相手の感情の中に入り込む」→共感",e:[["名",["共感",["empathy with/for A","Aへの共感"]]]]},
-{i:172,w:"endeavor",l:5,c:"en-+devoir(義務)→「己の務めとして力を尽くす」→努力",e:[["名",["努力；試み"]],["自動",[["endeavor to do","〜しようと努力する"]]]]},
-{i:173,w:"epitome",l:5,c:"epi-+temnein(切る)→「切り詰めて要点だけにしたもの」→縮図・典型",e:[["名",["典型；縮図",["the epitome of A","Aの典型"]]]]},
+{i:171,w:"empathy",l:5,c:"em-(中へ)+pathos(感情)→「相手の感情の中に入り込む」→共感",e:[["名","共感（empathy with/for A：Aへの共感）"]]},
+{i:172,w:"endeavor",l:5,c:"en-+devoir(義務)→「己の務めとして力を尽くす」→努力",e:[["名","努力；試み"],["自動","endeavor to do：〜しようと努力する"]]},
+{i:173,w:"epitome",l:5,c:"epi-+temnein(切る)→「切り詰めて要点だけにしたもの」→縮図・典型",e:[["名","典型；縮図（the epitome of A：Aの典型）"]]},
 {i:174,w:"feasible",l:5,c:"faire(行う)→「実際に行うことができる」→実行可能",e:[["形","実行可能な"]]},
-{i:175,w:"futile",l:5,c:"futilis(漏れやすい)→「注いでも漏れる器」→無駄・むなしい",e:[["形",["無駄な；むなしい",["It is futile to do","〜しても無駄だ"]]]]},
+{i:175,w:"futile",l:5,c:"futilis(漏れやすい)→「注いでも漏れる器」→無駄・むなしい",e:[["形","無駄な；むなしい（It is futile to do：〜しても無駄だ）"]]},
 {i:176,w:"hierarchy",l:5,c:"hieros(聖)+archein(支配)→「聖職者の位階」→階層・序列",e:[["名","階層制；序列"]]},
-{i:177,w:"indispensable",l:5,c:"in-(否)+dispense(免除する)→「免除できない」→不可欠",e:[["形",["不可欠の",["be indispensable to/for A","Aに不可欠"]]]]},
+{i:177,w:"indispensable",l:5,c:"in-(否)+dispense(免除する)→「免除できない」→不可欠",e:[["形","不可欠の（be indispensable to/for A：Aに不可欠）"]]},
 {i:178,w:"inevitable",l:5,c:"in-(否)+e-+vitare(避ける)→「避けて逃れられない」→不可避",e:[["形","避けられない"]]},
 {i:179,w:"integrity",l:5,c:"integer(欠けのない)→「欠けのない全体性」→誠実・完全",e:[["名","誠実；完全性"]]},
 {i:180,w:"intuition",l:5,c:"in-+tueri(見る)→「内側で直接見て取る」→直観",e:[["名","直観"]]},
 {i:181,w:"legitimate",l:5,c:"lex(法)→「法にかなっている」→合法・正当",e:[["形","合法の；正当な"]]},
 {i:182,w:"meticulous",l:5,c:"metus(恐れ)→「失敗を恐れるほど細心」→几帳面",e:[["形","細心の；きわめて注意深い"]]},
-{i:183,w:"notorious",l:5,c:"noscere(知る)→「(悪い方で)広く知れ渡った」→悪名高い",e:[["形",["悪名高い",["be notorious for A","Aで悪名高い"]]]]},
+{i:183,w:"notorious",l:5,c:"noscere(知る)→「(悪い方で)広く知れ渡った」→悪名高い",e:[["形","悪名高い（be notorious for A：Aで悪名高い）"]]},
 {i:184,w:"obsolete",l:5,c:"obsolescere(すたれる)→「使い古されて役目を終えた」→時代遅れ",e:[["形","時代遅れの；廃れた"]]},
 {i:185,w:"paradox",l:5,c:"para-(反する)+doxa(通念)→「通念に反する説」→逆説",e:[["名","逆説；矛盾した事態"]]},
 {i:186,w:"pervasive",l:5,c:"per-(隅々まで)+vadere(行く)→「隅々まで行き渡る」→浸透",e:[["形","広く行き渡った；浸透性の"]]},
@@ -486,13 +471,13 @@ const BUILTIN = [
 {i:189,w:"profound",l:5,c:"pro-+fundus(底)→「底が深い」→深遠・深い",e:[["形","深遠な；（影響などが）深い"]]},
 {i:190,w:"prudent",l:5,c:"providens(先を見る)の縮約→「先を見通して用心深い」→慎重・賢明",e:[["形","慎重な；賢明な"]]},
 {i:191,w:"reciprocal",l:5,c:"re-(後ろへ)+pro-(前へ)→「前後に行き来し合う」→相互",e:[["形","相互の"]]},
-{i:192,w:"reconcile",l:5,c:"re-+conciliare(呼び集める)→「再び一つに呼び戻す」→和解・調和",e:[["他動",[["reconcile A with B","AをBと和解させる・調和させる"],["reconcile oneself to A","A〔不快な事〕を受け入れる"]]]]},
+{i:192,w:"reconcile",l:5,c:"re-+conciliare(呼び集める)→「再び一つに呼び戻す」→和解・調和",e:[["他動","reconcile A with B：AをBと和解させる・調和させる（reconcile oneself to A：A〔不快な事〕を受け入れる）"]]},
 {i:193,w:"redundant",l:5,c:"red-+unda(波)→「波があふれ返る」→余分・冗長",e:[["形","余分な；冗長な"]]},
 {i:194,w:"resilient",l:5,c:"re-+salire(跳ぶ)→「押されても跳ね返って戻る」→回復力・弾力",e:[["形","回復力のある；弾力のある"]]},
-{i:195,w:"scrutiny",l:5,c:"scruta(がらくた)→「がらくたの山まで漁って調べる」→精査",e:[["名",["精査；監視",["under scrutiny","厳しい監視下で"]]]]},
-{i:196,w:"skeptical",l:5,c:"skeptesthai(よく見る)→「よく見て簡単には信じない」→懐疑的",e:[["形",["懐疑的な",["be skeptical of/about A","Aに懐疑的"]]]]},
+{i:195,w:"scrutiny",l:5,c:"scruta(がらくた)→「がらくたの山まで漁って調べる」→精査",e:[["名","精査；監視（under scrutiny：厳しい監視下で）"]]},
+{i:196,w:"skeptical",l:5,c:"skeptesthai(よく見る)→「よく見て簡単には信じない」→懐疑的",e:[["形","懐疑的な（be skeptical of/about A：Aに懐疑的）"]]},
 {i:197,w:"subtle",l:5,c:"sub-+tela(織物)→「織り目の下まで細かい」→微妙・かすか・巧妙",e:[["形","微妙な；かすかな；巧妙な"]]},
-{i:198,w:"susceptible",l:5,c:"sus-(下で)+capere(受け取る)→「受け取りやすい」→影響されやすい",e:[["形",[["be susceptible to A","Aの影響を受けやすい"]]]]},
+{i:198,w:"susceptible",l:5,c:"sus-(下で)+capere(受け取る)→「受け取りやすい」→影響されやすい",e:[["形","be susceptible to A：Aの影響を受けやすい"]]},
 {i:199,w:"tangible",l:5,c:"tangere(触れる)→「手で触れられる」→有形・明白",e:[["形","有形の；明白な"]]},
 {i:200,w:"ubiquitous",l:5,c:"ubique(どこにでも)→「至る所に存在する」→遍在",e:[["形","遍在する；どこにでもある"]]}
 ];
@@ -507,7 +492,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.11.09.42";
+const APP_VERSION = "2026-07-08-03";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -517,9 +502,6 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 let sb = null;          // Supabase クライアント
 let currentUser = null; // ログイン中ユーザー（未ログインは null）
-/* P-4：パスワードリセットのリンクで戻ってきた読み込みかを、URLハッシュから早期に捕捉。
-   （Supabaseがハッシュを消す前にパース時点で確定させる。true の間は引き継ぎ確認を抑止する。） */
-const IS_RECOVERY = /type=recovery/.test(location.hash) || /[?&]type=recovery(?:&|$)/.test(location.search);
 /* オーナー判定：メールアドレスを直接コードに書かず、SHA-256ハッシュ照合で判定する（コード解析での漏洩防止） */
 const OWNER_EMAIL_HASH = "875fbc00129419cb8c24817638ec6a9a90be4b67415991f2115ace02d2c1ad6f";
 let ownerFlag = false;
@@ -542,12 +524,11 @@ async function initSupabase(){
   if(!cloudConfigured()) return null;
   try{
     const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
-    sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }});
+    sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const { data:{ session } } = await sb.auth.getSession();
     currentUser = session ? session.user : null;
     await refreshOwnerFlag();
     sb.auth.onAuthStateChange(async (_evt, sess)=>{
-      if(_evt === "PASSWORD_RECOVERY"){ openPwResetModal(); return; }  /* P-4：リセット時のみ。新PW入力UIを出し、通常同期/引き継ぎ確認は抑止して抜ける */
       const before = currentUser ? currentUser.id : null;
       currentUser = sess ? sess.user : null;
       await refreshOwnerFlag();
@@ -689,11 +670,19 @@ async function loadState(){
 /* ===== 新バージョン公開の検知と通知 =====
    稼働中の APP_VERSION と、公開中のHTMLに埋め込まれた APP_VERSION を比較し、
    異なれば「更新があります」バナーを表示する（進捗・ログイン状態には一切触れない）。 */
-let updateAvailable = false;
-function showUpdateBanner(){ updateAvailable = true; reflectUpdateDot(); }  /* E-3：バナーは出さず、更新ボタンの赤ドットを立てる役に置換 */
-function reflectUpdateDot(){
-  const b = document.getElementById("updateBtn"); if(!b) return;
-  const d = b.querySelector(".update-dot"); if(d) d.style.display = updateAvailable ? "block" : "none";
+let updateBannerShown = false;
+let lastUpdateCheck = 0;
+function showUpdateBanner(){
+  if(updateBannerShown) return;
+  updateBannerShown = true;
+  const bar = document.createElement("div");
+  bar.className = "update-banner";
+  bar.innerHTML = `<span>新しいバージョンがあります。更新すると最新の内容になります（進捗・ログインは保持されます）。</span>
+    <button id="updateReloadBtn">更新する</button>
+    <button id="updateDismissBtn" aria-label="閉じる">×</button>`;
+  document.body.appendChild(bar);
+  document.getElementById("updateReloadBtn").onclick = ()=>{ location.reload(); };
+  document.getElementById("updateDismissBtn").onclick = ()=>{ bar.remove(); };
 }
 async function checkForUpdate(){
   if(!navigator.onLine) return;
@@ -712,13 +701,7 @@ function startUpdateWatcher(){
   setTimeout(checkForUpdate, 8000);                 // 起動から少し後に一度
   setInterval(checkForUpdate, 5*60*1000);           // 以降5分ごと
   document.addEventListener("visibilitychange", ()=>{ // タブに戻ったとき
-    if(document.visibilityState === "visible"){
-      checkForUpdate();
-      /* C-1保険：長時間放置からの復帰時にセッションを1回確認する。
-         supabase-jsの自動リフレッシュが正常なら通常はno-opだが、
-         万一失効していても操作前に気づける（害なし）。 */
-      if(sb){ sb.auth.getSession().catch(()=>{}); }
-    }
+    if(document.visibilityState === "visible") checkForUpdate();
   });
 }
 /* 2つの進捗stateを統合する。primary=クラウド(基準)、secondary=ローカル(未ログイン中の進捗)。
@@ -758,18 +741,18 @@ function mergeStates(primary, secondary){
 /* ログイン時：未ログイン中(localStorage)の進捗をアカウント(クラウド)に統合する。
    一度統合したら localStorage の進捗は消し、繰り返し統合されないようにする。 */
 async function migrateGuestProgress(){
-  if(!(sb && currentUser)) return null;
+  if(!(sb && currentUser)) return;
   let localRaw = null;
   try{ localRaw = localStorage.getItem(STORE_KEY); }catch(_){}
-  if(!localRaw) return null;
+  if(!localRaw) return;
   let localState = null;
-  try{ localState = JSON.parse(localRaw); }catch(_){ return null; }
+  try{ localState = JSON.parse(localRaw); }catch(_){ return; }
   const guestHasProgress = localState && localState.words && Object.keys(localState.words).length > 0;
-  if(!guestHasProgress) return null;
+  if(!guestHasProgress) return;
   const wantsMerge = await askMergeGuestProgress();
   if(!wantsMerge){
     try{ localStorage.removeItem(STORE_KEY); }catch(_){}
-    return null;
+    return;
   }
   let cloudState = null;
   try{
@@ -777,28 +760,11 @@ async function migrateGuestProgress(){
     if(data && data.data){ try{ cloudState = JSON.parse(data.data); }catch(_){ cloudState = null; } }
   }catch(_){}
   const merged = mergeStates(cloudState, localState);
-  if(!merged) return null;
+  if(!merged) return;
   try{
     await sb.from("user_data").upsert({ user_id: currentUser.id, data: JSON.stringify(merged), updated_at: new Date().toISOString() });
     try{ localStorage.removeItem(STORE_KEY); }catch(_){}
   }catch(_){ /* アップロード失敗時は localStorage を残し、次回再試行できるようにする */ }
-  return merged;   /* (A-safe) 統合結果を返す。呼び出し側で loadState 後に state へ反映し、失敗時も次回saveでクラウドへ回収する */
-}
-/* C-3：引き継ぎ確認の発火制御。端末に「最後に迎えた user.id」を記録し、
-   user.id が変化した初回のみ確認する（＝アプリを開いただけでは確認しない／要件23）。 */
-const LAST_UID_KEY = "vocab-srs-lastuid";
-function getLastUid(){ try{ return localStorage.getItem(LAST_UID_KEY) || null; }catch(_){ return null; } }
-function setLastUid(id){ try{ if(id) localStorage.setItem(LAST_UID_KEY, id); }catch(_){} }
-function clearLastUid(){ try{ localStorage.removeItem(LAST_UID_KEY); }catch(_){} }
-/* ログイン時だけ引き継ぎ確認を行い、統合結果(merged|null)を返す。
-   直接 migrateGuestProgress() を呼ばず、必ずこの関数経由にする（要件23の再発防止）。 */
-async function maybeMigrateOnLogin(){
-  if(IS_RECOVERY) return null;                        /* P-4：リセット到来時は引き継ぎ確認を出さない（通常ログインでは常にfalseなので不変） */
-  if(!(sb && currentUser)) return null;
-  if(currentUser.id === getLastUid()) return null;   /* 同じアカウントで挨拶済み → 開いただけでは出さない */
-  const merged = await migrateGuestProgress();        /* ゲスト進捗がある時だけ確認モーダルが出る（既存ロジック） */
-  setLastUid(currentUser.id);                         /* 迎え済みを記録 → 次回以降は出ない（(A)採用） */
-  return merged;
 }
 window.addEventListener("pagehide", ()=>{ if(dirty) flushSave(); });
 document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "hidden" && dirty) flushSave(); });
@@ -993,7 +959,6 @@ function renderHome(){
         <div class="date-line">${todayStr().replace(/-/g,"/")}・連続 ${streak()} 日</div>
       </div>
     </div>
-    <button class="update-ico" id="updateBtn" title="最新の状態に更新">${UPDATE_SVG}<span class="update-dot"></span></button>
     <button class="menu-btn" id="menuBtn" title="メニュー">${MENU_SVG}</button>
     <div class="menu-drop" id="menuDrop">
       <button id="menuSet">設定</button>
@@ -1004,7 +969,6 @@ function renderHome(){
       ${cloudConfigured() ? (currentUser
         ? `<button id="menuLogout">ログアウト${currentUser.email ? "（"+esc(currentUser.email)+"）" : ""}</button>`
         : `<button id="menuLogin">ログイン</button>`) : ``}
-      <button id="menuTsukuyomi">TSUKUYOMI（古文）</button>
     </div>
   </header>
   <div class="quote-line">${esc(quote)}</div>
@@ -1051,8 +1015,6 @@ function renderHome(){
   const menuBtn = document.getElementById("menuBtn");
   const menuDrop = document.getElementById("menuDrop");
   menuBtn.onclick = ()=>{ menuDrop.classList.toggle("open"); };
-  const updateBtn = document.getElementById("updateBtn"); if(updateBtn) updateBtn.onclick = ()=>location.reload();
-  const mTsuku = document.getElementById("menuTsukuyomi"); if(mTsuku) mTsuku.onclick = ()=>{ location.href = "https://amaterasu-vocab.com/tsukuyomi/"; };
   document.getElementById("menuSet").onclick = ()=>renderSettings();
   document.getElementById("menuData").onclick = ()=>renderData();
   document.getElementById("menuAbout").onclick = ()=>renderAbout();
@@ -1076,7 +1038,6 @@ function renderHome(){
   }else{
     document.getElementById("posStart").onclick = ()=>startPosSession(true);
   }
-  reflectUpdateDot();   /* E-3：ホーム描画後に赤ドット状態を反映 */
 }
 /* ==== データ追加ページ（メニューから） ==== */
 function renderData(){
@@ -1499,9 +1460,9 @@ function buildQueue(mode){
     return {
       id:x.id,
       quiz: makePosQuiz(w),
-      stage:"quiz", picks:{}, confirmed:{}, choiceDone:false, choiceOk:null,
+      picks:{}, choiceDone:false, choiceOk:null, confirming:false,
       cTries:0, cPassed:false, cFailed:false,
-      answeredWrite:false, writeOk:null,
+      answeredWrite:false, writeOk:null, confirmingW:false,
       wTries:0, wPassed:false, wFailed:false
     };
   });
@@ -1581,25 +1542,30 @@ function renderCard(){
   const s = session;
   const item = curItem();
   if(!item){ return; }
-  if(!item.confirmed) item.confirmed = {};   // 旧セッション復元時の保険
-  /* 旧セッション復元時の stage 補完（新規アイテムは buildQueue で "quiz"） */
-  if(item.stage === undefined){
-    if(item.choiceDone) item.stage = item.choiceOk ? "explain" : "marked";
-    else if(item.answeredWrite) item.stage = "explain";
-    else item.stage = "quiz";
-  }
   const w = byId(item.id);
   const retryTag = s.phase==="retry" ? "（2回目）" : "";
   const blockLabel = (s.block==="choice" ? "① 選択式" : "② 記述式") + retryTag;
   const pct = Math.round(s.pos / Math.max(1,s.order.length) * 100);
 
   let body = "";
-  if(item.stage === "explain"){
-    body = renderExplain(item, w, s.block==="choice" ? "choiceNext" : "writeNext");
-  }else if(s.block === "choice"){
-    body = renderChoiceBody(item, w);   // "quiz"（回答中）／"marked"（誤答の色分け＋Next）
+  if(s.block === "choice"){
+    if(item.confirming){
+      const wrongC = item.quiz.blanks
+        .filter(k=>item.picks[k] && item.picks[k] !== item.quiz.quizzes[k].correct)
+        .map(k=>`<div class="wrong-line">✕ あなたの解答：${esc(item.picks[k])}</div>`).join("");
+      body = `${confirmCardBody(w, wrongC)}
+        <button class="btn-primary" data-act="choiceConfirmNext">Next</button>`;
+    }else{
+      body = renderChoiceBody(item, w, false);
+    }
   }else{
-    body = renderWriteBody(item, w);    // "quiz"（入力中）
+    if(item.confirmingW){
+      const wrongW = `<div class="wrong-line">✕ あなたの解答：${esc(item.lastInput||"（スキップ）")}</div>`;
+      body = `${confirmCardBody(w, wrongW)}
+        <button class="btn-primary" data-act="writeConfirmNext">Next</button>`;
+    }else{
+      body = renderWriteBody(item, w);
+    }
   }
 
   const modeTag = s.mode==="weak" ? '<span class="tag" style="background:var(--shu)">苦手</span>' : '';
@@ -1626,165 +1592,53 @@ function renderCard(){
   const win = document.getElementById("writeIn");
   if(win && !item.answeredWrite){
     win.focus();
-    win.onkeydown = e=>{
-      if(e.key!=="Enter") return;
-      /* IME変換確定のEnterには一切触れない（preventDefaultもしない）＝日本語の確定を邪魔しない */
-      if(e.isComposing || e.keyCode===229) return;
-      /* 変換を経由しない“本物のEnter”だけ既定動作を抑えて判定へ */
-      e.preventDefault();
-      handleAct("writeCheck");
-    };
+    win.onkeydown = e=>{ if(e.key==="Enter") handleAct("writeCheck"); };
   }
-}
-
-/* ---- 結果テキスト（ラベルを外し、内容だけを示す：バッチJ 4-4） ---- */
-function choiceResultHtml(item){
-  const q = item.quiz;
-  if(item.choiceOk){
-    /* J-①：正解の訳を「／」で並記（正答は確認目的なので簡潔に） */
-    const corrects = q.blanks.map(k=>esc(q.quizzes[k].correct)).join("／");
-    return `<div class="dict-result ok">${corrects}</div>`;
-  }
-  /* 誤答の空欄ごとに「あなたの選択→正解訳」 */
-  const lines = q.blanks
-    .filter(k=>item.picks[k] !== q.quizzes[k].correct)
-    .map(k=>`<div class="sub-line">${esc(item.picks[k]||"（未選択）")}→${esc(q.quizzes[k].correct)}</div>`).join("");
-  return `<div class="dict-result ng">${lines}</div>`;
-}
-function writeResultHtml(item, w){
-  const yourAnswer = item.lastInput ? esc(item.lastInput) : "（スキップ）";
-  if(item.writeOk){
-    return `<div class="dict-result ok">${esc(w.w)}</div>`;   // 正解の英単語のみ
-  }
-  /* J-②：補助行は残すが前向き・中立の文言に */
-  const secondFail = session && session.mode==="review" && item.wTries>=2;
-  const sub = secondFail ? "明日もう一度出題されます" : "確認しよう";
-  return `<div class="dict-result ng">${yourAnswer}→${esc(w.w)}<div class="sub-line">${sub}</div></div>`;
-}
-
-/* ---- 解説画面（独立画面）本体：結果／コア／訳一覧／🔊発音／Next ---- */
-function renderExplain(item, w, nextAct){
-  const isChoice = (nextAct === "choiceNext");
-  const resultHtml = isChoice ? choiceResultHtml(item) : writeResultHtml(item, w);
-  /* J-③：選択式の解説にのみ見出し語 w.w を小さく添える（記述式は結果に ×× が出るので不要） */
-  const head = isChoice ? `<div class="explain-word">${esc(w.w)}</div>` : "";
-  return `${head}
-    ${resultHtml}
-    ${w.c ? `<div class="core-line"><span class="core-label">コア</span>${esc(w.c)}</div>` : ""}
-    <div class="prompt-zone">${promptEntries(w)}</div>
-    <button class="audio-btn" data-act="speak">🔊 発音を確認</button>
-    <div class="reveal-next"><button class="btn-primary" data-act="${nextAct}">Next</button></div>`;
 }
 
 /* ---- 選択式（品詞別・訳選択）の本体 ---- */
-function renderChoiceBody(item, w){
+function renderChoiceBody(item, w, strict){
   const q = item.quiz;
   const norm = normEntries(w);
   const rows = norm.map((e,k)=>{
     const isBlank = q.blanks.includes(k);
     if(!isBlank){
-      return `<div class="entry"><span class="pos-badge">${esc(e.pos)}</span><span class="meaning">${esc(e.ja.join("／"))}</span></div>`;
+      return `<div class="entry"><span class="pos-badge">${esc(e.pos)}</span><span class="meaning">${esc(e.cands.join("／"))}</span></div>`;
     }
     const picked = item.picks[k];
-    const confirmed = !!item.confirmed[k];
     const correct = q.quizzes[k].correct;
-    const optHtml = q.quizzes[k].opts.map((o,oi)=>{
+    const pat = q.quizzes[k].pat;
+    const optHtml = q.quizzes[k].opts.map(o=>{
       let cls = "opt-btn";
       if(item.choiceDone){
         if(o===correct) cls += " correct";
         else if(o===picked) cls += " wrong";
       }else if(o===picked){ cls += " picked"; }
-      const dis = (item.choiceDone || confirmed) ? "disabled" : "";
-      return `<button class="${cls}" data-act="pick" data-k="${k}" data-val="${esc(o)}" ${dis}><span class="opt-num">${oi+1}</span>${esc(o)}</button>`;
+      return `<button class="${cls}" data-act="pick" data-k="${k}" data-val="${esc(o)}" ${item.choiceDone?"disabled":""}>${esc(o)}</button>`;
     }).join("");
-    const slot = confirmed ? `✓ ${esc(picked)}` : (picked?esc(picked):"〔　？　〕");
-    const label = `<span class="pos-badge">${esc(e.pos)}</span>`;
-    return `<div class="blank-block${confirmed?" confirmed":""}">
-      <div class="entry">${label}<span class="meaning blank-slot">${slot}</span></div>
+    const label = pat
+      ? `<span class="pos-badge">${esc(e.pos)}</span><span class="pat-prompt">${esc(pat)}</span>`
+      : `<span class="pos-badge">${esc(e.pos)}</span>`;
+    return `<div class="blank-block">
+      <div class="entry">${label}<span class="meaning blank-slot">${picked?esc(picked):"〔　？　〕"}</span></div>
       <div class="opt-list">${optHtml}</div>
     </div>`;
   }).join("");
 
-  /* marked 画面（誤答時のみ到達）：色分けグリッド＋Next（→解説画面 choiceReveal） */
+  const allPicked = q.blanks.every(k=>item.picks[k]);
+  let footer = "";
   if(item.choiceDone){
-    return `<div class="word-display">${esc(w.w)}</div>
-      <div class="prompt-zone">${rows}</div>
-      <div class="reveal-next"><button class="btn-primary" data-act="choiceReveal">Next</button></div>`;
-  }
-
-  /* quiz 画面（回答中） */
-  const hint = `<div class="hint choice-hint">選択肢を2回タップで確定（PCは数字キー→もう一度／Enter）</div>`;
-  return `<div class="word-display">${esc(w.w)}</div>
-    ${hint}
-    <div class="prompt-zone">${rows}</div>`;
-}
-
-/* ---- 選択式：2タップ確定ロジック（クリック／キーボード共通） ---- */
-function choiceSelect(k, o){
-  const item = curItem();
-  if(!item || item.choiceDone) return;
-  if(!item.confirmed) item.confirmed = {};
-  if(item.confirmed[k]) return;            // 確定済みブランクは触れない
-  if(item.picks[k] === o){                 // 同じ肢を2回目 → このブランクを確定
-    choiceConfirmBlank(k);
-  }else{                                   // 別の肢／初回 → 選択（乗り換え）
-    item.picks[k] = o;
-    saveSession();
-    renderCard();
-  }
-}
-function choiceConfirmBlank(k){
-  const item = curItem();
-  if(!item || item.choiceDone) return;
-  if(!item.picks[k]) return;               // 何も選んでいなければ確定不可
-  item.confirmed[k] = true;
-  const q = item.quiz;
-  if(q.blanks.every(b=>item.confirmed[b])){ // 全ブランク確定 → 採点
-    gradeChoice();
+    footer = `<div class="dict-result ${item.choiceOk?"ok":"ng"}">${item.choiceOk?"◎ 正解":"✕ 不正解"}</div>
+      <button class="audio-btn" data-act="speak">🔊 発音を確認</button>
+      ${item.choiceOk
+        ? `<button class="btn-primary" data-act="choiceNext">Next</button>`
+        : `<button class="btn-primary" data-act="choiceCheckWord">Check</button>`}`;
   }else{
-    saveSession();
-    renderCard();
+    footer = `<button class="btn-primary" data-act="choiceCheck" ${allPicked?"":"disabled"}>解答</button>`;
   }
-}
-function gradeChoice(){
-  const item = curItem();
-  if(!item) return;
-  const q = item.quiz;
-  const w = byId(item.id);
-  item.choiceDone = true;
-  item.choiceOk = q.blanks.every(k=>item.picks[k] === q.quizzes[k].correct);
-  item.cTries++;
-  recordAnswer(item.id, "c", item.choiceOk);   // 回答回数に必ずカウント（リトライ含む）
-  if(item.choiceOk) item.cPassed = true;
-  else if(item.cTries >= 2) item.cFailed = true;
-  /* 全問正解→解説画面へ直行／誤答→色分け画面(marked)で一旦止める */
-  item.stage = item.choiceOk ? "explain" : "marked";
-  saveSession();
-  renderCard();
-  speak(w.w);
-}
-/* PCキーボード：数字で先頭の未確定ブランクを選択、同数字／Enterで確定 */
-function choiceKeydown(e){
-  const s = session;
-  if(!s || s.block !== "choice") return;
-  const ae = document.activeElement;
-  if(ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) return; // 入力欄フォーカス中は無反応
-  if(!app.querySelector(".opt-list")) return;                            // 選択式カード表示中のみ
-  const item = curItem();
-  if(!item || item.choiceDone) return;
-  if(!item.confirmed) item.confirmed = {};
-  const q = item.quiz;
-  const activeK = q.blanks.find(k=>!item.confirmed[k]);
-  if(activeK === undefined) return;
-  if(e.key === "Enter"){
-    if(item.picks[activeK]){ e.preventDefault(); choiceConfirmBlank(activeK); }
-    return;
-  }
-  if(/^[1-9]$/.test(e.key)){
-    const idx = parseInt(e.key) - 1;
-    const opts = q.quizzes[activeK].opts;
-    if(idx < opts.length){ e.preventDefault(); choiceSelect(activeK, opts[idx]); }
-  }
+  return `<div class="word-display">${esc(w.w)}</div>
+    <div class="prompt-zone">${rows}</div>
+    ${footer}`;
 }
 
 /* ---- 確認カード共通本体 ---- */
@@ -1799,15 +1653,31 @@ function confirmCardBody(w, wrongHtml){
     <div class="prompt-zone">${promptEntries(w)}</div>`;
 }
 
-/* ---- 記述式の本体（回答中のみ。判定後は解説画面 renderExplain へ） ---- */
+/* ---- 記述式の本体 ---- */
 function renderWriteBody(item, w){
+  const secondFail = session && session.mode==="review" && item.wTries>=2;
+  const yourAnswer = item.lastInput ? esc(item.lastInput) : "（スキップ）";
+  const resultInner = item.writeOk
+    ? "◎ 正解"
+    : `✕ 不正解<div class="sub-line">あなたの解答：${yourAnswer}　→　正解：${esc(w.w)}</div><div class="sub-line">${secondFail ? "翌日やり直し" : "確認しよう"}</div>`;
   return `<div class="hint">意味に合う英単語をスペルまで正確に入力（Enterで判定）</div>
     <div class="prompt-zone">${jaOnlyEntries(w)}</div>
     <div class="dict-row">
-      <input id="writeIn" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" placeholder="英単語を入力">
-      <button class="btn-sub" data-act="writeCheck">判定</button>
-      <button class="btn-sub" data-act="writeSkip">スキップ</button>
-    </div>`;
+      <input id="writeIn" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" placeholder="英単語を入力" value="${item.answeredWrite?esc(item.lastInput||""):""}" class="${item.answeredWrite?(item.writeOk?"ok":"ng"):""}" ${item.answeredWrite?"disabled":""}>
+      <button class="btn-sub" data-act="writeCheck" ${item.answeredWrite?"disabled":""}>判定</button>
+      <button class="btn-sub" data-act="writeSkip" ${item.answeredWrite?"disabled":""}>スキップ</button>
+    </div>
+    ${item.answeredWrite ? `
+      <div class="dict-result ${item.writeOk?"ok":"ng"}">${resultInner}</div>
+      <div class="answer-zone" style="border:none;padding-top:6px">
+        <div class="word-display" style="font-size:1.4rem;margin:0 0 8px">${esc(w.w)}</div>
+        ${w.c ? `<div class="core-line"><span class="core-label">コア</span>${esc(w.c)}</div>` : ""}
+        ${promptEntries(w)}
+      </div>
+      <button class="audio-btn" data-act="speak">🔊 発音を確認</button>
+      ${item.writeOk
+        ? `<button class="btn-primary" data-act="writeNext">Next</button>`
+        : `<button class="btn-primary" data-act="writeCheckWord">Check</button>`}` : ""}`;
 }
 function handleAct(act, el){
   const s = session;
@@ -1817,24 +1687,42 @@ function handleAct(act, el){
   if(act==="speak"){ speak(w.w); return; }
   if(act==="exit"){ saveSession(); flushSave(); renderHome(); return; }
 
-  /* ==== ブロックA：選択式（2タップ確定） ==== */
+  /* ==== ブロックA：選択式 ==== */
   if(act==="pick"){
-    choiceSelect(parseInt(el.dataset.k), el.dataset.val);
+    if(item.choiceDone) return;
+    const k = parseInt(el.dataset.k);
+    item.picks[k] = el.dataset.val;
+    renderCard();
     return;
   }
-  if(act==="choiceReveal"){ // marked（色分け）→ 解説画面へ
-    item.stage = "explain";
+  if(act==="choiceCheck"){ // 「解答する」
+    const q = item.quiz;
+    if(!q.blanks.every(k=>item.picks[k])) return;
+    item.choiceDone = true;
+    item.choiceOk = q.blanks.every(k=>item.picks[k] === q.quizzes[k].correct);
+    item.cTries++;
+    recordAnswer(item.id, "c", item.choiceOk);       // 回答回数に必ずカウント（リトライ含む）
+    if(item.choiceOk) item.cPassed = true;
+    else if(item.cTries >= 2) item.cFailed = true;   // 2回失敗確定
+    saveSession();
+    renderCard();
+    speak(w.w);
+    return;
+  }
+
+  if(act==="choiceCheckWord"){ // 不正解時の「Check」→確認画面
+    item.confirming = true;
     saveSession();
     renderCard();
     return;
   }
-  if(act==="choiceNext"){
+  if(act==="choiceConfirmNext" || act==="choiceNext"){
     /* 選択式の1問終了。誤答かつ1回目(main)なら retry に積む */
     if(!item.choiceOk && s.phase==="main" && !item.cPassed){
       s.retry.push(s.order[s.pos]);
     }
     // 次問へ進む前に、選択式の状態をリセット（2回目再挑戦に備える）
-    item.stage = "quiz"; item.choiceDone = false; item.choiceOk = null; item.picks = {}; item.confirmed = {};
+    item.choiceDone = false; item.choiceOk = null; item.picks = {}; item.confirming = false;
     if(s.phase==="retry"){ item.quiz = makePosQuiz(w); } // 2回目は新しい問題を作る
     advance();
     return;
@@ -1842,7 +1730,6 @@ function handleAct(act, el){
 
   /* ==== ブロックB：記述式 ==== */
   if(act==="writeCheck"){ // 「判定」
-    if(item.answeredWrite) return; // キーボード経由の二重発火に対する保険
     const v = (document.getElementById("writeIn").value||"").trim().toLowerCase();
     if(!v) return;
     item.answeredWrite = true;
@@ -1852,7 +1739,6 @@ function handleAct(act, el){
     recordAnswer(item.id, "w", item.writeOk);
     if(item.writeOk) item.wPassed = true;
     else if(item.wTries >= 2) item.wFailed = true;
-    item.stage = "explain";   // 記述式は正誤とも解説画面へ直行
     saveSession();
     renderCard();
     speak(w.w);
@@ -1866,22 +1752,26 @@ function handleAct(act, el){
     item.wTries++;
     recordAnswer(item.id, "w", false);
     if(item.wTries >= 2) item.wFailed = true;
-    item.stage = "explain";   // スキップも解説画面へ
     saveSession();
     renderCard();
     return;
   }
-  if(act==="writeNext"){
+  if(act==="writeCheckWord"){ // 不正解時の「Check」→確認画面
+    item.confirmingW = true;
+    saveSession();
+    renderCard();
+    return;
+  }
+  if(act==="writeConfirmNext" || act==="writeNext"){
     if(!item.writeOk && s.phase==="main" && !item.wPassed){
       s.retry.push(s.order[s.pos]);
     }
-    item.stage = "quiz"; item.answeredWrite = false; item.writeOk = null;
+    item.answeredWrite = false; item.writeOk = null; item.confirmingW = false;
     advance();
     return;
   }
 }
-/* 選択式のPCキーボード操作を登録（選択式ブロック中のみ作動） */
-document.addEventListener("keydown", choiceKeydown);
+/* キー操作は使わない。入力欄のEnterのみ有効。 */
 function renderDone(){
   const c = session.counts;
   const mode = session.mode;
@@ -2011,7 +1901,6 @@ function wordStatus(w){
 }
 const BOOK_SVG = "<svg viewBox=\"0 0 24 24\" class=\"book-svg\" aria-hidden=\"true\"><path d=\"M7 3h11a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H7a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3z\"/><path d=\"M7 5.2h9.3a0 0 0 0 1 0 0v2.1a0 0 0 0 1 0 0H7a1.05 1.05 0 0 1 0-2.1z\" fill=\"#fff\"/></svg>";
 const MENU_SVG = "<svg viewBox=\"0 0 24 24\" class=\"menu-svg\" aria-hidden=\"true\"><rect x=\"3\" y=\"5.5\" width=\"18\" height=\"2.4\" rx=\"1.2\"/><rect x=\"3\" y=\"10.8\" width=\"18\" height=\"2.4\" rx=\"1.2\"/><rect x=\"3\" y=\"16.1\" width=\"18\" height=\"2.4\" rx=\"1.2\"/></svg>";
-const UPDATE_SVG = "<svg viewBox=\"0 0 24 24\" class=\"update-svg\" aria-hidden=\"true\"><path d=\"M17.65 6.35A8 8 0 1 0 19.5 12h-2.1a6 6 0 1 1-1.6-4.05L13 10.5h6.5V4z\"/></svg>";
 const SVG_IMG = {
   "home_top": "<svg viewBox=\"0 0 300 250\" class=\"screen-svg\" role=\"img\" aria-label=\"\u30db\u30fc\u30e0\u753b\u9762\u4e0a\u90e8\u306e\u6a21\u5f0f\u56f3\">\n<rect x=\"0\" y=\"0\" width=\"300\" height=\"250\" class=\"scr-bg\"/>\n<rect x=\"10\" y=\"10\" width=\"24\" height=\"24\" rx=\"6\" class=\"scr-btn-dark\"/>\n<rect x=\"15.5\" y=\"17.5\" width=\"13\" height=\"2\" fill=\"#fff\"/>\n<rect x=\"15.5\" y=\"22.5\" width=\"9\" height=\"2\" fill=\"#fff\"/>\n<text x=\"42\" y=\"24\" class=\"scr-ink scr-serif\" font-size=\"13\" font-weight=\"700\">English Vocabulary</text>\n<text x=\"42\" y=\"35\" class=\"scr-sub scr-sans\" font-size=\"7.5\">2026/07/05\u30fb\u9023\u7d9a 2\u65e5</text>\n<rect x=\"262\" y=\"9\" width=\"26\" height=\"26\" rx=\"7\" fill=\"none\" stroke=\"var(--line)\"/>\n<rect x=\"270\" y=\"17.5\" width=\"10\" height=\"1.8\" rx=\"0.9\" class=\"scr-ink\"/>\n<rect x=\"270\" y=\"21.3\" width=\"10\" height=\"1.8\" rx=\"0.9\" class=\"scr-ink\"/>\n<rect x=\"270\" y=\"25.1\" width=\"10\" height=\"1.8\" rx=\"0.9\" class=\"scr-ink\"/>\n<line x1=\"10\" y1=\"46\" x2=\"290\" y2=\"46\" stroke=\"var(--ink)\" stroke-width=\"2\"/>\n<text x=\"10\" y=\"58\" font-style=\"italic\" class=\"scr-sub scr-sans\" font-size=\"7\">\u63a5\u982d\u8f9e re- \u306f\u300c\u518d\u3073\u30fb\u5f8c\u308d\u3078\u300d\u3002\u77e5\u308c\u3070\u8a9e\u5f59\u304c\u5e83\u304c\u308b\u3002</text>\n<rect x=\"10\" y=\"68\" width=\"280\" height=\"172\" rx=\"10\" class=\"scr-card\"/>\n<text x=\"24\" y=\"90\" class=\"scr-ink scr-serif\" font-size=\"12\" font-weight=\"700\">\u5b66\u7fd2</text>\n<rect x=\"24\" y=\"100\" width=\"122\" height=\"62\" rx=\"8\" fill=\"none\" stroke=\"var(--line)\"/>\n<text x=\"85\" y=\"128\" text-anchor=\"middle\" class=\"scr-shu scr-serif\" font-size=\"20\" font-weight=\"700\">32</text>\n<text x=\"85\" y=\"146\" text-anchor=\"middle\" class=\"scr-sub scr-sans\" font-size=\"7\">\u4eca\u65e5\u306e\u5fa9\u7fd2\u5bfe\u8c61</text>\n<rect x=\"154\" y=\"100\" width=\"122\" height=\"62\" rx=\"8\" fill=\"none\" stroke=\"var(--line)\"/>\n<text x=\"215\" y=\"128\" text-anchor=\"middle\" class=\"scr-ink scr-serif\" font-size=\"20\" font-weight=\"700\">60</text>\n<text x=\"215\" y=\"146\" text-anchor=\"middle\" class=\"scr-sub scr-sans\" font-size=\"7\">\u30b9\u30c8\u30c3\u30af\u7dcf\u6570</text>\n<rect x=\"24\" y=\"176\" width=\"252\" height=\"30\" rx=\"8\" class=\"scr-btn-dark\"/>\n<text x=\"150\" y=\"195\" text-anchor=\"middle\" fill=\"#fff\" class=\"scr-sans\" font-size=\"9\" font-weight=\"700\">&#9654; \u7d9a\u304d\u304b\u3089\u518d\u958b\uff0814/32\uff09</text>\n<rect x=\"24\" y=\"214\" width=\"252\" height=\"24\" rx=\"8\" fill=\"none\" stroke=\"var(--ink)\" stroke-width=\"1.3\"/>\n<text x=\"150\" y=\"230\" text-anchor=\"middle\" class=\"scr-ink scr-sans\" font-size=\"9\" font-weight=\"700\">\u65b0\u898f\u958b\u59cb</text>\n</svg>",
   "home_bottom": "<svg viewBox=\"0 0 300 300\" class=\"screen-svg\" role=\"img\" aria-label=\"\u30db\u30fc\u30e0\u753b\u9762\u4e0b\u90e8\u306e\u6a21\u5f0f\u56f3\">\n<rect x=\"0\" y=\"0\" width=\"300\" height=\"300\" class=\"scr-bg\"/>\n<rect x=\"10\" y=\"6\" width=\"280\" height=\"102\" rx=\"10\" class=\"scr-card\"/>\n<text x=\"24\" y=\"26\" class=\"scr-ink scr-serif\" font-size=\"12\" font-weight=\"700\">\u54c1\u8a5e\u30e2\u30fc\u30c9</text>\n<rect x=\"24\" y=\"36\" width=\"252\" height=\"26\" rx=\"8\" class=\"scr-btn-dark\"/>\n<text x=\"150\" y=\"53\" text-anchor=\"middle\" fill=\"#fff\" class=\"scr-sans\" font-size=\"8.5\" font-weight=\"700\">&#9654; \u7d9a\u304d\u304b\u3089\uff083/30\uff09</text>\n<rect x=\"24\" y=\"70\" width=\"252\" height=\"24\" rx=\"8\" fill=\"none\" stroke=\"var(--ink)\" stroke-width=\"1.3\"/>\n<text x=\"150\" y=\"86\" text-anchor=\"middle\" class=\"scr-ink scr-sans\" font-size=\"8.5\" font-weight=\"700\">\u6700\u521d\u304b\u3089</text>\n<rect x=\"10\" y=\"118\" width=\"280\" height=\"172\" rx=\"10\" class=\"scr-card\"/>\n<text x=\"24\" y=\"138\" class=\"scr-ink scr-serif\" font-size=\"12\" font-weight=\"700\">\u30ec\u30d9\u30eb\u5225\u9032\u6357</text>\n<g font-family=\"var(--sans)\">\n<rect x=\"24\" y=\"150\" width=\"30\" height=\"14\" rx=\"4\" fill=\"#2F7D5B\"/><text x=\"39\" y=\"160\" text-anchor=\"middle\" fill=\"#fff\" font-size=\"7.5\" font-weight=\"700\">Lv.1</text>\n<rect x=\"60\" y=\"151\" width=\"180\" height=\"10\" rx=\"5\" fill=\"var(--line)\"/><rect x=\"60\" y=\"151\" width=\"118\" height=\"10\" rx=\"5\" fill=\"#C88569\"/>\n<text x=\"276\" y=\"160\" text-anchor=\"end\" class=\"scr-sub\" font-size=\"7\">0/31/0/40</text>\n<rect x=\"24\" y=\"172\" width=\"30\" height=\"14\" rx=\"4\" fill=\"#4A7BA6\"/><text x=\"39\" y=\"182\" text-anchor=\"middle\" fill=\"#fff\" font-size=\"7.5\" font-weight=\"700\">Lv.2</text>\n<rect x=\"60\" y=\"173\" width=\"180\" height=\"10\" rx=\"5\" fill=\"var(--line)\"/><rect x=\"60\" y=\"173\" width=\"88\" height=\"10\" rx=\"5\" fill=\"#C88569\"/>\n<text x=\"276\" y=\"182\" text-anchor=\"end\" class=\"scr-sub\" font-size=\"7\">0/20/0/40</text>\n<rect x=\"24\" y=\"194\" width=\"30\" height=\"14\" rx=\"4\" fill=\"#8B6BAE\"/><text x=\"39\" y=\"204\" text-anchor=\"middle\" fill=\"#fff\" font-size=\"7.5\" font-weight=\"700\">Lv.3</text>\n<rect x=\"60\" y=\"195\" width=\"180\" height=\"10\" rx=\"5\" fill=\"var(--line)\"/>\n<text x=\"276\" y=\"204\" text-anchor=\"end\" class=\"scr-sub\" font-size=\"7\">0/0/0/40</text>\n<rect x=\"24\" y=\"216\" width=\"30\" height=\"14\" rx=\"4\" fill=\"#A6822F\"/><text x=\"39\" y=\"226\" text-anchor=\"middle\" fill=\"#fff\" font-size=\"7.5\" font-weight=\"700\">Lv.4</text>\n<rect x=\"60\" y=\"217\" width=\"180\" height=\"10\" rx=\"5\" fill=\"var(--line)\"/>\n<text x=\"276\" y=\"226\" text-anchor=\"end\" class=\"scr-sub\" font-size=\"7\">0/0/0/40</text>\n<rect x=\"24\" y=\"238\" width=\"30\" height=\"14\" rx=\"4\" fill=\"#B5432A\"/><text x=\"39\" y=\"248\" text-anchor=\"middle\" fill=\"#fff\" font-size=\"7.5\" font-weight=\"700\">Lv.5</text>\n<rect x=\"60\" y=\"239\" width=\"180\" height=\"10\" rx=\"5\" fill=\"var(--line)\"/>\n<text x=\"276\" y=\"248\" text-anchor=\"end\" class=\"scr-sub\" font-size=\"7\">0/0/0/40</text>\n</g>\n<circle cx=\"28\" cy=\"262\" r=\"4\" fill=\"#2F7D5B\"/><text x=\"36\" y=\"265\" class=\"scr-sub\" font-size=\"7\">\u5b9a\u7740\u6e08</text>\n<circle cx=\"80\" cy=\"262\" r=\"4\" fill=\"#C88569\"/><text x=\"88\" y=\"265\" class=\"scr-sub\" font-size=\"7\">\u5fa9\u7fd2\u4e2d</text>\n<circle cx=\"132\" cy=\"262\" r=\"4\" fill=\"#B9B2A6\"/><text x=\"140\" y=\"265\" class=\"scr-sub\" font-size=\"7\">\u51fa\u984c\u6e08</text>\n<text x=\"24\" y=\"280\" class=\"scr-sub\" font-size=\"6.5\">\u6570\u5b57\u306f\u5de6\u304b\u3089\u300c\u5b9a\u7740\u6e08\uff0f\u5fa9\u7fd2\u4e2d\uff0f\u51fa\u984c\u6e08\uff0f\u53ce\u9332\u300d\u3002</text>\n<text x=\"276\" y=\"294\" text-anchor=\"end\" class=\"scr-sub\" font-size=\"6\" opacity=\"0.75\">&#169;2026 AMATERAS</text>\n</svg>",
@@ -2158,31 +2047,11 @@ function renderSettings(){
       <select id="setRate">${[0.5,0.6,0.7,0.8,0.9,0.95,1.0,1.1,1.2].map(r=>`<option value="${r}" ${Math.abs((state.settings.rate||0.95)-r)<0.001?"selected":""}>${r}</option>`).join("")}</select></div>
     <div class="setting-row"><span>品詞モード：1回に出題する問題数</span>
       <input type="number" id="setPos" min="5" max="100" value="${state.settings.posChunk||30}"></div>
-    ${(sb && currentUser) ? `<div class="pw-card">
-      <div class="pw-head">🔐 パスワードを設定／変更</div>
-      <div class="pw-field">
-        <input type="password" id="setPw" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）">
-        <button class="pw-btn" id="setPwBtn">設定</button>
-      </div>
-      <span class="msg" id="setPwMsg"></span>
-    </div>` : ``}
     <p class="note" style="margin-top:8px">各設定の詳しい意味は「アプリの説明」を参照してください。</p>
     <button class="btn-sub" id="saveSet">設定を保存</button>
     <span class="msg" id="setMsg"></span>
   </div></div>`;
   document.getElementById("backHome").onclick = (e)=>{ e.preventDefault(); renderHome(); };
-  const setPwBtn = document.getElementById("setPwBtn");
-  if(setPwBtn) setPwBtn.onclick = async ()=>{
-    const m = document.getElementById("setPwMsg");
-    const pw = document.getElementById("setPw").value || "";
-    if(!sb || !currentUser){ m.style.color = "var(--shu)"; m.textContent = "ログイン中のみ設定できます。"; return; }
-    if(pw.length < 8){ m.style.color = "var(--shu)"; m.textContent = "パスワードは8文字以上にしてください。"; return; }
-    m.style.color = "var(--sub)"; m.textContent = "更新中…";
-    const { error } = await sb.auth.updateUser({ password: pw });
-    if(error){ m.style.color = "var(--shu)"; m.textContent = jaAuthError(error); return; }
-    m.style.color = "var(--midori)"; m.textContent = "パスワードを設定しました。";
-    document.getElementById("setPw").value = "";
-  };
   document.getElementById("saveSet").onclick = async ()=>{
     state.settings.nickname = document.getElementById("setNick").value.trim().slice(0,20);
     state.settings.newPerDay = Math.max(5, Math.min(100, parseInt(document.getElementById("setNew").value)||30));
@@ -2359,13 +2228,6 @@ function ensureAuthDom(){
     #authmodal .msg{font-size:.74rem;color:var(--midori);margin-top:10px;min-height:1em}
     #authmodal .close{position:absolute;top:14px;right:16px;font-size:1.3rem;color:var(--sub)}
     #authmodal .cardwrap{position:relative;width:100%;max-width:340px}
-    #authmodal .authtabs{display:flex;gap:6px;margin:4px 0 10px}
-    #authmodal .authtab{flex:1;padding:8px;border:1px solid var(--line);border-radius:8px;
-      background:var(--paper);color:var(--sub);font-size:.8rem;font-weight:700}
-    #authmodal .authtab.active{background:var(--ink);color:#fff;border-color:var(--ink)}
-    #authmodal .pwlinks{display:flex;justify-content:space-between;margin-top:2px}
-    #authmodal .linkbtn{background:none;border:none;color:var(--sub);font-size:.74rem;
-      text-decoration:underline;padding:2px}
   `;
   document.head.appendChild(style);
 
@@ -2380,34 +2242,7 @@ function ensureAuthDom(){
         <button class="oauth" id="authGoogle">Googleでログイン</button>
         <div class="sep">または メールで</div>
         <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email">
-        <div class="authtabs">
-          <button class="authtab active" id="tabCode">コード／リンク</button>
-          <button class="authtab" id="tabPw">パスワード</button>
-        </div>
-        <div id="paneCode">
-          <button class="send" id="authSend">確認メールを送る</button>
-          <div id="authCodeRow" style="display:none">
-            <input id="authCode" inputmode="numeric" autocomplete="one-time-code" autocorrect="off" autocapitalize="off" spellcheck="false" maxlength="6" placeholder="メールの6桁コード">
-            <button class="send" id="authVerify">コードで確認してログイン</button>
-          </div>
-        </div>
-        <div id="panePw" style="display:none">
-          <div id="pwLoginForm">
-            <input type="password" id="authPw" autocomplete="current-password" placeholder="パスワード">
-            <button class="send" id="pwLoginBtn">パスワードでログイン</button>
-            <div class="pwlinks">
-              <button class="linkbtn" id="pwToSignup">新規登録</button>
-              <button class="linkbtn" id="pwForgot">パスワードを忘れた</button>
-            </div>
-          </div>
-          <div id="pwSignupForm" style="display:none">
-            <input type="password" id="authPwNew" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）">
-            <button class="send" id="pwSignupBtn">登録する（確認メールが届きます）</button>
-            <div class="pwlinks">
-              <button class="linkbtn" id="pwToLogin">ログインに戻る</button>
-            </div>
-          </div>
-        </div>
+        <button class="send" id="authSend">ログインリンクを送る</button>
         <div class="msg" id="authMsg"></div>
       </div>
     </div>`;
@@ -2418,53 +2253,6 @@ function ensureAuthDom(){
 
   document.getElementById("authGoogle").onclick = ()=> oauthLogin("google");
   document.getElementById("authSend").onclick   = emailLogin;
-  const authVerifyBtn = document.getElementById("authVerify");
-  if(authVerifyBtn) authVerifyBtn.onclick = submitOtpCode;
-  const authCodeInput = document.getElementById("authCode");
-  if(authCodeInput) authCodeInput.addEventListener("keydown", (e)=>{
-    if(e.isComposing || e.keyCode === 229) return;   /* IME変換中は確定しない（副作用なしでreturn） */
-    if(e.key === "Enter"){ e.preventDefault(); submitOtpCode(); }
-  });
-
-  /* --- C-P：方式タブ（コード/リンク ⇄ パスワード）と各サブフォーム --- */
-  const paneCode = document.getElementById("paneCode");
-  const panePw   = document.getElementById("panePw");
-  const tabCode  = document.getElementById("tabCode");
-  const tabPw    = document.getElementById("tabPw");
-  const pwLoginForm  = document.getElementById("pwLoginForm");
-  const pwSignupForm = document.getElementById("pwSignupForm");
-  function clearAuthMsg(){ const m = document.getElementById("authMsg"); if(m){ m.textContent = ""; } }
-  function showTab(which){
-    const codeOn = (which === "code");
-    tabCode.classList.toggle("active", codeOn);
-    tabPw.classList.toggle("active", !codeOn);
-    paneCode.style.display = codeOn ? "" : "none";
-    panePw.style.display   = codeOn ? "none" : "";
-    clearAuthMsg();
-  }
-  function showPwForm(which){
-    const login = (which === "login");
-    pwLoginForm.style.display  = login ? "" : "none";
-    pwSignupForm.style.display = login ? "none" : "";
-    clearAuthMsg();
-  }
-  tabCode.onclick = ()=> showTab("code");
-  tabPw.onclick   = ()=> showTab("pw");
-  document.getElementById("pwToSignup").onclick = ()=> showPwForm("signup");
-  document.getElementById("pwToLogin").onclick  = ()=> showPwForm("login");
-  document.getElementById("pwLoginBtn").onclick  = passwordLogin;
-  document.getElementById("pwSignupBtn").onclick = passwordSignup;
-  document.getElementById("pwForgot").onclick    = passwordForgot;
-  const pwInput = document.getElementById("authPw");
-  if(pwInput) pwInput.addEventListener("keydown", (e)=>{
-    if(e.isComposing || e.keyCode === 229) return;
-    if(e.key === "Enter"){ e.preventDefault(); passwordLogin(); }
-  });
-  const pwNewInput = document.getElementById("authPwNew");
-  if(pwNewInput) pwNewInput.addEventListener("keydown", (e)=>{
-    if(e.isComposing || e.keyCode === 229) return;
-    if(e.key === "Enter"){ e.preventDefault(); passwordSignup(); }
-  });
 }
 function openAuthModal(){
   if(!cloudConfigured()){ alert("クラウド保存は未設定です。SUPABASE_URL と SUPABASE_ANON_KEY を設定すると有効になります。"); return; }
@@ -2479,157 +2267,36 @@ async function oauthLogin(provider){
   if(!sb) return;
   await sb.auth.signInWithOAuth({ provider, options:{ redirectTo: redirectTarget() } });
 }
-let otpEmail = "";
 async function emailLogin(){
   if(!sb) return;
   const email = (document.getElementById("authEmail").value || "").trim();
   const msg = document.getElementById("authMsg");
   if(!email){ msg.style.color = "var(--shu)"; msg.textContent = "メールアドレスを入力してください。"; return; }
   msg.style.color = "var(--sub)"; msg.textContent = "送信中…";
-  const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: redirectTarget(), shouldCreateUser: true } });
-  if(error){ msg.style.color = "var(--shu)"; msg.textContent = "送信に失敗しました：" + error.message; return; }
-  otpEmail = email;
-  const row = document.getElementById("authCodeRow");
-  if(row) row.style.display = "";
-  msg.style.color = "var(--midori)"; msg.textContent = "メールを送りました。届いたリンクを開くか、メール内の6桁コードを下に入力してください。";
-}
-/* メールの6桁コードを検証（マジックリンクと併用）。成功で true。 */
-async function verifyOtpCode(email, code){
-  if(!sb) return false;
-  try{
-    const r = await sb.auth.verifyOtp({ email, token: code, type: "email" });
-    if(r && r.error) throw r.error;
-    return true;
-  }catch(_){ return false; }
-}
-async function submitOtpCode(){
-  const msg = document.getElementById("authMsg");
-  const code = (document.getElementById("authCode").value || "").trim();
-  const email = otpEmail || (document.getElementById("authEmail").value || "").trim();
-  if(!/^\d{6}$/.test(code)){ msg.style.color = "var(--shu)"; msg.textContent = "6桁の数字コードを入力してください。"; return; }
-  if(!email){ msg.style.color = "var(--shu)"; msg.textContent = "先にメールアドレスを入力し、確認メールを送ってください。"; return; }
-  msg.style.color = "var(--sub)"; msg.textContent = "確認中…";
-  const ok = await verifyOtpCode(email, code);
-  if(ok){ msg.style.color = "var(--midori)"; msg.textContent = "ログインしました。"; closeAuthModal(); }
-  else{ msg.style.color = "var(--shu)"; msg.textContent = "コードが正しくないか、期限切れです。もう一度お試しください。"; }
-}
-/* ==== C-P：メール＋パスワード認証（既存のGoogle/コード方式に併用追加） ==== */
-/* Supabaseの英語エラーを日本語に寄せる（未知はそのまま添える） */
-function jaAuthError(err){
-  const m = (err && err.message) ? String(err.message) : "";
-  if(/Invalid login credentials/i.test(m)) return "メールアドレスかパスワードが正しくありません。";
-  if(/Email not confirmed/i.test(m)) return "メール確認が未完了です。確認メールのリンクを開いてください。";
-  if(/User already registered/i.test(m)) return "このメールアドレスは登録済みです。ログインするか、パスワードをお忘れの場合は再設定してください。";
-  if(/Password should be at least/i.test(m)) return "パスワードが短すぎます。8文字以上にしてください。";
-  if(/rate limit|too many/i.test(m)) return "回数制限に達しました。しばらく待ってから再度お試しください。";
-  return "うまくいきませんでした：" + m;
-}
-async function passwordLogin(){
-  if(!sb) return;
-  const msg = document.getElementById("authMsg");
-  const email = (document.getElementById("authEmail").value || "").trim();
-  const pw = document.getElementById("authPw").value || "";
-  if(!email || !pw){ msg.style.color = "var(--shu)"; msg.textContent = "メールアドレスとパスワードを入力してください。"; return; }
-  msg.style.color = "var(--sub)"; msg.textContent = "ログイン中…";
-  const { error } = await sb.auth.signInWithPassword({ email, password: pw });
-  if(error){ msg.style.color = "var(--shu)"; msg.textContent = jaAuthError(error); return; }
-  msg.style.color = "var(--midori)"; msg.textContent = "ログインしました。"; closeAuthModal();
-  /* 以降は既存の onAuthStateChange → syncOnAuthChange → maybeMigrateOnLogin に自動で乗る（C-3不変） */
-}
-async function passwordSignup(){
-  if(!sb) return;
-  const msg = document.getElementById("authMsg");
-  const email = (document.getElementById("authEmail").value || "").trim();
-  const pw = document.getElementById("authPwNew").value || "";
-  if(!email){ msg.style.color = "var(--shu)"; msg.textContent = "メールアドレスを入力してください。"; return; }
-  if(pw.length < 8){ msg.style.color = "var(--shu)"; msg.textContent = "パスワードは8文字以上にしてください。"; return; }
-  msg.style.color = "var(--sub)"; msg.textContent = "登録中…";
-  const { error } = await sb.auth.signUp({ email, password: pw, options:{ emailRedirectTo: redirectTarget() } });
-  if(error){ msg.style.color = "var(--shu)"; msg.textContent = jaAuthError(error); return; }
-  msg.style.color = "var(--midori)"; msg.textContent = "確認メールを送りました。メール内のリンクで確認するとログインできます。";
-}
-async function passwordForgot(){
-  if(!sb) return;
-  const msg = document.getElementById("authMsg");
-  const email = (document.getElementById("authEmail").value || "").trim();
-  if(!email){ msg.style.color = "var(--shu)"; msg.textContent = "メールアドレスを入力してから「パスワードを忘れた」を押してください。"; return; }
-  msg.style.color = "var(--sub)"; msg.textContent = "送信中…";
-  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: redirectTarget() });
-  if(error){ msg.style.color = "var(--shu)"; msg.textContent = jaAuthError(error); return; }
-  msg.style.color = "var(--midori)"; msg.textContent = "パスワード再設定用のメールを送りました。メール内のリンクを開いてください。";
-}
-/* P-4：リセットリンクで戻ってきたときの新パスワード入力UI */
-function ensurePwResetDom(){
-  if(document.getElementById("pwresetmodal")) return;
-  const style = document.createElement("style");
-  style.textContent = `
-    #pwresetmodal{position:fixed;inset:0;z-index:70;background:rgba(31,44,56,.45);
-      display:flex;align-items:center;justify-content:center;padding:16px}
-    #pwresetmodal.pr-hidden{display:none}
-    #pwresetmodal .card{background:var(--card);border:1px solid var(--line);border-radius:12px;width:100%;max-width:340px;padding:22px 20px}
-    #pwresetmodal h3{font-family:var(--serif);font-size:1.05rem;margin-bottom:4px}
-    #pwresetmodal p.sub{font-size:.74rem;color:var(--sub);margin-bottom:16px}
-    #pwresetmodal input{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font-size:.9rem;margin-bottom:9px;font-family:var(--sans)}
-    #pwresetmodal .send{width:100%;padding:11px;border-radius:8px;background:var(--ink);color:#fff;font-weight:700;font-size:.9rem}
-    #pwresetmodal .msg{font-size:.74rem;color:var(--midori);margin-top:10px;min-height:1em}
-  `;
-  document.head.appendChild(style);
-  const modal = document.createElement("div");
-  modal.id = "pwresetmodal";
-  modal.innerHTML = `
-    <div class="card">
-      <h3>新しいパスワードの設定</h3>
-      <p class="sub">再設定リンクから開きました。新しいパスワードを入力してください。</p>
-      <input type="password" id="pwResetInput" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）">
-      <button class="send" id="pwResetBtn">パスワードを更新する</button>
-      <div class="msg" id="pwResetMsg"></div>
-    </div>`;
-  document.body.appendChild(modal);
-  document.getElementById("pwResetBtn").onclick = submitPwReset;
-  const inp = document.getElementById("pwResetInput");
-  inp.addEventListener("keydown", (e)=>{
-    if(e.isComposing || e.keyCode === 229) return;
-    if(e.key === "Enter"){ e.preventDefault(); submitPwReset(); }
-  });
-}
-function openPwResetModal(){ ensurePwResetDom(); const m = document.getElementById("pwresetmodal"); if(m) m.classList.remove("pr-hidden"); }
-async function submitPwReset(){
-  if(!sb) return;
-  const msg = document.getElementById("pwResetMsg");
-  const pw = document.getElementById("pwResetInput").value || "";
-  if(pw.length < 8){ msg.style.color = "var(--shu)"; msg.textContent = "パスワードは8文字以上にしてください。"; return; }
-  msg.style.color = "var(--sub)"; msg.textContent = "更新中…";
-  const { error } = await sb.auth.updateUser({ password: pw });
-  if(error){ msg.style.color = "var(--shu)"; msg.textContent = jaAuthError(error); return; }
-  msg.style.color = "var(--midori)"; msg.textContent = "パスワードを更新しました。ログインします…";
-  setTimeout(()=>{ location.reload(); }, 900);   /* 更新後は通常ログインとして進める（reloadでIS_RECOVERYが解け、以降はC-3が通常どおり働く） */
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: redirectTarget() } });
+  if(error){ msg.style.color = "var(--shu)"; msg.textContent = "送信に失敗しました：" + error.message; }
+  else{ msg.style.color = "var(--midori)"; msg.textContent = "ログインリンクを送りました。メールを確認してください。"; }
 }
 async function doLogout(){
-  clearLastUid();                 /* C-3：ログアウトで記録を消し、再ログイン時に再度確認できるようにする */
   if(sb) await sb.auth.signOut();
 }
 /* ログイン／ログアウト時：未ログイン中の進捗をアカウントへ統合 → 読み直して再描画 */
 async function syncOnAuthChange(){
-  const merged = await maybeMigrateOnLogin();
+  await migrateGuestProgress();
   state = { settings:{ newPerDay:30, rate:0.95, difficulty:1 }, words:{}, log:{}, custom:[], activeSession:null };
   await loadState();
-  if(merged){ state = merged; scheduleSave(); }   /* (A-safe) 統合結果を確実に反映し、失敗時も次回saveでクラウドへ */
   renderHome();
 }
 
 /* ---- 起動 ---- */
 (async ()=>{
   await initSupabase();
-  let merged = null;
-  if(!IS_RECOVERY) merged = await maybeMigrateOnLogin();   /* C-3：id変化時だけ確認（リセット到来時は出さない）／統合結果を受け取る */
+  await migrateGuestProgress();   // ログイン済みなら未ログイン中の進捗を統合（OAuth再読込後にも対応）
   await loadSharedWords();
   ensureAuthDom();
   await loadState();
-  if(merged){ state = merged; scheduleSave(); }  /* (A-safe) 統合結果を確実に反映し、失敗時も次回saveでクラウドへ */
   renderHome();
   startUpdateWatcher();           // 新バージョン公開の監視を開始
-  { const vt = document.getElementById("versionTag"); if(vt) vt.textContent = "v." + APP_VERSION.replace(/-/g,"."); }  /* E-2：バージョン表示（値は不変・表示のみ） */
-  if(IS_RECOVERY) openPwResetModal();   /* P-4：リセットリンク到来時は新PW入力UIを出す（イベント取りこぼしの保険） */
 })();
 </script>
 </body>
