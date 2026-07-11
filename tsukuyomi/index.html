@@ -112,6 +112,21 @@
   .set-label{ font-family:var(--sans); font-size:.82rem; color:var(--sub); margin:0 0 .3rem; }
   .set-inline{ display:flex; gap:.5rem; align-items:center; }
   .set-hint{ font-family:var(--sans); font-size:.78rem; color:var(--midori); margin-top:.3rem; }
+  /* ===== パスワード認証UI（AMAS移植・TSUKUYOMI配色に統一） ===== */
+  .authtabs{ display:flex; gap:6px; margin:4px 0 10px; }
+  .authtab{ flex:1; padding:8px; border:1px solid var(--line); border-radius:8px; background:#fffdf7; color:var(--sub); font-family:var(--sans); font-size:.85rem; cursor:pointer; }
+  .authtab.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .pwlinks{ display:flex; justify-content:space-between; margin-top:2px; }
+  .linkbtn{ background:none; border:none; color:var(--sub); font-size:.78rem; cursor:pointer; text-decoration:underline; padding:4px 2px; font-family:var(--sans); }
+  .auth-msg{ font-family:var(--sans); font-size:.78rem; color:var(--midori); margin-top:8px; min-height:1em; }
+  .pw-card{ margin:14px 0 0; padding:14px; border:1px solid var(--line); border-radius:10px; background:linear-gradient(180deg,#fffdf7,#fbf6ea); }
+  .pw-card .pw-head{ display:flex; align-items:center; gap:7px; font-size:.9rem; font-weight:600; color:var(--ink); margin-bottom:4px; }
+  .pw-card .pw-field{ display:flex; gap:8px; align-items:stretch; }
+  .pw-card input[type=password]{ flex:1; min-width:0; font-family:var(--sans); padding:9px 11px; border:1px solid var(--line); border-radius:8px; font-size:.9rem; background:#fff; }
+  .pw-card input[type=password]:focus{ outline:none; border-color:var(--shu); box-shadow:0 0 0 2px var(--shu-soft); }
+  .pw-card .pw-btn{ white-space:nowrap; padding:9px 16px; border:none; border-radius:8px; background:var(--shu); color:#fff; font-size:.85rem; font-weight:600; cursor:pointer; }
+  .pw-card .pw-btn:active{ opacity:.85; }
+  .pw-card .msg{ margin-top:8px; font-family:var(--sans); font-size:.78rem; color:var(--midori); min-height:1em; }
   /* 助動詞クイズ解説の例文 */
   .rei{ margin:.55rem 0 .2rem; padding:.5rem .6rem; background:#fffdf7; border:1px solid var(--line); border-radius:8px; }
   .rei-s{ font-size:1.05rem; line-height:1.7; color:var(--ink); }
@@ -536,6 +551,15 @@
         </div>
         <!-- 3) 単語を追加（メニュー直下から移動） -->
         <button class="menu-item" id="miAddWord" type="button">単語を追加</button>
+        <!-- パスワード設定／変更（ログイン済みのときだけ表示。AMAS移植） -->
+        <div class="pw-card" id="pwSetCard" hidden>
+          <div class="pw-head">🔐 パスワードを設定／変更</div>
+          <div class="pw-field">
+            <input type="password" id="setPw" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）">
+            <button class="pw-btn" id="setPwBtn" type="button">設定</button>
+          </div>
+          <span class="msg" id="setPwMsg"></span>
+        </div>
         <!-- 4) すべての進捗をリセット（ログイン画面から移動。挙動は現状維持） -->
         <button class="homebtn subtle" id="btnResetAll" type="button">すべての進捗をリセット</button>
       </div>
@@ -647,12 +671,40 @@
       </div>
       <div class="login-body">
         <button class="homebtn primary" id="btnGoogle" type="button">Googleでログイン</button>
-        <div class="login-or">— または メール —</div>
-        <input class="ref-search" id="loginEmail" type="email" placeholder="メールアドレス" aria-label="メールアドレス">
-        <button class="homebtn" id="btnSendOtp" type="button">確認コードを送る</button>
-        <input class="ref-search" id="loginCode" type="text" placeholder="届いた確認コード" aria-label="確認コード" hidden>
-        <button class="homebtn" id="btnVerifyOtp" type="button" hidden>ログイン（確認）</button>
-        <div class="login-note" id="loginNote" hidden></div>
+        <!-- 方式タブ（コード／リンク ⇄ パスワード）：PW移植で追加 -->
+        <div class="authtabs">
+          <button class="authtab active" id="tabCode" type="button">コード／リンク</button>
+          <button class="authtab" id="tabPw" type="button">パスワード</button>
+        </div>
+        <!-- コード／リンク（既存OTP。構造は不変） -->
+        <div id="paneCode">
+          <div class="login-or">— メール —</div>
+          <input class="ref-search" id="loginEmail" type="email" placeholder="メールアドレス" aria-label="メールアドレス">
+          <button class="homebtn" id="btnSendOtp" type="button">確認コードを送る</button>
+          <input class="ref-search" id="loginCode" type="text" placeholder="届いた確認コード" aria-label="確認コード" hidden>
+          <button class="homebtn" id="btnVerifyOtp" type="button" hidden>ログイン（確認）</button>
+          <div class="login-note" id="loginNote" hidden></div>
+        </div>
+        <!-- パスワード（PW移植で追加） -->
+        <div id="panePw" hidden>
+          <input class="ref-search" id="authEmail" type="email" autocomplete="username" placeholder="メールアドレス" aria-label="メールアドレス">
+          <div id="pwLoginForm">
+            <input class="ref-search" id="authPw" type="password" autocomplete="current-password" placeholder="パスワード" aria-label="パスワード">
+            <button class="homebtn primary" id="pwLoginBtn" type="button">パスワードでログイン</button>
+            <div class="pwlinks">
+              <button class="linkbtn" id="pwToSignup" type="button">新規登録</button>
+              <button class="linkbtn" id="pwForgot" type="button">パスワードを忘れた</button>
+            </div>
+          </div>
+          <div id="pwSignupForm" hidden>
+            <input class="ref-search" id="authPwNew" type="password" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）" aria-label="新しいパスワード">
+            <button class="homebtn primary" id="pwSignupBtn" type="button">登録する（確認メールが届きます）</button>
+            <div class="pwlinks">
+              <button class="linkbtn" id="pwToLogin" type="button">ログインに戻る</button>
+            </div>
+          </div>
+          <div class="auth-msg" id="authMsg"></div>
+        </div>
       </div>
     </div>
     <!-- 単語を投稿（§9） -->
@@ -751,7 +803,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-10k";
+const APP_VERSION = "2026-07-11a";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -6158,6 +6210,14 @@ var customWords = [];  // ゲスト追加（i=200000+。当面は空）
 function allWords(){ return KOBUN_WORDS.concat(sharedWords || []).concat(customWords || []); } // 未初期化なら空扱い（読込初期の自己テスト対策）
 
 const STORAGE_KEY = "tsukuyomi_state";
+/* ===== C-3土台：最終ログインUID追跡（統合確認を「アカウント初回ログイン時だけ」に限定） =====
+   キー名は TSUKUYOMI 専用（AMAS側のlastuidキーは持ち込まない）。 */
+const LAST_UID_KEY = "tsukuyomi-lastuid";
+function getLastUid(){ try{ return localStorage.getItem(LAST_UID_KEY) || null; }catch(_){ return null; } }
+function setLastUid(id){ try{ if(id) localStorage.setItem(LAST_UID_KEY, id); }catch(_){} }
+function clearLastUid(){ try{ localStorage.removeItem(LAST_UID_KEY); }catch(_){} }
+/* P-4：パスワード再設定リンクで戻ってきたか（起動時に早期判定）。 */
+const IS_RECOVERY = /type=recovery/.test(location.hash) || /[?&]type=recovery(?:&|$)/.test(location.search);
 var _dirty = false;
 function markDirty() { _dirty = true; }
 
@@ -7238,6 +7298,54 @@ document.addEventListener("DOMContentLoaded", function () {
     var ok = await verifyOtpCode(email, code);
     if(ok){ closeMenu(); toast("ログインしました"); } // 以降は onAuthStateChange が統合・ロード・UI更新
   });
+
+  // ===== PW認証UIの配線（方式タブ・PWログイン/登録/再設定・PW設定カード）=====
+  (function wirePwUi(){
+    var paneCode = byId("paneCode"), panePw = byId("panePw");
+    var tabCode = byId("tabCode"), tabPw = byId("tabPw");
+    var pwLoginForm = byId("pwLoginForm"), pwSignupForm = byId("pwSignupForm");
+    function clearAuthMsg(){ var m = byId("authMsg"); if(m){ m.textContent = ""; } }
+    function showTab(which){
+      var codeOn = (which === "code");
+      if(tabCode) tabCode.classList.toggle("active", codeOn);
+      if(tabPw) tabPw.classList.toggle("active", !codeOn);
+      if(paneCode) paneCode.hidden = !codeOn;
+      if(panePw) panePw.hidden = codeOn;
+      clearAuthMsg();
+    }
+    function showPwForm(which){
+      var login = (which === "login");
+      if(pwLoginForm) pwLoginForm.hidden = !login;
+      if(pwSignupForm) pwSignupForm.hidden = login;
+      clearAuthMsg();
+    }
+    if(tabCode) tabCode.onclick = function(){ showTab("code"); };
+    if(tabPw) tabPw.onclick = function(){ showTab("pw"); };
+    if(byId("pwToSignup")) byId("pwToSignup").onclick = function(){ showPwForm("signup"); };
+    if(byId("pwToLogin")) byId("pwToLogin").onclick = function(){ showPwForm("login"); };
+    if(byId("pwLoginBtn")) byId("pwLoginBtn").onclick = passwordLogin;
+    if(byId("pwSignupBtn")) byId("pwSignupBtn").onclick = passwordSignup;
+    if(byId("pwForgot")) byId("pwForgot").onclick = passwordForgot;
+    // Enterキー：PWログインの各入力から確定
+    ["authEmail","authPw"].forEach(function(id){
+      var el = byId(id); if(!el) return;
+      el.addEventListener("keydown", function(e){ if(e.isComposing||e.keyCode===229) return; if(e.key==="Enter"){ e.preventDefault(); passwordLogin(); } });
+    });
+    var an = byId("authPwNew"); if(an) an.addEventListener("keydown", function(e){ if(e.isComposing||e.keyCode===229) return; if(e.key==="Enter"){ e.preventDefault(); passwordSignup(); } });
+    // ログイン済み用：PWを設定／変更（updateUser）
+    var setPwBtn = byId("setPwBtn");
+    if(setPwBtn) setPwBtn.onclick = async function(){
+      var m = byId("setPwMsg");
+      var pw = byId("setPw").value || "";
+      if(!sb || !currentUser){ m.style.color = "var(--shu)"; m.textContent = "ログイン中のみ設定できます。"; return; }
+      if(pw.length < 8){ m.style.color = "var(--shu)"; m.textContent = "パスワードは8文字以上にしてください。"; return; }
+      m.style.color = "var(--sub)"; m.textContent = "更新中…";
+      var r = await sb.auth.updateUser({ password: pw });
+      if(r && r.error){ m.style.color = "var(--shu)"; m.textContent = jaAuthError(r.error); return; }
+      m.style.color = "var(--midori)"; m.textContent = "パスワードを設定しました。次回からパスワード（端末の生体認証）でログインできます。";
+      byId("setPw").value = "";
+    };
+  })();
   // Escキーで閉じる
   document.addEventListener("keydown", function (ev) { if (ev.key === "Escape" && !menuPanel.hidden) closeMenu(); });
 
@@ -7256,6 +7364,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var rev = byId("miReview"), inb = byId("miInbox"); // §9：オーナー専用（UI出し分けのみ。安全境界はRLS）
     if(rev) rev.hidden = !isOwner;
     if(inb) inb.hidden = !isOwner;
+    var pwc = byId("pwSetCard"); if(pwc) pwc.hidden = !currentUser; // ログイン時のみPW設定カードを表示
   }
   function applyState(ns){
     if(!ns) return;
@@ -7433,6 +7542,103 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
   function redirectTarget(){ return location.href.split("#")[0]; }
+
+  /* ===== C-3土台：ログイン時だけ統合確認を発火（発火可否の制御に徹する） =====
+     統合の実適用は既存 migrateGuestProgress（内部で applyState(merged)＋ローカル削除まで実施）に1回だけ任せる。
+     ここでは applyState を呼ばない＝二重適用しない。直接 migrateGuestProgress を呼ばず必ずこの関数経由にする。 */
+  async function maybeMigrateOnLogin(){
+    if(IS_RECOVERY) return;                          // P-4：リセット到来時は統合確認を出さない
+    if(!(sb && currentUser)) return;
+    if(currentUser.id === getLastUid()) return;      // 同じアカウントで挨拶済み → 開いただけでは出さない
+    await migrateGuestProgress();                    // ゲスト進捗がある時だけ確認モーダルが出る（適用は既存側）
+    setLastUid(currentUser.id);                       // 迎え済みを記録 → 次回以降は出ない
+  }
+
+  /* ===== パスワード認証（AMAS移植・キー/テーブルは TSUKUYOMI 値）===== */
+  function jaAuthError(err){
+    var m = (err && err.message) ? String(err.message) : "";
+    if(/Invalid login credentials/i.test(m)) return "メールアドレスかパスワードが正しくありません。";
+    if(/Email not confirmed/i.test(m)) return "メール確認が未完了です。確認メールのリンクを開いてください。";
+    if(/User already registered/i.test(m)) return "このメールアドレスは登録済みです。ログインするか、パスワードをお忘れの場合は再設定してください。";
+    if(/Password should be at least/i.test(m)) return "パスワードが短すぎます。8文字以上にしてください。";
+    if(/rate limit|too many/i.test(m)) return "回数制限に達しました。しばらく待ってから再度お試しください。";
+    return "うまくいきませんでした：" + m;
+  }
+  async function passwordLogin(){
+    if(!sb){ toast("クラウド未設定です"); return; }
+    var msg = byId("authMsg");
+    var email = (byId("authEmail").value || "").trim();
+    var pw = byId("authPw").value || "";
+    if(!email || !pw){ msg.style.color = "var(--shu)"; msg.textContent = "メールアドレスとパスワードを入力してください。"; return; }
+    msg.style.color = "var(--sub)"; msg.textContent = "ログイン中…";
+    var r = await sb.auth.signInWithPassword({ email: email, password: pw });
+    if(r && r.error){ msg.style.color = "var(--shu)"; msg.textContent = jaAuthError(r.error); return; }
+    msg.style.color = "var(--midori)"; msg.textContent = "ログインしました。"; closeMenu();
+    // 以降は既存の onAuthStateChange → maybeMigrateOnLogin → loadCloud に自動で乗る（C-3不変）
+  }
+  async function passwordSignup(){
+    if(!sb){ toast("クラウド未設定です"); return; }
+    var msg = byId("authMsg");
+    var email = (byId("authEmail").value || "").trim();
+    var pw = byId("authPwNew").value || "";
+    if(!email){ msg.style.color = "var(--shu)"; msg.textContent = "メールアドレスを入力してください。"; return; }
+    if(pw.length < 8){ msg.style.color = "var(--shu)"; msg.textContent = "パスワードは8文字以上にしてください。"; return; }
+    msg.style.color = "var(--sub)"; msg.textContent = "登録中…";
+    var r = await sb.auth.signUp({ email: email, password: pw, options:{ emailRedirectTo: redirectTarget() } });
+    if(r && r.error){ msg.style.color = "var(--shu)"; msg.textContent = jaAuthError(r.error); return; }
+    msg.style.color = "var(--midori)"; msg.textContent = "確認メールを送りました。メール内のリンクで確認するとログインできます。";
+  }
+  async function passwordForgot(){
+    if(!sb){ toast("クラウド未設定です"); return; }
+    var msg = byId("authMsg");
+    var email = (byId("authEmail").value || "").trim();
+    if(!email){ msg.style.color = "var(--shu)"; msg.textContent = "メールアドレスを入力してから「パスワードを忘れた」を押してください。"; return; }
+    msg.style.color = "var(--sub)"; msg.textContent = "送信中…";
+    var r = await sb.auth.resetPasswordForEmail(email, { redirectTo: redirectTarget() });
+    if(r && r.error){ msg.style.color = "var(--shu)"; msg.textContent = jaAuthError(r.error); return; }
+    msg.style.color = "var(--midori)"; msg.textContent = "パスワード再設定用のメールを送りました。メール内のリンクを開いてください。";
+  }
+  /* P-4：リセットリンクで戻ってきたときの新パスワード入力UI（自己完結モーダル） */
+  function ensurePwResetDom(){
+    if(document.getElementById("pwresetmodal")) return;
+    var style = document.createElement("style");
+    style.textContent = "#pwresetmodal{position:fixed;inset:0;z-index:130;background:rgba(31,44,56,.45);display:flex;align-items:center;justify-content:center;padding:16px}"
+      + "#pwresetmodal.pr-hidden{display:none}"
+      + "#pwresetmodal .card{background:var(--card);border:1px solid var(--line);border-radius:12px;width:100%;max-width:340px;padding:22px 20px}"
+      + "#pwresetmodal h3{font-family:var(--serif);font-size:1.05rem;margin-bottom:4px}"
+      + "#pwresetmodal p.sub{font-size:.74rem;color:var(--sub);margin-bottom:16px}"
+      + "#pwresetmodal input{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font-size:.9rem;margin-bottom:9px;font-family:var(--sans)}"
+      + "#pwresetmodal .send{width:100%;padding:11px;border-radius:8px;background:var(--ink);color:#fff;font-weight:700;font-size:.9rem;border:none;cursor:pointer}"
+      + "#pwresetmodal .msg{font-size:.74rem;color:var(--midori);margin-top:10px;min-height:1em}";
+    document.head.appendChild(style);
+    var modal = document.createElement("div");
+    modal.id = "pwresetmodal";
+    modal.innerHTML = '<div class="card"><h3>新しいパスワードの設定</h3>'
+      + '<p class="sub">再設定リンクから開きました。新しいパスワードを入力してください。</p>'
+      + '<input type="password" id="pwResetInput" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）">'
+      + '<button class="send" id="pwResetBtn" type="button">パスワードを更新する</button>'
+      + '<div class="msg" id="pwResetMsg"></div></div>';
+    document.body.appendChild(modal);
+    document.getElementById("pwResetBtn").onclick = submitPwReset;
+    var inp = document.getElementById("pwResetInput");
+    inp.addEventListener("keydown", function(e){
+      if(e.isComposing || e.keyCode === 229) return;
+      if(e.key === "Enter"){ e.preventDefault(); submitPwReset(); }
+    });
+  }
+  function openPwResetModal(){ ensurePwResetDom(); var m = document.getElementById("pwresetmodal"); if(m) m.classList.remove("pr-hidden"); }
+  async function submitPwReset(){
+    if(!sb) return;
+    var msg = document.getElementById("pwResetMsg");
+    var pw = document.getElementById("pwResetInput").value || "";
+    if(pw.length < 8){ msg.style.color = "var(--shu)"; msg.textContent = "パスワードは8文字以上にしてください。"; return; }
+    msg.style.color = "var(--sub)"; msg.textContent = "更新中…";
+    var r = await sb.auth.updateUser({ password: pw });
+    if(r && r.error){ msg.style.color = "var(--shu)"; msg.textContent = jaAuthError(r.error); return; }
+    msg.style.color = "var(--midori)"; msg.textContent = "パスワードを更新しました。ログインします…";
+    setTimeout(function(){ location.reload(); }, 900); // reload で IS_RECOVERY が解け、以降は通常ログイン
+  }
+
   async function signInGoogle(){
     if(!sb){ toast("クラウド未設定です"); return; }
     try{ await sb.auth.signInWithOAuth({ provider:"google", options:{ redirectTo: redirectTarget() } }); }
@@ -7451,6 +7657,7 @@ document.addEventListener("DOMContentLoaded", function () {
     catch(_){ toast("コードが正しくありません"); return false; }
   }
   async function signOutCloud(){
+    clearLastUid();  // C-3：ログアウトで記録を消し、再ログイン時に再度統合確認できるようにする
     if(sb){ try{ await sb.auth.signOut(); }catch(_){} }
     currentUser = null; isOwner = false; updateAuthUI(); showMenuList(); toast("ログアウトしました");
   }
@@ -7469,14 +7676,15 @@ document.addEventListener("DOMContentLoaded", function () {
       await loadSharedWords(); // §9：承認済み共有語をプールへ（ゲストも閲覧可）
 
       sb.auth.onAuthStateChange(async function(event, sess){
+        if(event === "PASSWORD_RECOVERY"){ openPwResetModal(); return; } // P-4：新PW入力UIを出し、通常同期/統合確認は抑止して抜ける
         currentUser = sess ? sess.user : null;
         if(!currentUser){ isOwner = false; updateAuthUI(); return; }
         await computeOwner();
         if(event === "SIGNED_IN"){
-          // 項目23：本当の新規サインイン時だけ。ホームへ遷移してから統合モーダルを出す。
+          // 項目23／C-3：本当の新規サインイン時だけ。ホームへ遷移してから統合確認（初回uidのみ）。
           updateAuthUI();
           showScreen("home"); refreshHome();
-          await migrateGuestProgress();   // ゲスト進捗があれば「最初のホーム」で確認
+          await maybeMigrateOnLogin();   // C-3：直接 migrateGuestProgress を呼ばず必ずこの制御経由（初回1回だけ）
           await loadCloud();
           refreshHome();
         } else {
@@ -7490,6 +7698,7 @@ document.addEventListener("DOMContentLoaded", function () {
       var ss = await sb.auth.getSession();
       currentUser = (ss && ss.data && ss.data.session) ? ss.data.session.user : null;
       if(currentUser){ await computeOwner(); await loadCloud(); }
+      if(IS_RECOVERY) openPwResetModal(); // P-4：リセットリンク到来時は新PW入力UIを出す（イベント取りこぼしの保険）
 
       // 項目9：タブ復帰でトークン自動更新を回復（バックグラウンドで止まっても復帰時に回復）
       document.addEventListener("visibilitychange", function(){
