@@ -821,7 +821,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-12c";
+const APP_VERSION = "2026-07-12d";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -6250,6 +6250,24 @@ function setLastUid(id){ try{ if(id) localStorage.setItem(LAST_UID_KEY, id); }ca
 function clearLastUid(){ try{ localStorage.removeItem(LAST_UID_KEY); }catch(_){} }
 /* P-4：パスワード再設定リンクで戻ってきたか（起動時に早期判定）。 */
 const IS_RECOVERY = /type=recovery/.test(location.hash) || /[?&]type=recovery(?:&|$)/.test(location.search);
+
+/* WP14-①：更新ボタンが付けたキャッシュバスター(?v=)をURLから消す。
+   残したままだと redirectTarget()（location.href.split("#")[0]）に混入し、
+   Supabase の Redirect URLs で拒否されて認証が壊れる。
+   ・消すのは v パラメータだけ。認証用クエリ(?code= 等)とハッシュ(#access_token 等)には一切触れない。
+   ・IS_RECOVERY の判定より後に実行するため、再設定リンクの判定も壊さない。
+   ・Supabase クライアント生成（detectSessionInUrl）より前に済ませるので、セッション復元とも競合しない。 */
+(function stripCacheBuster(){
+  try{
+    if(!/[?&]v=/.test(location.search)) return;     // v が無ければ何もしない
+    var u = new URL(location.href);
+    u.searchParams.delete("v");                     // v だけを削除（code 等は残る）
+    var q = u.searchParams.toString();
+    var next = u.pathname + (q ? "?" + q : "") + location.hash;  // ハッシュはそのまま維持
+    history.replaceState(null, "", next);           // 履歴を汚さずURLだけ差し替え
+  }catch(_){ /* 失敗しても致命的ではない（?v= が残るだけ） */ }
+})();
+
 var _dirty = false;
 function markDirty() { _dirty = true; }
 
@@ -7140,7 +7158,18 @@ document.addEventListener("DOMContentLoaded", function () {
   async function safeReloadForUpdate(){
     try{ markDirty(); flush(state); }catch(_){}     // ①ローカルへ確実に保存（同期）
     try{ await saveCloudNow(); }catch(_){}          // ②クラウドへ即時保存し完了を待つ（失敗しても①がある）
-    location.reload();                              // ③更新実行 → 起動時に updateAvailable=false で消灯
+    /* WP14-①：単純な location.reload() はブラウザ／CloudflareのCDNキャッシュ（cf-cache-status: HIT）から
+       古いHTMLを返すことがあり、「検知はできるのに押しても更新されない」状態になる。
+       そこでURLにキャッシュバスター(?v=)を付けて取得し直す。
+       ?v= は起動直後に stripCacheBuster() が history.replaceState で除去するため、
+       認証の戻り先URL（redirectTarget()）には残らない。 */
+    try{
+      var u = new URL(location.href);
+      u.searchParams.set("v", String(Date.now()));
+      location.replace(u.toString());               // ③更新実行（キャッシュ迂回）
+    }catch(_){
+      location.reload();                            // 万一URL操作に失敗しても従来動作にフォールバック
+    }
   }
 
   // 項目30：AMATERAS（英単語）へ。未設定なら遷移を止めてトースト「準備中」、設定済みなら別タブで開く
@@ -7343,14 +7372,27 @@ document.addEventListener("DOMContentLoaded", function () {
      pendingSignup は「新規登録リンクから来たか」を示す揮発フラグ。
      state（kobun_user_data へ同期される進捗）には入れない＝保存・同期・統合(C-3)・mergeStates の思想は不変。
      1回提示したら必ずクリアし、二重発火させない（C-3＝統合確認の1回化と同じ思想）。 */
+  /* WP14-②：メールのリンクを踏むとアプリはリロードで開き直される。
+     揮発変数だとそこでフラグが消え、「リンクを押した人だけPW設定が出ない」症状になる（AMATERASの真因と同型）。
+     そこで localStorage に永続化する。キーは学習進捗（tsukuyomi_state / kobun_user_data）とは完全に別。 */
+  var PENDING_SIGNUP_KEY = "tsukuyomi_pending_signup";
   var pendingSignup = false;
+  try{ pendingSignup = (localStorage.getItem(PENDING_SIGNUP_KEY) === "1"); }catch(_){}
   function setSignupMode(on){
     pendingSignup = !!on;
+    try{
+      if(pendingSignup) localStorage.setItem(PENDING_SIGNUP_KEY, "1");
+      else localStorage.removeItem(PENDING_SIGNUP_KEY);
+    }catch(_){}
     var h = byId("signupHint"); if(h) h.hidden = !pendingSignup;   // 新規登録モードの見出し
   }
   // 新規登録経由のコード認証に成功したときだけ、続けてパスワード設定を提示する
+  var signupPromptShown = false;                 // WP14-②：起動時と検証直後の二重提示を防ぐ
   function promptPwAfterSignup(){
+    if(signupPromptShown) return;                // ★同一セッション内で2回出さない
+    signupPromptShown = true;
     pendingSignup = false;                       // ★提示は1回きり。ここで確実にクリア（二重発火防止）
+    try{ localStorage.removeItem(PENDING_SIGNUP_KEY); }catch(_){}   // WP14-②：永続フラグも即クリア
     var h = byId("signupHint"); if(h) h.hidden = true;
     var later = byId("btnPwLater"); if(later) later.hidden = false;  // 「あとで」でスキップ可能
     var msg = byId("setPwMsg"); if(msg){ msg.style.color = "var(--sub)"; msg.textContent = "登録が完了しました。パスワードを設定すると、次回のログインが簡単になります（あとででも設定できます）。"; }
@@ -7361,6 +7403,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // 登録完了ステップの終了（「あとで」／設定成功／画面離脱）
   function endSignupPrompt(){
     pendingSignup = false;
+    try{ localStorage.removeItem(PENDING_SIGNUP_KEY); }catch(_){}   // WP14-②：永続フラグも残さない
     var later = byId("btnPwLater"); if(later) later.hidden = true;
     var h = byId("signupHint"); if(h) h.hidden = true;
   }
@@ -7840,6 +7883,15 @@ document.addEventListener("DOMContentLoaded", function () {
       currentUser = (ss && ss.data && ss.data.session) ? ss.data.session.user : null;
       if(currentUser){ await computeOwner(); await loadCloud(); }
       if(IS_RECOVERY) openPwResetModal(); // P-4：リセットリンク到来時は新PW入力UIを出す（イベント取りこぼしの保険）
+      /* WP14-②：提示の経路B＝起動時。
+         新規登録メールのリンクを踏んだ利用者は、コード入力を経ずにリロードでログイン状態になる。
+         永続フラグが立っていれば、ここでPW設定カードを提示する（経路A＝コード検証直後、と合わせて2経路）。
+         提示は1回きり（promptPwAfterSignup 内で永続フラグを消し、二重発火ガードも効く）。
+         パスワード再設定（IS_RECOVERY）とは競合させない。 */
+      if(currentUser && pendingSignup && !IS_RECOVERY){
+        try{ openMenu(); }catch(_){}
+        promptPwAfterSignup();
+      }
 
       // 項目9：タブ復帰でトークン自動更新を回復（バックグラウンドで止まっても復帰時に回復）
       document.addEventListener("visibilitychange", function(){
