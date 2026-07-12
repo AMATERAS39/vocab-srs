@@ -317,13 +317,13 @@
   .review-card .r-actions .homebtn{ flex:1; padding:.5rem 0; font-size:.95rem; }
   .review-card .r-actions .ref-search{ flex:1; }
   /* ===== 機能8・§10：更新通知バナー（上部固定・z-index 100） ===== */
-  .update-banner{ position:fixed; top:0; left:0; right:0; z-index:100;
-    display:flex; align-items:center; gap:.6rem; justify-content:center; flex-wrap:wrap;
-    background:var(--card); border-bottom:1px solid var(--line); box-shadow:0 2px 10px rgba(60,40,20,.18);
-    font-family:var(--sans); font-size:.9rem; color:var(--ink); padding:.55rem .8rem; }
-  .update-banner .ub-btn{ font-family:var(--serif); font-size:.9rem; color:#fff; background:var(--shu);
-    border:none; border-radius:6px; padding:.35rem 1rem; cursor:pointer; }
-  .update-banner .ub-x{ background:transparent; border:none; color:var(--sub); font-size:1.1rem; cursor:pointer; line-height:1; padding:.2rem .4rem; }
+  /* ===== 赤ドット（更新あり／管理者の未読）。円のみ・数字やテキストは出さない（仕様4） ===== */
+  .icon-btn{ position:relative; }        /* ドットの基準（既存の見た目は不変） */
+  .menu-item{ position:relative; }       /* 同上（受信箱の項目にドットを出す） */
+  .dot{ position:absolute; width:8px; height:8px; border-radius:50%; background:var(--shu);
+        box-shadow:0 0 0 2px var(--card); pointer-events:none; }
+  .icon-btn > .dot{ top:1px; right:1px; }                    /* アイコンボタンの右上 */
+  .menu-item > .dot{ top:50%; right:.8rem; margin-top:-4px; } /* メニュー項目の右端（縦中央） */
   /* ===== アプリ説明（本格版・§9about）。色は変数/クラス経由（SVG属性へ直書きしない） ===== */
   .about-content{ padding:.4rem .9rem 1.2rem; }
   .about-content h2{ font-family:var(--serif); font-size:1rem; margin:1.2rem 0 .3rem; padding-left:8px; border-left:3px solid var(--shu); color:var(--ink); }
@@ -363,9 +363,11 @@
       <div class="hdr-actions">
         <button class="icon-btn" id="homeReload" type="button" aria-label="更新">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v5h-5"/></svg>
+          <span class="dot" id="dotUpdate" hidden></span>
         </button>
         <button class="icon-btn" id="menuBtn" type="button" aria-label="メニュー">
           <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          <span class="dot" id="dotMenu" hidden></span>
         </button>
       </div>
     </div>
@@ -527,7 +529,7 @@
         <button class="menu-item" id="miAbout" type="button">アプリの説明</button>
         <button class="menu-item" id="miFeedback" type="button">意見箱</button>
         <button class="menu-item" id="miReview" type="button" hidden>単語の審査</button>
-        <button class="menu-item" id="miInbox" type="button" hidden>届いた意見</button>
+        <button class="menu-item" id="miInbox" type="button" hidden>届いた意見<span class="dot" id="dotInbox" hidden></span></button>
         <div class="menu-divider"></div>
         <div class="menu-account" id="accountRow" hidden></div>
         <button class="menu-item" id="miLogin" type="button">ログイン</button>
@@ -810,12 +812,7 @@
   <!-- コピーライト帯（項目15+24）：全画面の下・カード右端そろえ・追従なし。ver は APP_VERSION から注入 -->
   <div class="site-footer"><span class="ver" id="footVer"></span>©2026 AMATERAS</div>
 
-  <!-- 更新通知バナー（§10） -->
-  <div id="updateBanner" class="update-banner" hidden>
-    <span>新しいバージョンがあります</span>
-    <button class="ub-btn" id="updateReloadBtn" type="button">更新する</button>
-    <button class="ub-x" id="updateCloseBtn" type="button" aria-label="閉じる">×</button>
-  </div>
+  <!-- 更新通知（§10）：バナーは廃止。新版があれば更新ボタン(#homeReload)に赤ドットのみを点灯する。 -->
 
   <div id="toast" class="toast" hidden></div>
 
@@ -824,14 +821,31 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-12b";
+const APP_VERSION = "2026-07-12c";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
    "ここに" の語を含む＝未設定と判定し、押下時はトースト「準備中」を出す。 */
 var AMATERAS_URL = "https://amaterasu-vocab.com/";
 
-// 公開中のHTMLから APP_VERSION を読み、稼働中と違えばバナー表示。失敗は静かに無視。
+/* ===== 赤ドットの状態（single source of truth） =====
+   ★AMATERASの教訓：onAuthStateChange による再描画で DOM の hidden は上書きされうる。
+   点灯状態は必ず「変数」で保持し、描画は renderDots() に一本化する。
+   updateAuthUI() の末尾でも renderDots() を呼ぶため、再描画後も変数どおりに正しく再評価される。 */
+var updateAvailable = false;   // 新版あり（更新ボタンの赤ドット）
+var unreadInbox = false;       // 管理者の未読あり（☰ と「届いた意見」の赤ドット。オーナー限定）
+var dotsIsOwner = false;       // renderDots が参照するオーナー判定のミラー（クロージャ内 isOwner から同期）
+function renderDots(){
+  var du = document.getElementById("dotUpdate");
+  var dm = document.getElementById("dotMenu");
+  var di = document.getElementById("dotInbox");
+  if(du) du.hidden = !updateAvailable;                       // 更新ドットはログイン状態と無関係
+  var showInbox = (dotsIsOwner && unreadInbox);              // 受信箱ドットはオーナーのみ（非オーナーには一切出さない）
+  if(dm) dm.hidden = !showInbox;                             // ☰ は受信箱の未読専用（更新では点けない）
+  if(di) di.hidden = !showInbox;
+}
+
+// 公開中のHTMLから APP_VERSION を読み、稼働中と違えば更新ボタンに赤ドットを点灯。失敗は静かに無視。
 async function checkForUpdate(manual){
   var now = Date.now();
   if (!manual && now - _lastUpdateCheck < 60000) return; // 最短1分間隔（手動押下時は無視）
@@ -842,20 +856,17 @@ async function checkForUpdate(manual){
     var text = await res.text();
     var m = text.match(/const APP_VERSION\s*=\s*"([^"]+)"/);
     if(m && m[1] && m[1] !== APP_VERSION){
-      var b = document.getElementById("updateBanner");
-      if(b) b.hidden = false;
-    } else if(manual){
-      toast("最新です");   // 手動押下で新版が無いとき（無反応にしない）
+      updateAvailable = true; renderDots();   // バナーの代わりに赤ドットのみ（説明文は出さない）
+    } else {
+      updateAvailable = false; renderDots();
+      if(manual) toast("最新です");           // 手動押下で新版が無いとき（無反応にしない）
     }
   }catch(e){ if(manual) toast("更新を確認できませんでした"); /* 自動時は静かに無視 */ }
 }
 function startUpdateChecks(){
   var fv = document.getElementById("footVer");   // コピーライト帯のバージョン表記（項目15）
   if(fv) fv.textContent = "v" + APP_VERSION;
-  var reload = document.getElementById("updateReloadBtn");
-  var close = document.getElementById("updateCloseBtn");
-  if(reload) reload.addEventListener("click", function(){ location.reload(); }); // 進捗・ログインには触れない
-  if(close) close.addEventListener("click", function(){ var b=document.getElementById("updateBanner"); if(b) b.hidden = true; });
+  renderDots();                                  // 初期状態を反映（すべて消灯）
   setTimeout(checkForUpdate, 8000);              // 起動から約8秒後に1回
   setInterval(checkForUpdate, 5 * 60 * 1000);    // 以降5分ごと
   document.addEventListener("visibilitychange", function(){
@@ -7107,7 +7118,30 @@ document.addEventListener("DOMContentLoaded", function () {
   })();
 
   // 項目17：ヘッダの手動リロード。既存 checkForUpdate を手動モードで呼ぶ（新版→§10バナー／最新→トースト）
-  byId("homeReload").addEventListener("click", function () { checkForUpdate(true); });
+  // 更新ボタン：新版あり（赤ドット点灯中）なら更新を実行、無ければ手動チェック（「最新です」トースト）
+  byId("homeReload").addEventListener("click", async function () {
+    if(!updateAvailable){ checkForUpdate(true); return; }   // 消灯中は従来どおり手動チェック
+    // ★進捗を失わないための保全（司令塔の追加条件）
+    // クイズ進行中は不意のリロードで学習中の回答が中断されるため、確認を挟む。
+    if(!quizScreen.hidden || !jodoshiQuizScreen.hidden){
+      var go = await askConfirm({
+        msg: "学習中です。今すぐ更新すると、この画面はいったん閉じます。ここまでの学習の記録は保存されます。更新しますか？",
+        okLabel: "更新する", cancelLabel: "あとで", cancelFirst: true, defaultCancel: true
+      });
+      if(!go) return;   // 「あとで」＝更新しない（赤ドットは点いたまま。学習を続けられる）
+    }
+    await safeReloadForUpdate();
+  });
+  /* 未保存の進捗を確実に保存してからリロードする。
+     ・flush(state) はローカル(localStorage)への同期書き込み → 確実に残る。
+     ・saveCloud() は400msデバウンス＋非同期のため、リロードで送信前に破棄されうる。
+       そこでデバウンスを飛ばし、クラウドへ即時 upsert して完了を待ってからリロードする。
+     ・クラウド保存に失敗しても、ローカルには保存済みなので進捗は失われない（次回起動で復元）。 */
+  async function safeReloadForUpdate(){
+    try{ markDirty(); flush(state); }catch(_){}     // ①ローカルへ確実に保存（同期）
+    try{ await saveCloudNow(); }catch(_){}          // ②クラウドへ即時保存し完了を待つ（失敗しても①がある）
+    location.reload();                              // ③更新実行 → 起動時に updateAvailable=false で消灯
+  }
 
   // 項目30：AMATERAS（英単語）へ。未設定なら遷移を止めてトースト「準備中」、設定済みなら別タブで開く
   (function(){
@@ -7424,6 +7458,12 @@ document.addEventListener("DOMContentLoaded", function () {
     if(rev) rev.hidden = !isOwner;
     if(inb) inb.hidden = !isOwner;
     var pwc = byId("pwSetCard"); if(pwc) pwc.hidden = !currentUser; // ログイン時のみPW設定カードを表示
+    // ★赤ドットは onAuthStateChange による再描画のたびに「変数の状態」から必ず再評価する（DOMに状態を持たせない）
+    var wasOwner = dotsIsOwner;
+    dotsIsOwner = isOwner;
+    if(!isOwner) unreadInbox = false;          // 非オーナー（ログアウト含む）は必ず消灯
+    renderDots();
+    if(isOwner && !wasOwner) checkInboxUnread(); // オーナーになった瞬間に1回だけ未読を問い合わせる
   }
   function applyState(ns){
     if(!ns) return;
@@ -7525,11 +7565,28 @@ document.addEventListener("DOMContentLoaded", function () {
       byId("fbBody").value = "";
     }catch(e){ toast("送信に失敗しました"); }
   }
+  /* 仕様2：管理者受信箱の未読判定。
+     点灯条件＝admin_read_at が null、または created_at より古い行が1件以上（利用者の最終送信 > admin_read_at）。
+     オーナーのみ実行・オーナーのみ表示（非オーナーには一切出さない）。失敗してもアプリは落とさない。 */
+  async function checkInboxUnread(){
+    if(!(sb && currentUser && isOwner)){ unreadInbox = false; dotsIsOwner = isOwner; renderDots(); return; }
+    try{
+      var res = await sb.from("kobun_feedback").select("id, created_at, admin_read_at");
+      var rows = (res && res.data) ? res.data : [];
+      unreadInbox = rows.some(function(r){
+        if(!r.admin_read_at) return true;                                   // 未読（null）
+        return new Date(r.admin_read_at) < new Date(r.created_at);          // 既読より後に届いている
+      });
+    }catch(e){ /* RLS等で失敗しても点灯状態は変えない（アプリは落とさない） */ }
+    dotsIsOwner = isOwner; renderDots();
+  }
+
   async function loadInbox(){
     var box = byId("inboxList"); box.innerHTML = '<div class="login-note">読み込み中…</div>';
     try{
       var res = await sb.from("kobun_feedback").select("*").order("created_at",{ascending:false});
       var rows = (res && res.data) ? res.data : [];
+      markInboxRead(rows);   // 仕様2：受信箱を開いた＝表示した行を既読にする（admin_read_at を更新して消灯）
       if(rows.length === 0){ box.innerHTML = '<div class="login-note" style="text-align:center">まだ意見はありません</div>'; return; }
       box.innerHTML = "";
       rows.forEach(function(fb){
@@ -7542,9 +7599,34 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     }catch(e){ box.innerHTML = '<div class="login-note">読み込みに失敗しました</div>'; }
   }
+  /* 表示した行のうち未読のものだけ admin_read_at を現在時刻で更新する（第1弾で書くのは admin_read_at のみ。
+     replied_at / user_read_at は第2弾用のため触らない）。失敗してもUIは壊さない。 */
+  async function markInboxRead(rows){
+    unreadInbox = false; renderDots();   // 開いた時点で消灯（☰ と「届いた意見」の両方）
+    if(!(sb && isOwner) || !rows || rows.length === 0) return;
+    var ids = rows.filter(function(r){
+      if(!r.admin_read_at) return true;
+      return new Date(r.admin_read_at) < new Date(r.created_at);
+    }).map(function(r){ return r.id; });
+    if(ids.length === 0) return;
+    try{ await sb.from("kobun_feedback").update({ admin_read_at: new Date().toISOString() }).in("id", ids); }
+    catch(e){ console.warn("[TSUKUYOMI 受信箱] 既読の記録に失敗", e); }
+  }
   async function replyFeedback(id, reply){
     try{ await sb.from("kobun_feedback").update({ reply: reply }).eq("id", id); toast("返信を保存しました"); }
     catch(e){ toast("保存に失敗しました"); }
+  }
+
+  /* リロード直前用：saveCloud のデバウンス（400ms）を飛ばし、即時に upsert して完了を待つ。
+     既存の saveCloud は変更しない（呼び出し順・戻り値も不変）。未ログイン/未設定なら何もしない。 */
+  async function saveCloudNow(){
+    if(!(sb && currentUser)) return;                       // ゲストはローカル保存のみで十分
+    if(cloudSaveTimer){ clearTimeout(cloudSaveTimer); cloudSaveTimer = null; } // 保留中のデバウンスを取り消す
+    try{
+      await sb.from(CLOUD_TABLE).upsert({ user_id: currentUser.id, updated_at: new Date().toISOString(),
+        data: JSON.stringify({ prog: state.prog, todayDate: state.todayDate, todayCount: state.todayCount, custom: state.custom || [], session: state.session || null,
+          newAssign: state.newAssign || { date: null, ids: [] }, normDoneDate: state.normDoneDate || null, carryOver: state.carryOver === true }) });
+    }catch(e){ console.warn("[TSUKUYOMI クラウド] 即時保存失敗（ローカルには保存済み）", e); }
   }
 
   async function loadCloud(){
