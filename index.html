@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>英単語学習アプリ-AMATERAS</title>
 <meta name="description" content="間隔反復(SRS)で効率よく覚える英単語学習アプリ。語源による解説と品詞ごとの意味整理で、大学受験レベルの単語を体系的に学習できます。">
 <meta name="google-site-verification" content="0V2hZBSmOEprvoma_RrSdgg_ahwdDcg1fvTCVgi4OHY" />
@@ -41,6 +41,13 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
+/* B-1：ゴムバンド／連鎖スクロールの抑止（通常のスクロールは阻害しない。高さ固定は行わない） */
+html,body{overscroll-behavior:none}
+/* A-2：ダブルタップ拡大の抑止（ピンチ拡大は残す＝弱視ユーザーの拡大手段を奪わない） */
+body{touch-action:manipulation}
+/* A-1 安全網：class無しの入力欄が body の clamp(13px…) を継承して16px未満になるのを防ぐ。
+   要素セレクタ（詳細度0,0,1）なので、.dict-row input（1.05rem=16.8px）等の既存指定は上書きしない。 */
+input,select,textarea{font-size:16px}
 body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.65;min-height:100vh}
 .wrap{max-width:580px;margin:0 auto;padding:20px 16px 8px}
 button{font-family:var(--sans);cursor:pointer;border:none;background:none;color:inherit}
@@ -77,8 +84,9 @@ details.panel summary::before{content:"▸ ";color:var(--shu)}
 details.panel[open] summary::before{content:"▾ "}
 details.panel .inner{padding:0 18px 18px}
 .setting-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;font-size:.85rem}
-.setting-row select,.setting-row input[type=number]{font-family:var(--sans);padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:.85rem;background:#fff}
-textarea{width:100%;min-height:110px;border:1px solid var(--line);border-radius:6px;padding:8px;font-size:.78rem;font-family:ui-monospace,monospace;background:#fff;color:var(--ink)}
+/* A-1：iOS Safari のフォーカス拡大防止（16px以上）。type=text も含める（setNick対策）。行高増はpaddingで吸収 */
+.setting-row select,.setting-row input[type=number],.setting-row input[type=text]{font-family:var(--sans);padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:16px;background:#fff}
+textarea{width:100%;min-height:130px;border:1px solid var(--line);border-radius:6px;padding:8px;font-size:16px;font-family:ui-monospace,monospace;background:#fff;color:var(--ink)}
 .btn-sub{padding:8px 14px;border:1px solid var(--ink);border-radius:6px;font-size:.82rem;font-weight:500;margin:8px 8px 0 0;background:#fff}
 .msg{font-size:.78rem;margin-top:8px;color:var(--midori)}
 .msg.err{color:var(--shu)}
@@ -90,7 +98,7 @@ code{background:var(--paper);padding:1px 5px;border-radius:4px;font-size:.78rem}
 .pw-card{margin:16px 0;padding:14px;border:1px solid var(--line);border-radius:10px;background:linear-gradient(180deg,#fff, #FAFBFC)}
 .pw-card .pw-head{display:flex;align-items:center;gap:7px;font-size:.9rem;font-weight:600;color:var(--ink);margin-bottom:4px}
 .pw-card .pw-field{display:flex;gap:8px;align-items:stretch}
-.pw-card input[type=password]{flex:1;min-width:0;font-family:var(--sans);padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:.9rem;background:#fff}
+.pw-card input[type=password]{flex:1;min-width:0;font-family:var(--sans);padding:8px 11px;border:1px solid var(--line);border-radius:8px;font-size:16px;background:#fff}
 .pw-card input[type=password]:focus{outline:none;border-color:var(--shu);box-shadow:0 0 0 2px var(--shu-soft)}
 .pw-card .pw-btn{white-space:nowrap;padding:9px 16px;border:none;border-radius:8px;background:var(--shu);color:#fff;font-size:.85rem;font-weight:600;cursor:pointer}
 .pw-card .pw-btn:active{opacity:.85}
@@ -147,7 +155,7 @@ code{background:var(--paper);padding:1px 5px;border-radius:4px;font-size:.78rem}
 .btn-ghost{display:block;width:100%;padding:12px;border:1.5px solid var(--ink);border-radius:8px;font-size:.95rem;font-weight:700;background:#fff;margin-top:10px}
 /* 参照モード */
 .ref-controls{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-.ref-controls select,.ref-controls input{font-family:var(--sans);padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:.82rem;background:#fff;flex:1;min-width:120px}
+.ref-controls select,.ref-controls input{font-family:var(--sans);padding:6px 9px;border:1px solid var(--line);border-radius:6px;font-size:16px;background:#fff;flex:1;min-width:120px}
 .ref-count{font-size:.76rem;color:var(--sub);margin-bottom:10px}
 .ref-item{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:12px 14px;margin-bottom:8px}
 .ref-head{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
@@ -4241,7 +4249,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.12.10.00";
+const APP_VERSION = "2026.07.12.14.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -6110,8 +6118,8 @@ function ensureAuthDom(){
     #authmodal .oauth{display:block;width:100%;padding:11px;border:1px solid var(--line);
       border-radius:8px;background:#fff;color:var(--ink);font-weight:700;font-size:.9rem;margin-bottom:9px}
     #authmodal .sep{text-align:center;font-size:.7rem;color:var(--sub);margin:10px 0}
-    #authmodal input{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;
-      font-size:.9rem;margin-bottom:9px;font-family:var(--sans)}
+    #authmodal input{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;
+      font-size:16px;margin-bottom:9px;font-family:var(--sans)}
     #authmodal .send{width:100%;padding:11px;border-radius:8px;background:var(--ink);color:#fff;
       font-weight:700;font-size:.9rem;white-space:nowrap}
     #authmodal .send.compact{font-size:.84rem;padding:11px 6px;letter-spacing:0}
@@ -6413,7 +6421,7 @@ function ensurePwResetDom(){
     #pwresetmodal .card{background:var(--card);border:1px solid var(--line);border-radius:12px;width:100%;max-width:340px;padding:22px 20px}
     #pwresetmodal h3{font-family:var(--serif);font-size:1.05rem;margin-bottom:4px}
     #pwresetmodal p.sub{font-size:.74rem;color:var(--sub);margin-bottom:16px}
-    #pwresetmodal input{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font-size:.9rem;margin-bottom:9px;font-family:var(--sans)}
+    #pwresetmodal input{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:16px;margin-bottom:9px;font-family:var(--sans)}
     #pwresetmodal .send{width:100%;padding:11px;border-radius:8px;background:var(--ink);color:#fff;font-weight:700;font-size:.9rem}
     #pwresetmodal .msg{font-size:.74rem;color:var(--midori);margin-top:10px;min-height:1em}
   `;
