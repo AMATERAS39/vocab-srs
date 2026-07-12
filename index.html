@@ -208,7 +208,17 @@ body{font-size:clamp(13px,1.9vh,16px)}
 .copyright-wrap{max-width:580px;margin:0 auto;padding:0 16px 18px;display:flex;justify-content:space-between;align-items:center}
 .copyright{font-size:.62rem;color:var(--sub);opacity:.75}
 .version-tag{font-size:.62rem;color:var(--sub);opacity:.75}
-.menu-btn{background:var(--card);border:1px solid var(--line);border-radius:9px;cursor:pointer;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:0}
+.menu-btn{position:relative;background:var(--card);border:1px solid var(--line);border-radius:9px;cursor:pointer;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:0}
+/* 赤ドット（様式D：小さな円のみ・数字なし・--shu）。.update-dot と同トーン・同サイズ */
+.notif-dot{display:none;position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:var(--shu);border:1.5px solid var(--card)}
+.menu-drop button{position:relative}
+.menu-drop button .notif-dot{top:8px;right:10px}
+/* 追加2：画面に依存しないフローティング更新ボタン（#updateBtn はホームにしか無いため）。
+   更新を検知している間だけ表示する。クイズの操作ボタンと重ならないよう右下・safe-area考慮。 */
+#updateFloat{display:none;position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));
+  z-index:1200;align-items:center;gap:6px;padding:10px 14px;border-radius:999px;
+  background:var(--ink);color:#fff;border:none;font-size:.82rem;font-weight:700;
+  box-shadow:0 3px 12px rgba(0,0,0,.25);cursor:pointer}
 .update-ico{position:relative;background:var(--card);border:1px solid var(--line);border-radius:9px;cursor:pointer;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:0;margin-right:6px}
 .update-svg{width:20px;height:20px;fill:var(--ink)}
 .update-dot{display:none;position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:var(--shu);border:1.5px solid var(--card)}
@@ -4253,7 +4263,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.12.20.00";
+const APP_VERSION = "2026.07.13.10.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4436,10 +4446,93 @@ async function loadState(){
    稼働中の APP_VERSION と、公開中のHTMLに埋め込まれた APP_VERSION を比較し、
    異なれば「更新があります」バナーを表示する（進捗・ログイン状態には一切触れない）。 */
 let updateAvailable = false;
-function showUpdateBanner(){ updateAvailable = true; reflectUpdateDot(); }  /* E-3：バナーは出さず、更新ボタンの赤ドットを立てる役に置換 */
+function showUpdateBanner(){ updateAvailable = true; reflectUpdateUi(); }  /* E-3：バナーは出さず、更新ボタンの赤ドットを立てる役に置換 */
 function reflectUpdateDot(){
   const b = document.getElementById("updateBtn"); if(!b) return;
   const d = b.querySelector(".update-dot"); if(d) d.style.display = updateAvailable ? "block" : "none";
+}
+/* 追加2：ホームの赤ドットと、画面に依存しないフローティング更新ボタンの両方を同期する。
+   #updateBtn はホームのヘッダーにしか無いため、クイズ中・設定・辞書などでは気づけなかった。 */
+function reflectUpdateUi(){
+  reflectUpdateDot();                      /* 既存の挙動は不変 */
+  const f = document.getElementById("updateFloat");
+  if(f) f.style.display = updateAvailable ? "inline-flex" : "none";
+}
+/* 追加1：更新ボタンで確実に新版へ切り替える。
+   原因＝location.reload() はHTTPキャッシュ（CloudflareのCDNキャッシュにHIT）から旧版が返りうる。
+   検知側 checkForUpdate は fetch(cache:"no-store") で迂回できていたため「検知はできるが切り替わらない」状態だった。
+   ①進捗を確定保存 → ②正規URLのキャッシュを新版で上書き → ③キャッシュバスター付きURLで開き直す。 */
+async function applyUpdateNow(){
+  try{ if(dirty) await flushSave(); }catch(_){}          /* 進捗・ログイン状態を壊さない */
+  const canonical = location.origin + location.pathname; /* クエリなしの正規URL */
+  try{ await fetch(canonical, { cache: "reload" }); }catch(_){}  /* 失敗しても③で新版になる */
+  location.replace(location.pathname + "?v=" + Date.now());
+}
+/* 追加1の副作用対策：開き直した後に残る ?v=... を除去し、URLを正規の姿に戻す。
+   redirectTarget()（=location.href.split("#")[0]）にキャッシュバスターが混入するのを防ぐ。
+   ※除去するのは自前の v= のみ。認証用のクエリ（code / token_hash / type=recovery 等）は必ず温存する。
+   ※supabase-js の detectSessionInUrl がURLを読み終えた後（initSupabase 完了後）に呼ぶこと。 */
+function stripCacheBuster(){
+  try{
+    if(!/[?&]v=\d+(?:&|$)/.test(location.search)) return;
+    const u = new URL(location.href);
+    u.searchParams.delete("v");                       /* v= だけを削除。他のクエリは残す */
+    const qs = u.searchParams.toString();
+    const next = u.pathname + (qs ? "?" + qs : "") + u.hash;   /* ハッシュ（認証情報）も温存 */
+    history.replaceState(null, "", next);
+  }catch(_){}
+}
+/* ==== 赤ドット通知（A:管理者の受信箱／B:利用者のお問い合わせ） ====
+   判定は行を取得してJS側で時刻比較する（PostgRESTでは列同士の比較が素直に書けないため）。
+   通信失敗は握りつぶす＝点灯しないだけ（画面は壊さない）。未ログイン時はクエリを投げない。 */
+let notifInbox = false;     /* 管理者：未読の投稿がある */
+let notifFeedback = false;  /* 利用者：未読の返信/既読がある */
+function tmax(a, b){        /* null考慮の max（ISO文字列は辞書順比較で時刻順になる） */
+  if(!a) return b || null;
+  if(!b) return a;
+  return (a > b) ? a : b;
+}
+async function refreshNotifDots(){
+  if(!sb || !currentUser){ notifInbox = false; notifFeedback = false; reflectNotifDots(); return; }
+  /* B：利用者側。自分の投稿のうち max(replied_at, admin_read_at) > user_read_at なら未読 */
+  try{
+    const { data } = await sb.from("feedback")
+      .select("id, replied_at, admin_read_at, user_read_at")
+      .eq("submitted_by", currentUser.id);
+    notifFeedback = (data || []).some(r=>{
+      const latest = tmax(r.replied_at, r.admin_read_at);
+      if(!latest) return false;                 /* 管理者がまだ何もしていない */
+      if(!r.user_read_at) return true;          /* 未読（一度も開いていない） */
+      return latest > r.user_read_at;           /* 既読後に再返信されたら再点灯 */
+    });
+  }catch(_){ notifFeedback = false; }
+  /* A：管理者側。オーナーのみ実行。created_at > admin_read_at（nullなら未読）が1件でもあれば点灯 */
+  if(isOwner()){
+    try{
+      const { data } = await sb.from("feedback").select("id, created_at, admin_read_at");
+      notifInbox = (data || []).some(r=> !r.admin_read_at || r.created_at > r.admin_read_at);
+    }catch(_){ notifInbox = false; }
+  }else{
+    notifInbox = false;
+  }
+  reflectNotifDots();
+}
+function reflectNotifDots(){
+  const set = (id, on)=>{ const el = document.getElementById(id); if(el) el.style.display = on ? "block" : "none"; };
+  set("dotInbox", notifInbox);
+  set("dotFeedback", notifFeedback);
+  set("dotMenu", notifInbox || notifFeedback);   /* ☰へ伝播（メニューを開かなくても気づける） */
+}
+/* 追加2：フローティング更新ボタンを body 直下に常設する（app.innerHTML の書き換えの影響を受けない） */
+function ensureUpdateFloat(){
+  if(document.getElementById("updateFloat")) return;
+  const b = document.createElement("button");
+  b.id = "updateFloat";
+  b.type = "button";
+  b.textContent = "新しい版に更新";
+  b.onclick = ()=> applyUpdateNow();
+  document.body.appendChild(b);
+  reflectUpdateUi();
 }
 async function checkForUpdate(){
   if(!navigator.onLine) return;
@@ -4742,14 +4835,14 @@ function renderHome(){
     </div>
     <div class="head-right">
       <button class="update-ico" id="updateBtn" title="最新の状態に更新">${UPDATE_SVG}<span class="update-dot"></span></button>
-      <button class="menu-btn" id="menuBtn" title="メニュー">${MENU_SVG}</button>
+      <button class="menu-btn" id="menuBtn" title="メニュー">${MENU_SVG}<span class="notif-dot" id="dotMenu"></span></button>
     </div>
     <div class="menu-drop" id="menuDrop">
       <button id="menuSet">設定</button>
       <button id="menuAbout">アプリの説明</button>
       <button id="menuData">単語データの追加</button>
-      ${cloudConfigured() ? `<button id="menuFeedback">ご要望・お問い合わせ</button>` : ``}
-      ${isOwner() ? `<button id="menuInbox">受信箱</button>` : ``}
+      ${cloudConfigured() ? `<button id="menuFeedback">ご要望・お問い合わせ<span class="notif-dot" id="dotFeedback"></span></button>` : ``}
+      ${isOwner() ? `<button id="menuInbox">受信箱<span class="notif-dot" id="dotInbox"></span></button>` : ``}
       ${cloudConfigured() ? (currentUser
         ? `<button id="menuLogout">ログアウト${currentUser.email ? "（"+esc(currentUser.email)+"）" : ""}</button>`
         : `<button id="menuLogin">ログイン</button>`) : ``}
@@ -4800,7 +4893,7 @@ function renderHome(){
   const menuBtn = document.getElementById("menuBtn");
   const menuDrop = document.getElementById("menuDrop");
   menuBtn.onclick = ()=>{ menuDrop.classList.toggle("open"); };
-  const updateBtn = document.getElementById("updateBtn"); if(updateBtn) updateBtn.onclick = ()=>location.reload();
+  const updateBtn = document.getElementById("updateBtn"); if(updateBtn) updateBtn.onclick = ()=>applyUpdateNow();
   const mTsuku = document.getElementById("menuTsukuyomi"); if(mTsuku) mTsuku.onclick = ()=>{ location.href = "https://amaterasu-vocab.com/tsukuyomi/"; };
   document.getElementById("menuSet").onclick = ()=>renderSettings();
   document.getElementById("menuData").onclick = ()=>renderData();
@@ -4825,7 +4918,8 @@ function renderHome(){
   }else{
     document.getElementById("posStart").onclick = ()=>startPosSession(true);
   }
-  reflectUpdateDot();   /* E-3：ホーム描画後に赤ドット状態を反映 */
+  reflectUpdateUi();   /* E-3：ホーム描画後に赤ドット状態を反映（フローティング更新ボタンも同期） */
+  refreshNotifDots();  /* 赤ドット：受信箱／お問い合わせの未読を判定（非同期・失敗しても画面は壊さない） */
 }
 /* ==== データ追加ページ（メニューから） ==== */
 function renderData(){
@@ -4947,6 +5041,18 @@ function renderFeedback(){
     }catch(e){ msg.className="msg err"; msg.textContent="送信に失敗しました: "+e.message; }
   };
   refreshOwnFeedbackHistory();
+  markMyFeedbackRead();   /* B消灯：開いた時点で既読にする（RPC経由。利用者にUPDATE権はない） */
+}
+/* B消灯：自分宛ての返信/既読をまとめて既読にする。
+   ※テーブルへの直接 update は書かない（利用者にUPDATE権が無く、ポリシーで弾かれ0行更新になるため）。
+     SECURITY DEFINER の RPC が唯一の正しい経路。 */
+async function markMyFeedbackRead(){
+  if(!sb || !currentUser) return;
+  try{
+    await sb.rpc("mark_my_feedback_read");
+    notifFeedback = false;
+    reflectNotifDots();
+  }catch(_){ /* 失敗しても画面は壊さない（次回開いた時に再試行される） */ }
 }
 async function refreshOwnFeedbackHistory(){
   const box = document.getElementById("fbHistory");
@@ -4979,6 +5085,22 @@ async function renderInbox(){
   <div class="panel"><div class="inner" id="inboxBody"><p class="note">読み込み中…</p></div></div>`;
   document.getElementById("backHome").onclick = (e)=>{ e.preventDefault(); renderHome(); };
   await refreshInbox();
+  await markInboxSeen();   /* A消灯：受信箱を開いた時点で未読の投稿を既読にする */
+}
+/* A消灯：未読（admin_read_at が null、または created_at より古い）の行だけ admin_read_at を now() にする。
+   オーナーの直接UPDATE権は従来どおり有効。既存の is_read 系UPDATEには触れない。 */
+async function markInboxSeen(){
+  if(!sb || !isOwner()) return;
+  try{
+    const { data } = await sb.from("feedback").select("id, created_at, admin_read_at");
+    const now = new Date().toISOString();
+    const unread = (data || []).filter(r=> !r.admin_read_at || r.created_at > r.admin_read_at);
+    for(const r of unread){
+      await sb.from("feedback").update({ admin_read_at: now }).eq("id", r.id);
+    }
+    notifInbox = false;
+    reflectNotifDots();
+  }catch(_){ /* 失敗しても画面は壊さない */ }
 }
 async function refreshInbox(){
   const body = document.getElementById("inboxBody");
@@ -5012,7 +5134,7 @@ async function refreshInbox(){
       const existingReply = f.reply ? `<div class="note">返信済み（${String(f.replied_at||"").replace("T"," ").slice(0,16)}）：${esc(String(f.reply))}</div>` : "";
       const canReply = !!f.submitted_by; // 匿名投稿には返信を届けられない
       html += `<div class="inbox-item ${f.is_read?"read":""}">
-        <div class="note">${when}　${who}${f.is_read?"　[既読]":""}</div>
+        <div class="note">${when}　${who}${f.is_read?"　[既読]":""}${f.user_read_at?"　[利用者が既読]":""}</div>
         <div style="white-space:pre-wrap">${esc(String(f.message||""))}</div>
         ${att}
         ${existingReply}
@@ -6542,15 +6664,20 @@ async function syncOnAuthChange(){
   if(merged){ state = merged; scheduleSave(); }   /* (A-safe) 統合結果を確実に反映し、失敗時も次回saveでクラウドへ */
   renderHome();
   maybePromptSignupPassword();   /* 案件1：再描画の後に提示する（コード入力経由をカバー） */
+  refreshNotifDots();            /* 赤ドット：ログイン成立直後に未読を判定 */
 }
 
 /* ---- 起動 ---- */
 (async ()=>{
   await initSupabase();
+  stripCacheBuster();   /* 追加1の副作用対策：?v= を除去してURLを正規に戻す。
+                           ※detectSessionInUrl がURLを読み終えた initSupabase の【後】に置く。
+                             認証クエリ（code / token_hash / type=recovery 等）は温存し、v= だけを消す。 */
   let merged = null;
   if(!IS_RECOVERY) merged = await maybeMigrateOnLogin();   /* C-3：id変化時だけ確認（リセット到来時は出さない）／統合結果を受け取る */
   await loadSharedWords();
   ensureAuthDom();
+  ensureUpdateFloat();            /* 追加2：画面に依存しない更新ボタンを常設 */
   await loadState();
   if(merged){ state = merged; scheduleSave(); }  /* (A-safe) 統合結果を確実に反映し、失敗時も次回saveでクラウドへ */
   renderHome();
