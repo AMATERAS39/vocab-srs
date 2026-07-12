@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -127,6 +127,11 @@
   .pw-card .pw-btn{ white-space:nowrap; padding:9px 16px; border:none; border-radius:8px; background:var(--shu); color:#fff; font-size:.85rem; font-weight:600; cursor:pointer; }
   .pw-card .pw-btn:active{ opacity:.85; }
   .pw-card .msg{ margin-top:8px; font-family:var(--sans); font-size:.78rem; color:var(--midori); min-height:1em; }
+  /* WP10：コード式の新規登録フロー */
+  #btnSendOtp{ white-space:nowrap; font-size:1rem; }                      /* 「認証コードを送信する」を1行で収める */
+  .signup-hint{ font-family:var(--sans); font-size:.78rem; color:var(--sub); line-height:1.6; margin:.1rem 0 .5rem; text-align:left; }
+  .pw-card .pw-note{ font-family:var(--sans); font-size:.76rem; color:var(--sub); line-height:1.6; margin:.15rem 0 .5rem; }
+  #btnPwLater{ display:block; margin:.5rem 0 0 auto; }                    /* 「あとで」は右下に控えめに */
   /* 助動詞クイズ解説の例文 */
   .rei{ margin:.55rem 0 .2rem; padding:.5rem .6rem; background:#fffdf7; border:1px solid var(--line); border-radius:8px; }
   .rei-s{ font-size:1.05rem; line-height:1.7; color:var(--ink); }
@@ -554,11 +559,13 @@
         <!-- パスワード設定／変更（ログイン済みのときだけ表示。AMAS移植） -->
         <div class="pw-card" id="pwSetCard" hidden>
           <div class="pw-head">🔐 パスワードを設定／変更</div>
+          <div class="pw-note">Googleでログイン中の方も設定できます。設定すると、次回からメールアドレスとパスワードでのログインもお使いいただけます。</div>
           <div class="pw-field">
             <input type="password" id="setPw" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）">
             <button class="pw-btn" id="setPwBtn" type="button">設定</button>
           </div>
           <span class="msg" id="setPwMsg"></span>
+          <button class="linkbtn" id="btnPwLater" type="button" hidden>あとで</button>
         </div>
         <!-- 4) すべての進捗をリセット（ログイン画面から移動。挙動は現状維持） -->
         <button class="homebtn subtle" id="btnResetAll" type="button">すべての進捗をリセット</button>
@@ -679,9 +686,10 @@
         <!-- コード／リンク（既存OTP。構造は不変） -->
         <div id="paneCode">
           <div class="login-or">— メール —</div>
+          <div class="signup-hint" id="signupHint" hidden>はじめての方：メールアドレスに認証コードを送ります。コードを入力すると登録が完了します。</div>
           <input class="ref-search" id="loginEmail" type="email" placeholder="メールアドレス" aria-label="メールアドレス">
-          <button class="homebtn" id="btnSendOtp" type="button">確認コードを送る</button>
-          <input class="ref-search" id="loginCode" type="text" placeholder="届いた確認コード" aria-label="確認コード" hidden>
+          <button class="homebtn" id="btnSendOtp" type="button">認証コードを送信する</button>
+          <input class="ref-search" id="loginCode" type="text" placeholder="届いた認証コード" aria-label="認証コード" hidden>
           <button class="homebtn" id="btnVerifyOtp" type="button" hidden>ログイン（確認）</button>
           <div class="login-note" id="loginNote" hidden></div>
         </div>
@@ -803,7 +811,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-11a";
+const APP_VERSION = "2026-07-12a";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -7201,7 +7209,7 @@ document.addEventListener("DOMContentLoaded", function () {
   byId("settingsBack").addEventListener("click", showMenuList);
   byId("settingsClose").addEventListener("click", closeMenu);
   // A：設定サブビュー（現在値を反映してから開く）
-  byId("miSettings").addEventListener("click", function () { fillSettings(); setMenuView("menuSettings"); });
+  byId("miSettings").addEventListener("click", function () { endSignupPrompt(); var m = byId("setPwMsg"); if(m) m.textContent = ""; fillSettings(); setMenuView("menuSettings"); });
   // §9：単語を追加（設定内から開く。戻るは設定へ）
   byId("miAddWord").addEventListener("click", function () {
     if(!cloudConfigured()){ toast("準備中（クラウド未設定）"); return; }
@@ -7262,6 +7270,7 @@ document.addEventListener("DOMContentLoaded", function () {
   byId("inboxClose").addEventListener("click", closeMenu);
   byId("miLogin").addEventListener("click", function () {
     if(!cloudConfigured()){ toast("クラウド未設定です（オーナーがSupabase値を設定すると使えます）"); return; }
+    endSignupPrompt();   // WP10：開き直したら新規登録モードは持ち越さない（フラグ残留の防止）
     showMenuLogin();
   });
   byId("miLogout").addEventListener("click", function () { signOutCloud(); });
@@ -7283,20 +7292,52 @@ document.addEventListener("DOMContentLoaded", function () {
     closeMenu(); showScreen("home"); refreshHome();
   });
   byId("btnGoogle").addEventListener("click", signInGoogle);
+  /* ===== WP10：コード式の新規登録フロー =====
+     pendingSignup は「新規登録リンクから来たか」を示す揮発フラグ。
+     state（kobun_user_data へ同期される進捗）には入れない＝保存・同期・統合(C-3)・mergeStates の思想は不変。
+     1回提示したら必ずクリアし、二重発火させない（C-3＝統合確認の1回化と同じ思想）。 */
+  var pendingSignup = false;
+  function setSignupMode(on){
+    pendingSignup = !!on;
+    var h = byId("signupHint"); if(h) h.hidden = !pendingSignup;   // 新規登録モードの見出し
+  }
+  // 新規登録経由のコード認証に成功したときだけ、続けてパスワード設定を提示する
+  function promptPwAfterSignup(){
+    pendingSignup = false;                       // ★提示は1回きり。ここで確実にクリア（二重発火防止）
+    var h = byId("signupHint"); if(h) h.hidden = true;
+    var later = byId("btnPwLater"); if(later) later.hidden = false;  // 「あとで」でスキップ可能
+    var msg = byId("setPwMsg"); if(msg){ msg.style.color = "var(--sub)"; msg.textContent = "登録が完了しました。パスワードを設定すると、次回のログインが簡単になります（あとででも設定できます）。"; }
+    var pw = byId("setPw"); if(pw) pw.value = "";
+    fillSettings(); setMenuView("menuSettings");  // メニューは開いたまま設定サブビューへ（SIGNED_IN の画面遷移と競合しない）
+    try{ if(pw) pw.focus(); }catch(_){}
+  }
+  // 登録完了ステップの終了（「あとで」／設定成功／画面離脱）
+  function endSignupPrompt(){
+    pendingSignup = false;
+    var later = byId("btnPwLater"); if(later) later.hidden = true;
+    var h = byId("signupHint"); if(h) h.hidden = true;
+  }
+
   byId("btnSendOtp").addEventListener("click", async function () {
     var email = byId("loginEmail").value.trim();
     if(!email){ toast("メールアドレスを入力してください"); return; }
     var ok = await sendOtp(email);
     if(ok){ byId("loginCode").hidden = false; byId("btnVerifyOtp").hidden = false;
-            var n = byId("loginNote"); n.hidden = false; n.textContent = "確認コードをメールに送りました。";
-            byId("btnSendOtp").textContent = "コードを再送する";
+            var n = byId("loginNote"); n.hidden = false; n.textContent = "認証コードをメールに送りました。";
+            byId("btnSendOtp").textContent = "認証コードを再送信する";
             try{ byId("loginCode").focus(); }catch(_){} }
   });
   byId("btnVerifyOtp").addEventListener("click", async function () {
     var email = byId("loginEmail").value.trim(), code = byId("loginCode").value.trim();
     if(!email || !code){ toast("コードを入力してください"); return; }
+    var wasSignup = pendingSignup;   // 検証前に退避（この後の分岐で使う）
     var ok = await verifyOtpCode(email, code);
-    if(ok){ closeMenu(); toast("ログインしました"); } // 以降は onAuthStateChange が統合・ロード・UI更新
+    if(ok){
+      // WP10-②：新規登録から来たときだけ、続けてパスワード設定を提示（「あとで」でスキップ可）。
+      // 通常のコードログイン（wasSignup=false）は従来どおり＝既存挙動を変えない。
+      if(wasSignup){ toast("登録が完了しました"); promptPwAfterSignup(); }
+      else { closeMenu(); toast("ログインしました"); } // 以降は onAuthStateChange が統合・ロード・UI更新
+    }
   });
 
   // ===== PW認証UIの配線（方式タブ・PWログイン/登録/再設定・PW設定カード）=====
@@ -7316,15 +7357,16 @@ document.addEventListener("DOMContentLoaded", function () {
     function showPwForm(which){
       var login = (which === "login");
       if(pwLoginForm) pwLoginForm.hidden = !login;
-      if(pwSignupForm) pwSignupForm.hidden = login;
+      if(pwSignupForm) pwSignupForm.hidden = login;   // 旧・リンク式signUpフォーム（主経路から到達不能。残置）
       clearAuthMsg();
     }
-    if(tabCode) tabCode.onclick = function(){ showTab("code"); };
-    if(tabPw) tabPw.onclick = function(){ showTab("pw"); };
-    if(byId("pwToSignup")) byId("pwToSignup").onclick = function(){ showPwForm("signup"); };
+    if(tabCode) tabCode.onclick = function(){ setSignupMode(false); showTab("code"); }; // タブ直接＝通常のコードログイン
+    if(tabPw) tabPw.onclick = function(){ setSignupMode(false); showTab("pw"); };
+    // WP10-①：パスワードタブ内「新規登録」→ 旧signUpフォームではなく、コード式の新規登録へ誘導（死にリンクにしない）
+    if(byId("pwToSignup")) byId("pwToSignup").onclick = function(){ setSignupMode(true); showTab("code"); };
     if(byId("pwToLogin")) byId("pwToLogin").onclick = function(){ showPwForm("login"); };
     if(byId("pwLoginBtn")) byId("pwLoginBtn").onclick = passwordLogin;
-    if(byId("pwSignupBtn")) byId("pwSignupBtn").onclick = passwordSignup;
+    if(byId("pwSignupBtn")) byId("pwSignupBtn").onclick = passwordSignup;   // 旧経路の配線は残置（到達不能）
     if(byId("pwForgot")) byId("pwForgot").onclick = passwordForgot;
     // Enterキー：PWログインの各入力から確定
     ["authEmail","authPw"].forEach(function(id){
@@ -7332,6 +7374,9 @@ document.addEventListener("DOMContentLoaded", function () {
       el.addEventListener("keydown", function(e){ if(e.isComposing||e.keyCode===229) return; if(e.key==="Enter"){ e.preventDefault(); passwordLogin(); } });
     });
     var an = byId("authPwNew"); if(an) an.addEventListener("keydown", function(e){ if(e.isComposing||e.keyCode===229) return; if(e.key==="Enter"){ e.preventDefault(); passwordSignup(); } });
+    // WP10-②：登録完了ステップの「あとで」＝スキップ（アカウントはコードで既にログイン済み）
+    var later = byId("btnPwLater");
+    if(later) later.onclick = function(){ endSignupPrompt(); closeMenu(); toast("あとから設定でも変更できます"); };
     // ログイン済み用：PWを設定／変更（updateUser）
     var setPwBtn = byId("setPwBtn");
     if(setPwBtn) setPwBtn.onclick = async function(){
@@ -7342,8 +7387,9 @@ document.addEventListener("DOMContentLoaded", function () {
       m.style.color = "var(--sub)"; m.textContent = "更新中…";
       var r = await sb.auth.updateUser({ password: pw });
       if(r && r.error){ m.style.color = "var(--shu)"; m.textContent = jaAuthError(r.error); return; }
-      m.style.color = "var(--midori)"; m.textContent = "パスワードを設定しました。次回からパスワード（端末の生体認証）でログインできます。";
+      m.style.color = "var(--midori)"; m.textContent = "パスワードを設定しました。次回からメールアドレスとパスワードでのログインもお使いいただけます。";
       byId("setPw").value = "";
+      endSignupPrompt();   // 登録完了ステップとして出していた場合は、ここで終了（「あとで」は隠す）
     };
   })();
   // Escキーで閉じる
