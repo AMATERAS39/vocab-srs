@@ -153,11 +153,19 @@ code{background:var(--paper);padding:1px 5px;border-radius:4px;font-size:.78rem}
 .reveal-next .btn-primary{width:auto;display:inline-block;padding:12px 30px}
 .explain-word{font-size:1.05rem;font-weight:700;color:var(--sub);text-align:center;margin-bottom:6px;font-family:var(--serif)}
 .btn-ghost{display:block;width:100%;padding:12px;border:1.5px solid var(--ink);border-radius:8px;font-size:.95rem;font-weight:700;background:#fff;margin-top:10px}
-/* 参照モード */
+/* 単語一覧 */
 .ref-controls{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 .ref-controls select,.ref-controls input{font-family:var(--sans);padding:6px 9px;border:1px solid var(--line);border-radius:6px;font-size:16px;background:#fff;flex:1;min-width:120px}
 .ref-count{font-size:.76rem;color:var(--sub);margin-bottom:10px}
 .ref-item{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:12px 14px;margin-bottom:8px}
+/* 【WP17】単語一覧：スライド目次・最上部ボタン。position:fixed は viewport 基準のため、
+   bodyスクロール構造を一切変更せずに固定表示できる（内部スクロール化はしない＝§4.4厳守） */
+.ref-sec{position:sticky;top:0;z-index:2;background:var(--paper);border-bottom:1px solid var(--line);font-family:var(--serif);font-weight:700;font-size:18px;color:var(--shu);padding:6px 2px 4px;margin:14px 0 6px;text-transform:uppercase;scroll-margin-top:8px}
+.idx-bar{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;width:24px;padding:6px 0;background:rgba(255,255,255,.85);border:1px solid var(--line);border-right:none;border-radius:8px 0 0 8px;touch-action:none;-webkit-user-select:none;user-select:none;cursor:pointer}
+.idx-bar span{display:block;font-size:10px;line-height:1.18;font-weight:700;color:var(--sub);text-transform:uppercase;padding:0 4px;pointer-events:none}
+.idx-bar.dots span{width:6px;height:6px;margin:3px 0;padding:0;border-radius:50%;background:var(--line);font-size:0;line-height:0}
+.idx-bubble{position:fixed;right:34px;z-index:41;display:none;min-width:56px;text-align:center;padding:8px 12px;border-radius:10px;background:var(--ink);color:#fff;font-family:var(--serif);font-weight:700;font-size:26px;text-transform:uppercase;pointer-events:none}
+.to-top{position:fixed;right:34px;bottom:calc(env(safe-area-inset-bottom, 0px) + 18px);z-index:40;display:none;width:44px;height:44px;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:16px;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.14);cursor:pointer}
 .ref-head{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
 .ref-word{font-family:var(--serif);font-size:1.3rem;font-weight:700}
 .ref-lv{font-size:.66rem;font-weight:700;color:#fff;border-radius:4px;padding:1px 6px}
@@ -4271,7 +4279,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.12.23.00";
+const APP_VERSION = "2026.07.13.01.30";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4835,7 +4843,7 @@ function renderHome(){
   app.innerHTML = `
   <header>
     <div class="head-left">
-      <button class="book-ico" id="refBtn" title="単語帳（参照モード）">${BOOK_SVG}</button>
+      <button class="book-ico" id="refBtn" title="単語一覧">${BOOK_SVG}</button>
       <div>
         <h1>AMATERAS</h1>
         <div class="date-line">${todayStr().replace(/-/g,"/")}・連続 ${streak()} 日</div>
@@ -5220,7 +5228,7 @@ function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.rand
    新: [品詞, [候補,...]]  候補 = "日本語" | ["原形パターン","日本語訳"]
    旧: [品詞, "訳；訳"]
    返り値: [{pos, ja:[日本語訳...], cands:[表示用候補...]}]
-   ja: 選択式の正解候補（日本語のみ）  cands: 確認・参照モード用の全表示 */
+   ja: 選択式の正解候補（日本語のみ）  cands: 確認・単語一覧用の全表示 */
 const POS_ORDER = {"自動":0,"他動":1,"名":2,"形":3,"副":4,"句動":5,"熟":6};
 function normEntries(w){
   const arr = w.e.map(ent=>{
@@ -5790,7 +5798,7 @@ function renderDone(){
   document.getElementById("homeBtn").onclick = renderHome;
 }
 
-/* ---- 参照モード（判定に一切関与しない全単語一覧）---- */
+/* ---- 単語一覧（判定に一切関与しない全単語の閲覧）---- */
 let refFilter = { lv:"all", q:"", sort:"std" };
 function renderReference(){
   session = null;
@@ -5816,8 +5824,20 @@ function renderReference(){
   }else if(refFilter.sort==="asc"){
     list = list.slice().sort((a,b)=>{ const ra=combined(a), rb=combined(b);
       if(ra==null&&rb==null) return a.i-b.i; if(ra==null) return 1; if(rb==null) return -1; return ra-rb||a.i-b.i; });
+  }else if(refFilter.sort==="alpha"){
+    /* 【WP17】読み順（a→z）。新設。既存3種のロジックには一切触れない */
+    list = list.slice().sort((a,b)=>{ const x=(a.w||"").toLowerCase(), y=(b.w||"").toLowerCase();
+      return x<y ? -1 : x>y ? 1 : a.i-b.i; });
   }
+  /* 【WP17】読み順のときだけ、頭文字が変わる位置に見出しを差し込む。
+     見出しは list から生成するため、該当ゼロの文字は原理的に出ない（絞り込み・検索にも自動追従） */
+  let _lastSec = null;
   const items = list.map(w=>{
+    let secHtml = "";
+    if(refFilter.sort==="alpha"){
+      const k = (w.w||"").charAt(0).toLowerCase();
+      if(/[a-z]/.test(k) && k!==_lastSec){ _lastSec = k; secHtml = `<div class="ref-sec" id="refsec-${k}">${k}</div>`; }
+    }
     const [cls,label] = wordStatus(w);
     const a = accuracy(w.i);
     const rate = combined(w);
@@ -5827,7 +5847,7 @@ function renderReference(){
         + (a.cRate!=null?`<span class="ref-acc ${a.cRate<60?"low":""}">選 ${a.cRate}%</span>`:"")
         + (a.wRate!=null?`<span class="ref-acc ${a.wRate<60?"low":""}">記 ${a.wRate}%</span>`:"")
       : "";
-    return `<div class="ref-item">
+    return secHtml + `<div class="ref-item">
       <div class="ref-head">
         <span class="ref-lv" style="background:${LV_COLORS[w.l]}">Lv.${w.l}</span>
         <span class="ref-word">${esc(w.w)}</span>
@@ -5841,9 +5861,15 @@ function renderReference(){
     </div>`;
   }).join("");
 
+  /* 【WP17】目次の見出しキー。読み順のときだけ a〜z（該当ゼロは list に無いので自動的に出ない）。
+     他の並び順は「順序に名前が付けられない」ため見出しを出さず、なぞりスクロールのみ提供する（総司令仕様）。 */
+  const secKeys = (refFilter.sort==="alpha")
+    ? [...new Set(list.map(w=>(w.w||"").charAt(0).toLowerCase()).filter(c=>/[a-z]/.test(c)))]
+    : [];
+
   app.innerHTML = `
     <header>
-      <div><h1>単語帳（参照モード）</h1>
+      <div><h1>単語一覧</h1>
       <div class="date-line">判定なし・閲覧のみ</div></div>
       <a class="streak" href="#" id="backHome" style="text-decoration:underline">戻る</a>
     </header>
@@ -5855,6 +5881,7 @@ function renderReference(){
         </select>
         <select id="refSort">
           <option value="std" ${refFilter.sort==="std"?"selected":""}>番号順</option>
+          <option value="alpha" ${refFilter.sort==="alpha"?"selected":""}>読み順（a→z）</option>
           <option value="asc" ${refFilter.sort==="asc"?"selected":""}>正答率が低い順</option>
           <option value="desc" ${refFilter.sort==="desc"?"selected":""}>正答率が高い順</option>
         </select>
@@ -5862,7 +5889,8 @@ function renderReference(){
       </div>
       <div class="ref-count">該当 ${list.length} 語 / 全 ${words.length} 語</div>
       ${items || `<div class="note">該当する単語がありません。</div>`}
-    </div>`;
+    </div>
+    ${refNavHtml(secKeys, list.length)}`;
 
   document.getElementById("backHome").onclick = (e)=>{ e.preventDefault(); renderHome(); };
   document.getElementById("refLv").onchange = (e)=>{ refFilter.lv = e.target.value; renderReference(); };
@@ -5871,6 +5899,66 @@ function renderReference(){
   qi.oninput = (e)=>{ refFilter.q = e.target.value; };
   qi.onkeydown = (e)=>{ if(e.key==="Enter") renderReference(); };
   app.querySelectorAll("[data-play]").forEach(b=>{ b.onclick = ()=>speak(b.dataset.play); });
+  bindRefNav(secKeys);
+}
+
+/* 【WP17】単語一覧のスライド目次・最上部ボタン。
+   ・語数が少ないときは出さない（12語以下では不要かつ邪魔）
+   ・読み順のときは a〜z の見出し、それ以外はドット（＝割合スクロール）
+   ・要素は app.innerHTML の中に置くため、他画面へ遷移すれば自動的に破棄される */
+function refNavHtml(secKeys, total){
+  if(total <= 12) return "";
+  const dots = !secKeys.length;
+  const cells = dots ? Array.from({length:12},(_,n)=>String(n)) : secKeys;
+  return `<div class="idx-bar${dots?" dots":""}" id="refIdx">`
+    + cells.map(k=>`<span data-k="${k}">${dots?"":k}</span>`).join("")
+    + `</div><div class="idx-bubble" id="refBubble"></div>`
+    + `<button class="to-top" id="refTop" title="最上部へ戻る" aria-label="最上部へ戻る">▲</button>`;
+}
+function bindRefNav(secKeys){
+  const bar = document.getElementById("refIdx");
+  const bub = document.getElementById("refBubble");
+  const top = document.getElementById("refTop");
+  if(bar && bub){
+    const spans = Array.prototype.slice.call(bar.querySelectorAll("span"));
+    const alpha = secKeys.length > 0;
+    const go = (clientY)=>{
+      const r = bar.getBoundingClientRect();
+      if(!r.height || !spans.length) return;
+      let idx = Math.floor((clientY - r.top) / (r.height / spans.length));
+      if(idx < 0) idx = 0;
+      if(idx > spans.length-1) idx = spans.length-1;
+      if(alpha){
+        const k = spans[idx].dataset.k;
+        const el = document.getElementById("refsec-" + k);
+        if(el) window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 8);
+        bub.textContent = k;
+      }else{
+        const frac = spans.length>1 ? idx/(spans.length-1) : 0;
+        const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+        window.scrollTo(0, Math.round(max * frac));
+        bub.textContent = Math.round(frac*100) + "%";
+      }
+      bub.style.display = "block";
+      bub.style.top = Math.max(8, Math.min(window.innerHeight - 64, clientY - 26)) + "px";
+    };
+    const end = ()=>{ bub.style.display = "none"; };
+    bar.addEventListener("touchstart", (e)=>{ go(e.touches[0].clientY); e.preventDefault(); }, {passive:false});
+    bar.addEventListener("touchmove",  (e)=>{ go(e.touches[0].clientY); e.preventDefault(); }, {passive:false});
+    bar.addEventListener("touchend", end);
+    bar.addEventListener("touchcancel", end);
+    bar.addEventListener("click", (e)=>{ go(e.clientY); setTimeout(end, 700); });
+  }
+  if(top){
+    top.onclick = ()=>{ try{ window.scrollTo({top:0, behavior:"smooth"}); }catch(_){ window.scrollTo(0,0); } };
+    const onScroll = ()=>{
+      /* 他画面へ遷移するとボタンはDOMから消えるので、その時点で監視を自分で外す（漏れ防止） */
+      if(!document.body.contains(top)){ window.removeEventListener("scroll", onScroll); return; }
+      top.style.display = (window.scrollY > 320) ? "block" : "none";
+    };
+    window.addEventListener("scroll", onScroll, {passive:true});
+    onScroll();
+  }
 }
 
 /* ==== 追加機能：ステータス・格言・品詞モード・設定・説明 ==== */
@@ -6122,7 +6210,7 @@ function renderAbout(){
 
     <h2>ホーム画面</h2>
     ${shot("home_top","ホーム画面（上部）")}
-    <p class="note"><strong>左上の本アイコン</strong>＝単語帳（参照モード）を開きます。<br>
+    <p class="note"><strong>左上の本アイコン</strong>＝単語一覧を開きます。<br>
     <strong>右上の☰</strong>＝メニュー（設定・単語データの追加・アプリの説明）。<br>
     <strong>日付の下</strong>＝格言や豆知識（毎回変わります）。<br>
     <strong>「学習」</strong>＝1日のノルマ。今日の復習対象とストック総数、開始ボタンが並びます。</p>
@@ -6133,7 +6221,7 @@ function renderAbout(){
     <p class="note"><strong>学習</strong>＝1日のノルマ。選択式と記述式で定着を判定します。<br>
     <strong>苦手モード</strong>＝正答率60%未満の単語を集中的に演習（復習期日とは無関係）。<br>
     <strong>品詞モード</strong>＝品詞をすべて選ぶモード。記録なし。<br>
-    <strong>参照モード</strong>＝単語帳として全単語を閲覧。</p>
+    <strong>単語一覧</strong>＝全単語を閲覧。</p>
 
     <h2>学習の流れ</h2>
     <svg viewBox="0 0 360 66" class="about-svg" role="img">
@@ -6179,8 +6267,8 @@ function renderAbout(){
     ${shot("pos","品詞モード")}
     <p class="note">英単語を見て、当てはまる品詞（自動詞・他動詞・名詞・形容詞・副詞）をすべて選ぶモードです。過不足なく選べば正解。記録も定着判定もしません。1回の問題数は設定で変更できます。</p>
 
-    <h2>参照モード（単語帳）</h2>
-    ${shot("reference","参照モード")}
+    <h2>単語一覧</h2>
+    ${shot("reference","単語一覧")}
     <p class="note">収録する全単語を閲覧できます。レベルでの絞り込み、単語・意味での検索、正答率での並べ替えが可能。各単語には正答率のゲージが表示されます。</p>
 
     <h2>単語のステータス（4段階）</h2>
