@@ -324,6 +324,14 @@
         box-shadow:0 0 0 2px var(--card); pointer-events:none; }
   .icon-btn > .dot{ top:1px; right:1px; }                    /* アイコンボタンの右上 */
   .menu-item > .dot{ top:50%; right:.8rem; margin-top:-4px; } /* メニュー項目の右端（縦中央） */
+  /* WP15：意見箱の送信履歴（入力欄は増やさないので 16px 規則には影響しない） */
+  .fb-hist{ margin-top:1rem; border-top:1px solid var(--line); padding-top:.8rem; }
+  .fb-hist-title{ font-family:var(--serif); font-size:1rem; color:var(--sub); margin-bottom:.5rem; }
+  .fb-hist-item{ border:1px solid var(--line); border-radius:6px; background:var(--card); padding:.6rem .7rem; margin-bottom:.6rem; }
+  .fb-hist-body{ font-size:.95rem; color:var(--ink); white-space:pre-wrap; word-break:break-word; }
+  .fb-hist-date{ font-size:.78rem; color:var(--sub); margin-top:.25rem; }
+  .fb-hist-reply{ margin-top:.5rem; padding-top:.5rem; border-top:1px dashed var(--line); font-size:.9rem; color:var(--ink); white-space:pre-wrap; word-break:break-word; }
+  .fb-hist-wait{ margin-top:.5rem; padding-top:.5rem; border-top:1px dashed var(--line); font-size:.85rem; color:var(--sub); }
   /* ===== アプリ説明（本格版・§9about）。色は変数/クラス経由（SVG属性へ直書きしない） ===== */
   .about-content{ padding:.4rem .9rem 1.2rem; }
   .about-content h2{ font-family:var(--serif); font-size:1rem; margin:1.2rem 0 .3rem; padding-left:8px; border-left:3px solid var(--shu); color:var(--ink); }
@@ -527,7 +535,7 @@
       <div class="menu-items">
         <button class="menu-item" id="miSettings" type="button">設定</button>
         <button class="menu-item" id="miAbout" type="button">アプリの説明</button>
-        <button class="menu-item" id="miFeedback" type="button">意見箱</button>
+        <button class="menu-item" id="miFeedback" type="button">意見箱<span class="dot" id="dotFeedback" hidden></span></button>
         <button class="menu-item" id="miReview" type="button" hidden>単語の審査</button>
         <button class="menu-item" id="miInbox" type="button" hidden>届いた意見<span class="dot" id="dotInbox" hidden></span></button>
         <div class="menu-divider"></div>
@@ -763,6 +771,12 @@
         <textarea class="ref-search" id="fbBody" rows="4" placeholder="ご意見・ご要望"></textarea>
         <button class="homebtn primary" id="fbSubmit" type="button">送信する</button>
         <div class="login-note" id="fbNote" hidden></div>
+        <!-- WP15：送信履歴＋管理者からの返信（自分の行のみ。RLS: kfb_select_own ＋ クライアント側の二重防御） -->
+        <div class="fb-hist" id="fbHist">
+          <div class="fb-hist-title" id="fbHistTitle">送信履歴</div>
+          <div class="login-note" id="fbHistGuest" hidden>ログインして送信すると、送信履歴と管理者からの返信を確認できます。</div>
+          <div id="fbHistList"></div>
+        </div>
       </div>
     </div>
     <!-- 単語の審査（オーナー・§9） -->
@@ -821,7 +835,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-12d";
+const APP_VERSION = "2026-07-12e";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -834,6 +848,8 @@ var AMATERAS_URL = "https://amaterasu-vocab.com/";
    updateAuthUI() の末尾でも renderDots() を呼ぶため、再描画後も変数どおりに正しく再評価される。 */
 var updateAvailable = false;   // 新版あり（更新ボタンの赤ドット）
 var unreadInbox = false;       // 管理者の未読あり（☰ と「届いた意見」の赤ドット。オーナー限定）
+var unreadReply = false;       // WP15：利用者の未読あり（☰ と「意見箱」の赤ドット。ログイン利用者のみ）
+var dotsUserId  = null;        // WP15：未読問い合わせを1回だけにするためのログイン主体のミラー
 var dotsIsOwner = false;       // renderDots が参照するオーナー判定のミラー（クロージャ内 isOwner から同期）
 function renderDots(){
   var du = document.getElementById("dotUpdate");
@@ -843,6 +859,10 @@ function renderDots(){
   var showInbox = (dotsIsOwner && unreadInbox);              // 受信箱ドットはオーナーのみ（非オーナーには一切出さない）
   if(dm) dm.hidden = !showInbox;                             // ☰ は受信箱の未読専用（更新では点けない）
   if(di) di.hidden = !showInbox;
+  /* WP15：☰ = (オーナー && 受信箱の未読) || 利用者の未読返信 ／ 意見箱 = 利用者の未読返信 */
+  var df = document.getElementById("dotFeedback");
+  if(df) df.hidden = !unreadReply;
+  if(dm && unreadReply) dm.hidden = false;                  // 片方を消しても、もう片方が未読なら ☰ は点いたまま
 }
 
 // 公開中のHTMLから APP_VERSION を読み、稼働中と違えば更新ボタンに赤ドットを点灯。失敗は静かに無視。
@@ -7127,6 +7147,14 @@ document.addEventListener("DOMContentLoaded", function () {
     markDirty(); flush(state); refreshHome();
   });
   byId("menuBtn").addEventListener("click", function () { openMenu(); });   // ②メニューを開く
+  /* WP15（Q2 承認済み）：☰ を開いたときに未読返信を再チェック（60秒スロットル）。
+     アプリを開いたままでも、メニューを開けば返信の赤ドットに気づける。既存のリスナは触らず、別に足す。 */
+  byId("menuBtn").addEventListener("click", function () {
+    var now = Date.now();
+    if (now - _lastReplyCheck < 60000) return;
+    _lastReplyCheck = now;
+    checkUnreadReply();
+  });
   byId("refBtn").addEventListener("click", function () { openReference(); });  // ③参照モードを開く
   // 格言カード：タップ／Enter・Space で別の一枚に手動更新
   (function(){
@@ -7333,6 +7361,7 @@ document.addEventListener("DOMContentLoaded", function () {
   byId("miFeedback").addEventListener("click", function () {
     if(!cloudConfigured()){ toast("準備中（クラウド未設定）"); return; }
     byId("fbNote").hidden = true; setMenuView("menuFeedback");
+    openFeedbackHistory();   // WP15：送信履歴＋返信を描画し、既読RPCで赤ドットを消す
   });
   byId("fbBack").addEventListener("click", showMenuList);
   byId("fbClose").addEventListener("click", closeMenu);
@@ -7507,6 +7536,14 @@ document.addEventListener("DOMContentLoaded", function () {
     if(!isOwner) unreadInbox = false;          // 非オーナー（ログアウト含む）は必ず消灯
     renderDots();
     if(isOwner && !wasOwner) checkInboxUnread(); // オーナーになった瞬間に1回だけ未読を問い合わせる
+    /* WP15：利用者の未読返信。ログイン主体が変わったときだけ1回問い合わせ、ログアウト時は即消灯。
+       onAuthStateChange の再描画のたびにここを通るので、DOM の hidden が上書きされても変数から必ず復元される。 */
+    var uidNow = currentUser ? currentUser.id : null;
+    if(uidNow !== dotsUserId){
+      dotsUserId = uidNow;
+      if(uidNow){ checkUnreadReply(); }
+      else { unreadReply = false; renderDots(); }
+    }
   }
   function applyState(ns){
     if(!ns) return;
@@ -7656,8 +7693,122 @@ document.addEventListener("DOMContentLoaded", function () {
     catch(e){ console.warn("[TSUKUYOMI 受信箱] 既読の記録に失敗", e); }
   }
   async function replyFeedback(id, reply){
-    try{ await sb.from("kobun_feedback").update({ reply: reply }).eq("id", id); toast("返信を保存しました"); }
+    /* WP15（Q1 承認済み）：返信の保存時に replied_at も書く。
+       利用者側の点灯判定は max(replied_at, admin_read_at) > user_read_at なので、
+       replied_at を書かないと「返信が来た」で赤ドットが点かず、再点灯も成立しない。
+       返信を空にしたときは replied_at を null に戻す（返信が無いのに点灯するのを防ぐ）。 */
+    var body = (reply || "").trim();
+    var payload = body ? { reply: body, replied_at: new Date().toISOString() }
+                       : { reply: "",   replied_at: null };
+    try{
+      var r = await sb.from("kobun_feedback").update(payload).eq("id", id);
+      if(r && r.error) throw r.error;
+      toast("返信を保存しました");
+    }
     catch(e){ toast("保存に失敗しました"); }
+  }
+
+  /* =========================================================
+     WP15：赤ドット第2弾（利用者向け 送信履歴＋管理者からの返信）
+     ・取得は kobun_feedback の自分の行のみ（RLS: kfb_select_own）。
+       ★二重防御：クライアント側でも user_id === 自分 の行だけに絞る（Q5 承認済み）。
+     ・点灯判定：max(replied_at, admin_read_at) > user_read_at（null 考慮）。
+     ・既読の記録は必ず RPC。利用者は kobun_feedback へ素の UPDATE ができず、
+       直接 update するとポリシーに弾かれて「サイレントに0行更新」になる。
+     ========================================================= */
+  var FB_HIST_LIMIT   = 20;   // 履歴の表示件数（新しい順。Q3 承認済み）
+  var _lastReplyCheck = 0;    // ☰ を開いたときの再チェックのスロットル（60秒。Q2 承認済み）
+
+  // 管理者側の最終アクション時刻（返信 or 既読）。まだ何もされていなければ null
+  function fbAdminStamp(r){
+    var a = r.replied_at    ? new Date(r.replied_at).getTime()    : 0;
+    var b = r.admin_read_at ? new Date(r.admin_read_at).getTime() : 0;
+    var t = Math.max(a || 0, b || 0);
+    return (t > 0 && !isNaN(t)) ? t : null;
+  }
+  function fbIsUnread(r){
+    var t = fbAdminStamp(r);
+    if(t === null) return false;                       // 管理者はまだ何もしていない
+    if(!r.user_read_at) return true;                   // 利用者が一度も意見箱を開いていない
+    return t > new Date(r.user_read_at).getTime();     // 既読より後の返信/既読で再点灯
+  }
+  // 二重防御：RLS に事故があっても他人の投稿は絶対に表示しない
+  function fbMine(rows){
+    var uid = currentUser ? currentUser.id : null;
+    if(!uid) return [];
+    return (rows || []).filter(function(r){ return r.user_id === uid; });
+  }
+  function fbFmtDate(s){
+    if(!s) return "";
+    var d = new Date(s); if(isNaN(d.getTime())) return "";
+    var p = function(n){ return (n < 10 ? "0" : "") + n; };
+    return d.getFullYear() + "/" + p(d.getMonth()+1) + "/" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+  }
+  // 未読返信の問い合わせ（ログイン利用者のみ）。失敗しても点灯状態は変えず、アプリは落とさない。
+  async function checkUnreadReply(){
+    if(!(sb && currentUser && cloudConfigured())){ unreadReply = false; renderDots(); return; }
+    try{
+      var res  = await sb.from("kobun_feedback").select("id, user_id, replied_at, admin_read_at, user_read_at");
+      var rows = fbMine(res && res.data ? res.data : []);
+      unreadReply = rows.some(fbIsUnread);
+    }catch(e){ /* RLS等で失敗しても状態は据え置き */ }
+    renderDots();
+  }
+  // 送信履歴の描画（未ログインなら履歴は出さず、案内1行だけ）
+  async function loadMyFeedback(){
+    var title = byId("fbHistTitle"), guest = byId("fbHistGuest"), list = byId("fbHistList");
+    if(!list) return;
+    if(!(sb && currentUser)){
+      if(title) title.hidden = true;
+      if(guest) guest.hidden = false;
+      list.hidden = true; list.innerHTML = "";
+      return;
+    }
+    if(title) title.hidden = false;
+    if(guest) guest.hidden = true;
+    list.hidden = false; list.innerHTML = '<div class="login-note">読み込み中…</div>';
+    try{
+      var res = await sb.from("kobun_feedback")
+        .select("id, user_id, body, created_at, reply, replied_at")
+        .order("created_at", { ascending: false })
+        .limit(FB_HIST_LIMIT);
+      var rows = fbMine(res && res.data ? res.data : []);
+      if(rows.length === 0){
+        list.innerHTML = '<div class="login-note" style="text-align:center">まだ送信はありません。</div>';
+        return;
+      }
+      list.innerHTML = "";
+      rows.forEach(function(r){
+        var item = document.createElement("div"); item.className = "fb-hist-item";
+        var b = document.createElement("div"); b.className = "fb-hist-body"; b.textContent = r.body || "";
+        var d = document.createElement("div"); d.className = "fb-hist-date"; d.textContent = fbFmtDate(r.created_at);
+        item.appendChild(b); item.appendChild(d);
+        var rep = document.createElement("div");
+        if(r.reply && String(r.reply).trim()){
+          rep.className = "fb-hist-reply";
+          rep.textContent = "返信：" + String(r.reply) + (r.replied_at ? "（" + fbFmtDate(r.replied_at) + "）" : "");
+        } else {
+          rep.className = "fb-hist-wait";
+          rep.textContent = "返信をお待ちください";
+        }
+        item.appendChild(rep);
+        list.appendChild(item);
+      });
+    }catch(e){ list.innerHTML = '<div class="login-note">読み込みに失敗しました</div>'; }
+  }
+  // 既読の記録（必ず RPC 経由）。失敗したら赤ドットは消さない。
+  async function markMyFeedbackRead(){
+    if(!(sb && currentUser)) return;
+    try{
+      var r = await sb.rpc("mark_my_kobun_feedback_read");
+      if(r && r.error) throw r.error;
+      unreadReply = false; renderDots();   // 成功したときだけ消灯（☰ はオーナーの受信箱未読が残れば点いたまま）
+    }catch(e){ console.warn("[TSUKUYOMI 意見箱] 既読の記録に失敗", e); }
+  }
+  // 意見箱を開いたとき：履歴を描いてから既読化する
+  async function openFeedbackHistory(){
+    await loadMyFeedback();
+    await markMyFeedbackRead();
   }
 
   /* リロード直前用：saveCloud のデバウンス（400ms）を飛ばし、即時に upsert して完了を待つ。
