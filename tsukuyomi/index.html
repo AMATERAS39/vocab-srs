@@ -50,7 +50,20 @@
 
   [hidden]{ display:none !important; }
   *{ box-sizing:border-box; }
-  html,body{ margin:0; padding:0; }
+  html,body{ margin:0; padding:0; overscroll-behavior:none; }   /* 2-2：ゴムバンド／連鎖スクロールの抑止（子孫のスクロール領域には継承されない） */
+
+  /* ===== 2-1(a)：意図しない拡大の抑止（iOS Safari はフォーカス時に16px未満の入力欄を強制拡大する） =====
+     個別セレクタ（.ref-search / .ref-sort / .pw-card input / #pwresetmodal input）で16px以上を指定済み。
+     下は取りこぼし防止の保険：動的生成や将来追加分も含め、全フォーム要素の最小フォントを16pxで底上げする。 */
+  input, select, textarea{ font-size:16px; }
+
+  /* ===== 2-1(b)：ダブルタップ拡大の抑止 =====
+     タップ操作要素に限定して付与する。スクロール領域（.ref-list／メニューパネル／#refScreen の内側）には当てない。
+     ※(c)ピンチ拡大の抑止は実施しない（弱視の方の拡大手段を残すため）。 */
+  button, .homebtn, .choice, .menu-item, .icon-btn, .linkbtn, .authtab,
+  .pw-btn, .next, .restart, .kotoba-card, .ref-item, .tab, .badge-btn{
+    touch-action: manipulation;
+  }
   body{
     min-height:100vh; background:var(--paper); color:var(--ink);
     font-family:var(--serif);
@@ -122,7 +135,7 @@
   .pw-card{ margin:14px 0 0; padding:14px; border:1px solid var(--line); border-radius:10px; background:linear-gradient(180deg,#fffdf7,#fbf6ea); }
   .pw-card .pw-head{ display:flex; align-items:center; gap:7px; font-size:.9rem; font-weight:600; color:var(--ink); margin-bottom:4px; }
   .pw-card .pw-field{ display:flex; gap:8px; align-items:stretch; }
-  .pw-card input[type=password]{ flex:1; min-width:0; font-family:var(--sans); padding:9px 11px; border:1px solid var(--line); border-radius:8px; font-size:.9rem; background:#fff; }
+  .pw-card input[type=password]{ flex:1; min-width:0; font-family:var(--sans); padding:8px 11px; border:1px solid var(--line); border-radius:8px; font-size:1rem; background:#fff; }
   .pw-card input[type=password]:focus{ outline:none; border-color:var(--shu); box-shadow:0 0 0 2px var(--shu-soft); }
   .pw-card .pw-btn{ white-space:nowrap; padding:9px 16px; border:none; border-radius:8px; background:var(--shu); color:#fff; font-size:.85rem; font-weight:600; cursor:pointer; }
   .pw-card .pw-btn:active{ opacity:.85; }
@@ -266,9 +279,9 @@
   :root{ --status-none:#9a9186; --status-review:#6b4a2f; }  /* 灰／くすんだ焦茶。極性の朱・藍に近づけない */
   #refScreen{ display:flex; flex-direction:column; max-height:calc(100dvh - 32px); }
   .ref-toolbar{ display:flex; gap:.5rem; padding:.5rem .8rem; border-bottom:1px solid var(--line); }
-  .ref-search{ flex:1; min-width:0; font-family:var(--sans); font-size:.9rem; padding:.5rem .7rem;
+  .ref-search{ flex:1; min-width:0; font-family:var(--sans); font-size:1rem; padding:.45rem .7rem;
                border:1px solid var(--line); border-radius:6px; background:#fffdf7; color:var(--ink); }
-  .ref-sort{ font-family:var(--sans); font-size:.85rem; padding:.5rem; border:1px solid var(--line);
+  .ref-sort{ font-family:var(--sans); font-size:1rem; padding:.45rem .5rem; border:1px solid var(--line);
              border-radius:6px; background:#fffdf7; color:var(--ink); }
   .ref-list{ flex:1; overflow-y:auto; padding:.4rem .6rem .6rem; }
   .ref-row{ border:1px solid var(--line); border-radius:8px; background:#fffdf7; padding:.55rem .7rem; margin-bottom:.45rem; cursor:pointer; }
@@ -811,12 +824,12 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-12a";
+const APP_VERSION = "2026-07-12b";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
    "ここに" の語を含む＝未設定と判定し、押下時はトースト「準備中」を出す。 */
-var AMATERAS_URL = "https://ここにAMATERASのURL";
+var AMATERAS_URL = "https://amaterasu-vocab.com/";
 
 // 公開中のHTMLから APP_VERSION を読み、稼働中と違えばバナー表示。失敗は静かに無視。
 async function checkForUpdate(manual){
@@ -7653,7 +7666,7 @@ document.addEventListener("DOMContentLoaded", function () {
       + "#pwresetmodal .card{background:var(--card);border:1px solid var(--line);border-radius:12px;width:100%;max-width:340px;padding:22px 20px}"
       + "#pwresetmodal h3{font-family:var(--serif);font-size:1.05rem;margin-bottom:4px}"
       + "#pwresetmodal p.sub{font-size:.74rem;color:var(--sub);margin-bottom:16px}"
-      + "#pwresetmodal input{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font-size:.9rem;margin-bottom:9px;font-family:var(--sans)}"
+      + "#pwresetmodal input{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:8px;font-size:16px;margin-bottom:9px;font-family:var(--sans)}"
       + "#pwresetmodal .send{width:100%;padding:11px;border-radius:8px;background:var(--ink);color:#fff;font-weight:700;font-size:.9rem;border:none;cursor:pointer}"
       + "#pwresetmodal .msg{font-size:.74rem;color:var(--midori);margin-top:10px;min-height:1em}";
     document.head.appendChild(style);
