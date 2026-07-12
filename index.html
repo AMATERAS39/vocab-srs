@@ -4241,7 +4241,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.11.20.00";
+const APP_VERSION = "2026.07.12.10.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -5938,7 +5938,7 @@ function renderSettings(){
     m.style.color = "var(--sub)"; m.textContent = "更新中…";
     const { error } = await sb.auth.updateUser({ password: pw });
     if(error){ m.style.color = "var(--shu)"; m.textContent = jaAuthError(error); return; }
-    m.style.color = "var(--midori)"; m.textContent = "パスワードを設定しました。";
+    m.style.color = "var(--midori)"; m.textContent = "パスワードを設定しました。次回からメール＋パスワードでもログインできます。";
     document.getElementById("setPw").value = "";
   };
   document.getElementById("saveSet").onclick = async ()=>{
@@ -6113,7 +6113,9 @@ function ensureAuthDom(){
     #authmodal input{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;
       font-size:.9rem;margin-bottom:9px;font-family:var(--sans)}
     #authmodal .send{width:100%;padding:11px;border-radius:8px;background:var(--ink);color:#fff;
-      font-weight:700;font-size:.9rem}
+      font-weight:700;font-size:.9rem;white-space:nowrap}
+    #authmodal .send.compact{font-size:.84rem;padding:11px 6px;letter-spacing:0}
+    #authmodal .step-note{font-size:.74rem;color:var(--sub);margin:2px 0 9px;line-height:1.5}
     #authmodal .msg{font-size:.74rem;color:var(--midori);margin-top:10px;min-height:1em}
     #authmodal .close{position:absolute;top:14px;right:16px;font-size:1.3rem;color:var(--sub)}
     #authmodal .cardwrap{position:relative;width:100%;max-width:340px}
@@ -6159,8 +6161,16 @@ function ensureAuthDom(){
             </div>
           </div>
           <div id="pwSignupForm" style="display:none">
-            <input type="password" id="authPwNew" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）">
-            <button class="send" id="pwSignupBtn">登録する（確認メールが届きます）</button>
+            <div class="step-note">メールアドレスに6桁の認証コードをお送りします。コードを入力し、パスワードを設定すると登録完了です。</div>
+            <button class="send compact" id="signupSendBtn">認証コードを送信する</button>
+            <div id="signupCodeRow" style="display:none">
+              <input id="signupCode" inputmode="numeric" autocomplete="one-time-code" autocorrect="off" autocapitalize="off" spellcheck="false" maxlength="6" placeholder="メールの6桁コード">
+              <button class="send" id="signupVerifyBtn">コードを確認する</button>
+            </div>
+            <div id="signupPwRow" style="display:none">
+              <input type="password" id="signupPwNew" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）">
+              <button class="send compact" id="signupPwBtn">パスワードを設定して完了</button>
+            </div>
             <div class="pwlinks">
               <button class="linkbtn" id="pwToLogin">ログインに戻る</button>
             </div>
@@ -6204,6 +6214,7 @@ function ensureAuthDom(){
     const login = (which === "login");
     pwLoginForm.style.display  = login ? "" : "none";
     pwSignupForm.style.display = login ? "none" : "";
+    if(login) resetSignupSteps();   /* 新規登録の途中状態を持ち越さない */
     clearAuthMsg();
   }
   tabCode.onclick = ()=> showTab("code");
@@ -6211,17 +6222,25 @@ function ensureAuthDom(){
   document.getElementById("pwToSignup").onclick = ()=> showPwForm("signup");
   document.getElementById("pwToLogin").onclick  = ()=> showPwForm("login");
   document.getElementById("pwLoginBtn").onclick  = passwordLogin;
-  document.getElementById("pwSignupBtn").onclick = passwordSignup;
   document.getElementById("pwForgot").onclick    = passwordForgot;
+  /* --- 方式A：新規登録はコード入力式（既存のOTPログイン経路 paneCode/submitOtpCode には触れない） --- */
+  document.getElementById("signupSendBtn").onclick   = signupSendCode;
+  document.getElementById("signupVerifyBtn").onclick = signupVerifyCode;
+  document.getElementById("signupPwBtn").onclick     = signupSetPassword;
+  const signupCodeInput = document.getElementById("signupCode");
+  if(signupCodeInput) signupCodeInput.addEventListener("keydown", (e)=>{
+    if(e.isComposing || e.keyCode === 229) return;   /* IME変換中は確定しない */
+    if(e.key === "Enter"){ e.preventDefault(); signupVerifyCode(); }
+  });
+  const signupPwInput = document.getElementById("signupPwNew");
+  if(signupPwInput) signupPwInput.addEventListener("keydown", (e)=>{
+    if(e.isComposing || e.keyCode === 229) return;
+    if(e.key === "Enter"){ e.preventDefault(); signupSetPassword(); }
+  });
   const pwInput = document.getElementById("authPw");
   if(pwInput) pwInput.addEventListener("keydown", (e)=>{
     if(e.isComposing || e.keyCode === 229) return;
     if(e.key === "Enter"){ e.preventDefault(); passwordLogin(); }
-  });
-  const pwNewInput = document.getElementById("authPwNew");
-  if(pwNewInput) pwNewInput.addEventListener("keydown", (e)=>{
-    if(e.isComposing || e.keyCode === 229) return;
-    if(e.key === "Enter"){ e.preventDefault(); passwordSignup(); }
   });
 }
 function openAuthModal(){
@@ -6305,6 +6324,73 @@ async function passwordSignup(){
   const { error } = await sb.auth.signUp({ email, password: pw, options:{ emailRedirectTo: redirectTarget() } });
   if(error){ msg.style.color = "var(--shu)"; msg.textContent = jaAuthError(error); return; }
   msg.style.color = "var(--midori)"; msg.textContent = "確認メールを送りました。メール内のリンクで確認するとログインできます。";
+}
+/* ==== 方式A：新規登録＝コード入力式（signInWithOtp → verifyOtp → updateUser({password})） ====
+   既存の emailLogin / submitOtpCode（コード・リンクタブ）とは別UI・別関数に分離し、
+   既存のログイン経路には一切干渉しない。C-3（統合確認）は verifyOtp 成立時に
+   onAuthStateChange の uid 変化で1回だけ走る（後続の updateUser は uid 不変のため再発火しない）。 */
+let pendingSignup = false;
+let signupEmail = "";
+function resetSignupSteps(){
+  pendingSignup = false; signupEmail = "";
+  const codeRow = document.getElementById("signupCodeRow");
+  const pwRow   = document.getElementById("signupPwRow");
+  const sendBtn = document.getElementById("signupSendBtn");
+  const code    = document.getElementById("signupCode");
+  const pwNew   = document.getElementById("signupPwNew");
+  if(codeRow) codeRow.style.display = "none";
+  if(pwRow)   pwRow.style.display   = "none";
+  if(sendBtn) sendBtn.style.display = "";
+  if(code)  code.value  = "";
+  if(pwNew) pwNew.value = "";
+}
+/* ① メールのみ入力 →「認証コードを送信する」 */
+async function signupSendCode(){
+  if(!sb) return;
+  const msg = document.getElementById("authMsg");
+  const email = (document.getElementById("authEmail").value || "").trim();
+  if(!email){ msg.style.color = "var(--shu)"; msg.textContent = "メールアドレスを入力してください。"; return; }
+  msg.style.color = "var(--sub)"; msg.textContent = "送信中…";
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: redirectTarget(), shouldCreateUser: true } });
+  if(error){ msg.style.color = "var(--shu)"; msg.textContent = jaAuthError(error); return; }
+  pendingSignup = true;
+  signupEmail = email;
+  const row = document.getElementById("signupCodeRow");
+  if(row) row.style.display = "";
+  msg.style.color = "var(--midori)"; msg.textContent = "認証コードを送りました。メールの6桁コードを入力してください。";
+}
+/* ② 6桁コードを検証（既存 verifyOtpCode をそのまま利用） */
+async function signupVerifyCode(){
+  const msg = document.getElementById("authMsg");
+  const code = (document.getElementById("signupCode").value || "").trim();
+  const email = signupEmail || (document.getElementById("authEmail").value || "").trim();
+  if(!/^\d{6}$/.test(code)){ msg.style.color = "var(--shu)"; msg.textContent = "6桁の数字コードを入力してください。"; return; }
+  if(!email){ msg.style.color = "var(--shu)"; msg.textContent = "先にメールアドレスを入力し、認証コードを送信してください。"; return; }
+  msg.style.color = "var(--sub)"; msg.textContent = "確認中…";
+  const ok = await verifyOtpCode(email, code);
+  if(!ok){ msg.style.color = "var(--shu)"; msg.textContent = "コードが正しくないか、期限切れです。もう一度お試しください。"; return; }
+  /* 認証成立。ここではモーダルを閉じず、パスワード設定ステップへ進む */
+  const codeRow = document.getElementById("signupCodeRow");
+  const sendBtn = document.getElementById("signupSendBtn");
+  const pwRow   = document.getElementById("signupPwRow");
+  if(codeRow) codeRow.style.display = "none";
+  if(sendBtn) sendBtn.style.display = "none";
+  if(pwRow)   pwRow.style.display   = "";
+  msg.style.color = "var(--midori)"; msg.textContent = "確認できました。最後にパスワードを設定してください。";
+}
+/* ③ パスワードを設定して登録完了（既存 updateUser({password}) を利用） */
+async function signupSetPassword(){
+  if(!sb) return;
+  const msg = document.getElementById("authMsg");
+  const pw = document.getElementById("signupPwNew").value || "";
+  if(pw.length < 8){ msg.style.color = "var(--shu)"; msg.textContent = "パスワードは8文字以上にしてください。"; return; }
+  if(!currentUser){ msg.style.color = "var(--shu)"; msg.textContent = "認証が切れています。もう一度コードを送信してください。"; return; }
+  msg.style.color = "var(--sub)"; msg.textContent = "設定中…";
+  const { error } = await sb.auth.updateUser({ password: pw });
+  if(error){ msg.style.color = "var(--shu)"; msg.textContent = jaAuthError(error); return; }
+  msg.style.color = "var(--midori)"; msg.textContent = "登録が完了しました。次回からメール＋パスワードでもログインできます。";
+  resetSignupSteps();
+  setTimeout(()=>{ closeAuthModal(); }, 900);
 }
 async function passwordForgot(){
   if(!sb) return;
