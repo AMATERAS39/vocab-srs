@@ -302,7 +302,15 @@ h1{font-size:clamp(1.05rem,3vh,1.5rem);white-space:nowrap;overflow:hidden;text-o
 </style>
 </head>
 <body>
-<div class="wrap" id="app"></div>
+<div class="wrap" id="app">
+  <!-- 【P11】検索エンジンにクロールされる静的な本文。
+       JS起動時に render() が innerHTML で上書きするため、利用者の見た目は変わらない。
+       非表示の隠しテキストではない（JS無効時には実際に表示される）。 -->
+  <h1>AMATERAS｜英単語学習アプリ</h1>
+  <p>間隔反復（SRS）で効率よく覚える、無料の英単語学習アプリです。大学受験レベルの英単語3,932語を収録し、選択式と記述式の2系統で出題します。両方に合格して初めて「定着」と判定するため、見覚えがあるだけの状態を防げます。</p>
+  <p>語源による解説と、品詞ごとに整理された意味表示で、単語を体系的に覚えられます。学習の進捗はアカウントごとにクラウド保存され、スマートフォンとパソコンのどちらからでも続きから学習できます。インストール不要、ブラウザだけで使えます。</p>
+  <p>古文単語版の <a href="/tsukuyomi/">TSUKUYOMI（古文単語アプリ）</a> もあります。</p>
+</div>
 <div class="copyright-wrap"><span class="version-tag" id="versionTag"></span><span class="copyright">©2026 AMATERAS</span></div>
 
 <script>
@@ -4263,7 +4271,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.13.10.00";
+const APP_VERSION = "2026.07.12.23.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -5085,7 +5093,11 @@ async function renderInbox(){
   <div class="panel"><div class="inner" id="inboxBody"><p class="note">読み込み中…</p></div></div>`;
   document.getElementById("backHome").onclick = (e)=>{ e.preventDefault(); renderHome(); };
   await refreshInbox();
-  await markInboxSeen();   /* A消灯：受信箱を開いた時点で未読の投稿を既読にする */
+  /* 【WP16】受信箱を開いただけでは既読にしない（＝送信者へ通知を飛ばさない）。
+     admin_read_at は「既読にする」ボタンまたは返信の時にのみ書く。
+     markInboxSeen() は非破壊のため定義のみ残置し、ここからは呼ばない。
+     await markInboxSeen();  ← 廃止 */
+  await refreshNotifDots();  /* 開いた時点では点灯状態を再計算するだけ（書き込みなし） */
 }
 /* A消灯：未読（admin_read_at が null、または created_at より古い）の行だけ admin_read_at を now() にする。
    オーナーの直接UPDATE権は従来どおり有効。既存の is_read 系UPDATEには触れない。 */
@@ -5159,8 +5171,12 @@ async function replyToFeedback(id, text){
   if(!sb) return;
   const t = String(text||"").trim();
   if(!t){ alert("返信内容を入力してください"); return; }
-  try{ await sb.from("feedback").update({ reply:t, replied_at:new Date().toISOString(), is_read:true }).eq("id", id); }catch(_){}
+  /* 【WP16】返信は「管理者が明示的に処理した」瞬間。ここで admin_read_at も確定させる。
+     利用者側の点灯判定 max(replied_at, admin_read_at) > user_read_at は不変。 */
+  const now = new Date().toISOString();
+  try{ await sb.from("feedback").update({ reply:t, replied_at:now, admin_read_at:now, is_read:true }).eq("id", id); }catch(_){}
   await refreshInbox();
+  await refreshNotifDots();
 }
 async function approveSubmission(id){
   if(!sb) return;
@@ -5182,14 +5198,18 @@ async function rejectSubmission(id){
 }
 async function markFeedbackRead(id){
   if(!sb) return;
-  try{ await sb.from("feedback").update({ is_read:true }).eq("id", id); }catch(_){}
+  /* 【WP16】管理者が意図的に「既読にする」を押したときに限り admin_read_at を書く。
+     これにより送信者側の赤ドットが点灯する（返信保留中であることを伝える）。 */
+  try{ await sb.from("feedback").update({ is_read:true, admin_read_at:new Date().toISOString() }).eq("id", id); }catch(_){}
   await refreshInbox();
+  await refreshNotifDots();
 }
 async function deleteFeedback(id){
   if(!sb) return;
   if(!confirm("削除しますか？")) return;
   try{ await sb.from("feedback").delete().eq("id", id); }catch(_){}
   await refreshInbox();
+  await refreshNotifDots();  /* 【WP16】未処理件数が減るので点灯状態を再計算 */
 }
 
 /* ---- セッション ----
