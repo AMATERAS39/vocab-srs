@@ -251,6 +251,10 @@ body{font-size:clamp(13px,1.9vh,16px)}
 /* ==== ヘッダー1行化・アイコン ==== */
 header{display:flex;justify-content:space-between;align-items:flex-start;position:relative;gap:8px}
 .head-left{display:flex;align-items:center;gap:10px;min-width:0}
+/* 案件2：更新ボタンとメニューを右側にグループ化し、header を「左／右」2要素の space-between にする。
+   ※ .head-right には position:relative を付けないこと。付けると .menu-drop（absolute; top:110%; right:0）の
+     基準が header から .head-right に移り、ドロップダウンの縦位置がずれるため。基準は header のまま維持する。 */
+.head-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
 h1{font-size:clamp(1.05rem,3vh,1.5rem);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .date-line{white-space:nowrap}
 .book-ico{flex:none;display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;padding:0;border:1px solid var(--line);border-radius:10px;background:var(--card);cursor:pointer}
@@ -4249,7 +4253,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.12.16.00";
+const APP_VERSION = "2026.07.12.20.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4736,8 +4740,10 @@ function renderHome(){
         <div class="date-line">${todayStr().replace(/-/g,"/")}・連続 ${streak()} 日</div>
       </div>
     </div>
-    <button class="update-ico" id="updateBtn" title="最新の状態に更新">${UPDATE_SVG}<span class="update-dot"></span></button>
-    <button class="menu-btn" id="menuBtn" title="メニュー">${MENU_SVG}</button>
+    <div class="head-right">
+      <button class="update-ico" id="updateBtn" title="最新の状態に更新">${UPDATE_SVG}<span class="update-dot"></span></button>
+      <button class="menu-btn" id="menuBtn" title="メニュー">${MENU_SVG}</button>
+    </div>
     <div class="menu-drop" id="menuDrop">
       <button id="menuSet">設定</button>
       <button id="menuAbout">アプリの説明</button>
@@ -6178,6 +6184,9 @@ function ensureAuthDom(){
             <div id="signupPwRow" style="display:none">
               <input type="password" id="signupPwNew" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）">
               <button class="send compact" id="signupPwBtn">パスワードを設定して完了</button>
+              <div class="pwlinks">
+                <button class="linkbtn" id="signupPwSkip">あとで設定する</button>
+              </div>
             </div>
             <div class="pwlinks">
               <button class="linkbtn" id="pwToLogin">ログインに戻る</button>
@@ -6235,6 +6244,8 @@ function ensureAuthDom(){
   document.getElementById("signupSendBtn").onclick   = signupSendCode;
   document.getElementById("signupVerifyBtn").onclick = signupVerifyCode;
   document.getElementById("signupPwBtn").onclick     = signupSetPassword;
+  const signupSkipBtn = document.getElementById("signupPwSkip");
+  if(signupSkipBtn) signupSkipBtn.onclick = skipSignupPassword;
   const signupCodeInput = document.getElementById("signupCode");
   if(signupCodeInput) signupCodeInput.addEventListener("keydown", (e)=>{
     if(e.isComposing || e.keyCode === 229) return;   /* IME変換中は確定しない */
@@ -6339,6 +6350,67 @@ async function passwordSignup(){
    onAuthStateChange の uid 変化で1回だけ走る（後続の updateUser は uid 不変のため再発火しない）。 */
 let pendingSignup = false;
 let signupEmail = "";
+/* 案件1：新規登録の「PW設定待ち」を localStorage に永続化する。
+   理由：signupSendCode は emailRedirectTo を渡すため、届くメールにはコードとマジックリンクの両方が載る。
+   リンクをタップされるとアプリがリロードで開き直され、メモリ変数の pendingSignup は失われる。
+   その結果ログインだけ成立してPW設定が出ず、パスワード未設定ユーザーが生まれていた。 */
+const PENDING_SIGNUP_KEY = "amateras_pending_signup";
+function setPendingSignup(email){
+  try{ localStorage.setItem(PENDING_SIGNUP_KEY, email || "1"); }catch(_){}
+}
+function getPendingSignup(){
+  try{ return localStorage.getItem(PENDING_SIGNUP_KEY); }catch(_){ return null; }
+}
+function clearPendingSignup(){
+  try{ localStorage.removeItem(PENDING_SIGNUP_KEY); }catch(_){}
+}
+let signupPromptShown = false;   /* 同一ページ内での二重発火ガード */
+/* 案件1：ログイン成立後（renderHome の後）にパスワード設定を提示する。
+   syncOnAuthChange 末尾（コード入力経由）と起動IIFE末尾（マジックリンク経由のリロード）の
+   2箇所から呼ばれる。syncOnAuthChange 本体のロジックには手を入れない（C-3不変）。 */
+function maybePromptSignupPassword(){
+  if(signupPromptShown) return;                 /* 同一ページ内の二重発火を防ぐ */
+  if(!(sb && currentUser)) return;              /* ログイン成立時のみ */
+  if(IS_RECOVERY) return;                       /* PWリセット到来時は別フロー（P-4）に譲る */
+  if(!getPendingSignup()) return;               /* 新規登録の途中でなければ何もしない */
+  signupPromptShown = true;
+  clearPendingSignup();                         /* 提示は1回きり：入り口で即クリア */
+  ensureAuthDom();
+  /* パスワードペインの新規登録フォームを開き、PW設定行だけを見せる */
+  const paneCode   = document.getElementById("paneCode");
+  const panePw     = document.getElementById("panePw");
+  const tabCode    = document.getElementById("tabCode");
+  const tabPw      = document.getElementById("tabPw");
+  const loginForm  = document.getElementById("pwLoginForm");
+  const signupForm = document.getElementById("pwSignupForm");
+  const sendBtn    = document.getElementById("signupSendBtn");
+  const codeRow    = document.getElementById("signupCodeRow");
+  const pwRow      = document.getElementById("signupPwRow");
+  if(paneCode)   paneCode.style.display   = "none";
+  if(panePw)     panePw.style.display     = "";
+  if(tabCode)    tabCode.classList.remove("active");
+  if(tabPw)      tabPw.classList.add("active");
+  if(loginForm)  loginForm.style.display  = "none";
+  if(signupForm) signupForm.style.display = "";
+  if(sendBtn)    sendBtn.style.display    = "none";
+  if(codeRow)    codeRow.style.display    = "none";
+  if(pwRow)      pwRow.style.display      = "";
+  const modal = document.getElementById("authmodal");
+  if(modal) modal.className = "";
+  const msg = document.getElementById("authMsg");
+  if(msg){ msg.style.color = "var(--midori)"; msg.textContent = "認証できました。最後にパスワードを設定してください。"; }
+}
+/* 「あとで設定する」：スキップしても再ログイン手段が分かるように案内する */
+function skipSignupPassword(){
+  clearPendingSignup();
+  resetSignupSteps();
+  const msg = document.getElementById("authMsg");
+  if(msg){
+    msg.style.color = "var(--sub)";
+    msg.textContent = "パスワード未設定でも、次回はメールに届く認証コードでログインできます（ログイン画面の「コード／リンク」タブ）。設定画面からいつでもパスワードを設定できます。";
+  }
+  setTimeout(()=>{ closeAuthModal(); }, 2600);
+}
 function resetSignupSteps(){
   pendingSignup = false; signupEmail = "";
   const codeRow = document.getElementById("signupCodeRow");
@@ -6363,6 +6435,7 @@ async function signupSendCode(){
   if(error){ msg.style.color = "var(--shu)"; msg.textContent = jaAuthError(error); return; }
   pendingSignup = true;
   signupEmail = email;
+  setPendingSignup(email);   /* リンク経由でリロードされてもPW設定を提示できるよう永続化 */
   const row = document.getElementById("signupCodeRow");
   if(row) row.style.display = "";
   msg.style.color = "var(--midori)"; msg.textContent = "認証コードを送りました。メールの6桁コードを入力してください。";
@@ -6397,6 +6470,7 @@ async function signupSetPassword(){
   const { error } = await sb.auth.updateUser({ password: pw });
   if(error){ msg.style.color = "var(--shu)"; msg.textContent = jaAuthError(error); return; }
   msg.style.color = "var(--midori)"; msg.textContent = "登録が完了しました。次回からメール＋パスワードでもログインできます。";
+  clearPendingSignup();          /* PW設定済み → 提示フラグを確実に落とす */
   resetSignupSteps();
   setTimeout(()=>{ closeAuthModal(); }, 900);
 }
@@ -6467,6 +6541,7 @@ async function syncOnAuthChange(){
   await loadState();
   if(merged){ state = merged; scheduleSave(); }   /* (A-safe) 統合結果を確実に反映し、失敗時も次回saveでクラウドへ */
   renderHome();
+  maybePromptSignupPassword();   /* 案件1：再描画の後に提示する（コード入力経由をカバー） */
 }
 
 /* ---- 起動 ---- */
@@ -6482,6 +6557,7 @@ async function syncOnAuthChange(){
   startUpdateWatcher();           // 新バージョン公開の監視を開始
   { const vt = document.getElementById("versionTag"); if(vt) vt.textContent = "v." + APP_VERSION.replace(/-/g,"."); }  /* E-2：バージョン表示（値は不変・表示のみ） */
   if(IS_RECOVERY) openPwResetModal();   /* P-4：リセットリンク到来時は新PW入力UIを出す（イベント取りこぼしの保険） */
+  maybePromptSignupPassword();          /* 案件1：マジックリンク経由でリロードされた場合もPW設定を提示する */
 })();
 </script>
 </body>
