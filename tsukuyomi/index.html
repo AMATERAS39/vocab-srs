@@ -283,7 +283,34 @@
                border:1px solid var(--line); border-radius:6px; background:#fffdf7; color:var(--ink); }
   .ref-sort{ font-family:var(--sans); font-size:1rem; padding:.45rem .5rem; border:1px solid var(--line);
              border-radius:6px; background:#fffdf7; color:var(--ink); }
-  .ref-list{ flex:1; overflow-y:auto; padding:.4rem .6rem .6rem; }
+  /* 優先3：position:relative は「見出しの offsetTop を .ref-list 基準にする」ために必須（着地ズレ＝地雷#16の変種を防ぐ）。
+     overflow-y:auto は維持。scrollbar-* は純正スクロールバーの非表示（要素内部スクロールなので効く見込み）。 */
+  .ref-list{ flex:1; overflow-y:auto; padding:.4rem .6rem .6rem; position:relative; scrollbar-width:none; -ms-overflow-style:none; }
+  .ref-list::-webkit-scrollbar{ display:none; }
+  /* リスト内の見出し。★position:sticky は絶対に付けない（地雷#16：貼り付いた見出しは位置計算を壊す） */
+  .ref-sec{ font-family:var(--serif); font-size:.85rem; color:var(--sub); letter-spacing:.08em;
+            border-bottom:1px solid var(--line); padding:.35rem .1rem .25rem; margin:.5rem 0 .45rem; }
+  .ref-sec:first-child{ margin-top:.1rem; }
+  /* 左端：スライド目次（viewport基準の fixed。位置は refList の実表示領域に合わせて JS が指定する） */
+  .refnav-index{ position:fixed; z-index:60; display:flex; flex-direction:column; justify-content:center;
+                 gap:1px; width:22px; touch-action:none; user-select:none; -webkit-user-select:none; }
+  .refnav-index .ix{ font-family:var(--sans); font-size:10px; line-height:1.15; color:var(--sub);
+                     text-align:center; padding:1px 0; border-radius:3px; }
+  .refnav-index .ix.on{ color:var(--card); background:var(--shu); }
+  /* 目次をなぞっているとき、指で隠れない位置に出す吹き出し */
+  .refnav-bubble{ position:fixed; z-index:70; min-width:56px; padding:.35rem .6rem; border-radius:8px;
+                  background:rgba(42,37,33,.9); color:#fff; font-family:var(--serif); font-size:1.15rem;
+                  text-align:center; pointer-events:none; box-shadow:0 4px 14px rgba(0,0,0,.3); }
+  /* 右端：自前スクロールバー */
+  .refnav-bar{ position:fixed; z-index:60; width:14px; touch-action:none; }
+  .refnav-track{ position:absolute; left:5px; top:0; width:4px; height:100%; border-radius:2px; background:rgba(120,105,85,.18); }
+  .refnav-thumb{ position:absolute; left:1px; width:12px; height:40px; border-radius:6px;
+                 background:var(--sub); opacity:.75; box-shadow:0 1px 4px rgba(0,0,0,.2); }
+  /* 右下：最上部へ戻る */
+  .refnav-top{ position:fixed; z-index:65; width:40px; height:40px; border-radius:50%;
+               border:1px solid var(--line); background:var(--card); color:var(--sub);
+               font-size:1rem; line-height:1; cursor:pointer; touch-action:manipulation;
+               box-shadow:0 3px 10px rgba(60,40,20,.25); }
   .ref-row{ border:1px solid var(--line); border-radius:8px; background:#fffdf7; padding:.55rem .7rem; margin-bottom:.45rem; cursor:pointer; }
   .ref-row-top{ display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; }
   .ref-word{ font-family:var(--serif); font-size:1.1rem; color:var(--ink); }
@@ -468,6 +495,11 @@
       </select>
     </div>
     <div class="ref-list" id="refList"></div>
+    <!-- 優先3：ナビ3点（#refScreen の中に置くので、他画面へ移れば自然に消える） -->
+    <div class="refnav-index" id="refNavIndex" hidden aria-hidden="true"></div>
+    <div class="refnav-bubble" id="refNavBubble" hidden aria-hidden="true"></div>
+    <div class="refnav-bar" id="refNavBar" hidden aria-hidden="true"><div class="refnav-track"></div><div class="refnav-thumb" id="refNavThumb"></div></div>
+    <button class="refnav-top" id="refNavTop" type="button" hidden aria-label="最上部へ戻る">▲</button>
     <div class="rod bottom"></div>
   </div>
 
@@ -582,6 +614,7 @@
         <div class="set-group">
           <div class="set-label">今日のノルマ（1日に増えるストック数）</div>
           <select class="ref-sort" id="setQuota"></select>
+          <div class="set-hint" id="setQuotaMsg" hidden></div>   <!-- 追補：いつ反映されるかを明示 -->
         </div>
         <div class="set-group">
           <div class="set-label">助動詞モードの1回の出題数</div>
@@ -845,7 +878,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-13c";
+const APP_VERSION = "2026-07-13e";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -7270,6 +7303,45 @@ document.addEventListener("DOMContentLoaded", function () {
 
   /* ===== 機能5骨格③：参照モード（辞書） ===== */
   var refExpandedId = null; // いま開いている行のi（同時に1行だけ開く）
+
+  /* =========================================================
+     優先3：単語一覧のナビゲーション
+     ・見出しと目次は【同一の配列 refSecs】から作る（項目数が原理的にズレない＝虫食い防止）。
+     ・着地計算は offsetTop のみ（getBoundingClientRect は「fixed の重ね位置」にしか使わない）。
+     ・見出しに position:sticky は付けない（地雷#16）。
+     ・スクロールは refList.scrollTop（window.scrollTo は使わない＝内部スクロール構造）。
+     ========================================================= */
+  var KANA_ROWS = [   // 濁音・半濁音・拗音・促音は清音の行に含める。ゐ・ゑ・を・ん は「わ」行（司令塔裁定）。
+    ["あ", "あいうえおぁぃぅぇぉヴ"],
+    ["か", "かきくけこがぎぐげご"],
+    ["さ", "さしすせそざじずぜぞ"],
+    ["た", "たちつてとだぢづでどっ"],
+    ["な", "なにぬねの"],
+    ["は", "はひふへほばびぶべぼぱぴぷぺぽ"],
+    ["ま", "まみむめも"],
+    ["や", "やゆよゃゅょ"],
+    ["ら", "らりるれろ"],
+    ["わ", "わゐゑをん"]
+  ];
+  function refKanaRow(w){
+    var c = String(w.yomi || w.w || "").charAt(0);
+    for (var k = 0; k < KANA_ROWS.length; k++) { if (KANA_ROWS[k][1].indexOf(c) >= 0) return KANA_ROWS[k][0]; }
+    return "他";   // 実データ600語には該当ゼロ（走査で確認済み）。将来の追加語の保険として残す
+  }
+  function refSortHasIndex(key){ return (key === "yomi" || key === "level" || key === "i"); }  // 正答率順・ステータス順は目次を出さない
+  /* 語 → 見出し。{ key, nav（目次バーの短い表記）, label（リスト内の見出し文字） } */
+  function refSecOf(w, key){
+    if (key === "yomi"){ var r = refKanaRow(w); return { key: "y" + r, nav: r, label: r + "行" }; }
+    if (key === "level"){ return { key: "l" + w.l, nav: String(w.l), label: "レベル" + w.l }; }
+    if (key === "i"){
+      var b = Math.floor((w.i - 1) / 100) * 100 + 1;                       // 1, 101, 201, …
+      return { key: "i" + b, nav: String(b), label: b + "〜" + (b + 99) };
+    }
+    return null;
+  }
+  var refSecs = [];          // [{ id, nav }]（目次バーはこの配列だけから作る）
+  var refNavDragging = false;
+  var REF_NAV_MIN = 12;      // 12件以下ならナビを出さない（目安。1〜2画面に収まるリストでは邪魔になるため）
   function refStatusClass(st){ return st === "定着済" ? "status-mastered" : st === "復習中" ? "status-review" : "status-none"; }
   // 検索：見出し・よみ・語義の部分一致
   function refPassFilter(w, q){
@@ -7308,7 +7380,20 @@ document.addEventListener("DOMContentLoaded", function () {
     let list = allWords().filter(w => refPassFilter(w, q));
     list = refSortList(list, refSort.value);
     let html = "";
+    // 優先3：見出しの差し込み。並べ替え済みの list を1回走査し、キーが変わった位置に見出しを置く。
+    const useSec = refSortHasIndex(refSort.value);
+    const secSeen = {};   // ※ループ内の const seen（出題回数）と名前が衝突しないこと
+    refSecs = [];
     for(const w of list){
+      if(useSec){
+        const sec = refSecOf(w, refSort.value);
+        if(sec && !secSeen[sec.key]){                    // 同じキーが離れて再登場しても見出しは1つだけ（ID重複を防ぐ）
+          secSeen[sec.key] = true;
+          const sid = "refsec-" + refSecs.length;
+          refSecs.push({ id: sid, nav: sec.nav });
+          html += '<div class="ref-sec" id="' + sid + '">' + esc(sec.label) + '</div>';
+        }
+      }
       const p = state.prog[w.i];
       const st = wordStatus(p);
       const r = correctRate(p);
@@ -7335,8 +7420,140 @@ document.addEventListener("DOMContentLoaded", function () {
       html += '</div>';
     }
     refList.innerHTML = html || '<div class="ref-note" style="text-align:center;padding:2rem 0">該当する語がありません</div>';
+    refNavBuild(list.length);   // 優先3：目次・スクロールバー・最上部ボタンを作り直す（見出しと同じ refSecs から）
   }
-  function openReference(){ refExpandedId = null; refSearch.value = ""; renderRefList(); refList.scrollTop = 0; showScreen("reference"); }
+
+  /* 目次バーの生成（refSecs だけから作るので、検索で絞り込んでも項目数がズレない） */
+  function refNavBuild(count){
+    var ix = byId("refNavIndex"), bar = byId("refNavBar"), top = byId("refNavTop");
+    var show = (count > REF_NAV_MIN);
+    var showIx = show && refSortHasIndex(refSort.value) && refSecs.length > 1;
+    ix.innerHTML = "";
+    if(showIx){
+      refSecs.forEach(function(sec, k){
+        var b = document.createElement("div");
+        b.className = "ix"; b.textContent = sec.nav; b.dataset.k = String(k);
+        ix.appendChild(b);
+      });
+    }
+    ix.hidden = !showIx;
+    bar.hidden = !show;
+    top.hidden = true;                 // スクロールしてから出す
+    refNavLayout(); refNavSync();
+  }
+
+  /* fixed の重ね位置を refList の実表示領域に合わせる。
+     ★getBoundingClientRect はこの「重ね位置」にだけ使う。スクロール先の計算には使わない（地雷#16）。 */
+  function refNavLayout(){
+    if(refScreen.hidden) return;
+    var r = refList.getBoundingClientRect();
+    if(!(r.height > 0)) return;
+    var ix = byId("refNavIndex"), bar = byId("refNavBar"), top = byId("refNavTop"), bub = byId("refNavBubble");
+    ix.style.left = (r.left + 2) + "px";  ix.style.top = (r.top + 6) + "px";  ix.style.height = (r.height - 12) + "px";
+    bar.style.left = (r.right - 18) + "px"; bar.style.top = (r.top + 6) + "px"; bar.style.height = (r.height - 12) + "px";
+    top.style.left = (r.right - 56) + "px"; top.style.top = (r.bottom - 52) + "px";
+    bub.style.left = (r.left + 30) + "px";
+  }
+
+  /* つまみ位置と「最上部へ」ボタンの表示を、スクロール量から再計算する（ドラッグ中は同期しない＝自己干渉の防止） */
+  function refNavSync(){
+    var bar = byId("refNavBar"), thumb = byId("refNavThumb"), top = byId("refNavTop");
+    if(bar.hidden) return;
+    var maxScroll = refList.scrollHeight - refList.clientHeight;
+    var trackH = bar.clientHeight || parseFloat(bar.style.height) || 0;
+    var th = Math.max(36, Math.round(trackH * (refList.clientHeight / Math.max(1, refList.scrollHeight))));
+    thumb.style.height = th + "px";
+    var ratio = (maxScroll > 0) ? (refList.scrollTop / maxScroll) : 0;
+    if(!refNavDragging) thumb.style.top = Math.round(ratio * Math.max(0, trackH - th)) + "px";
+    top.hidden = !(refList.scrollTop > 320);
+  }
+
+  /* 見出しへの着地。★offsetTop（文書基準・.ref-list が offsetParent）だけを使う */
+  function refNavJump(k){
+    var sec = refSecs[k]; if(!sec) return;
+    var el = document.getElementById(sec.id); if(!el) return;
+    var maxScroll = refList.scrollHeight - refList.clientHeight;
+    refList.scrollTop = Math.max(0, Math.min(el.offsetTop, maxScroll));
+    refNavSync();
+  }
+  function refNavHighlight(k){
+    var ix = byId("refNavIndex"); if(!ix) return;
+    var items = ix.querySelectorAll(".ix");
+    for(var n = 0; n < items.length; n++) items[n].className = (n === k) ? "ix on" : "ix";
+  }
+  /* 指のY座標 → 目次の何番目か（要素の高さで割るだけ。elementFromPoint に頼らない） */
+  function refNavIndexAt(clientY){
+    var ix = byId("refNavIndex");
+    var items = ix.querySelectorAll(".ix");
+    if(!items.length) return -1;
+    var r = ix.getBoundingClientRect();
+    var k = Math.floor((clientY - r.top) / (r.height / items.length));
+    return Math.max(0, Math.min(items.length - 1, k));
+  }
+  function refNavBubble(k, clientY){
+    var bub = byId("refNavBubble"), sec = refSecs[k];
+    if(!sec){ bub.hidden = true; return; }
+    bub.textContent = sec.nav; bub.hidden = false;
+    bub.style.top = Math.round(clientY - 22) + "px";
+  }
+  (function refNavWire(){
+    var ix = byId("refNavIndex"), bar = byId("refNavBar"), thumb = byId("refNavThumb"), top = byId("refNavTop"), bub = byId("refNavBubble");
+    // 目次：タップ＆なぞり（touch-action:none で、なぞってもページ側はスクロールしない）
+    function idxMove(ev){
+      var y = (ev.touches && ev.touches[0]) ? ev.touches[0].clientY : ev.clientY;
+      var k = refNavIndexAt(y);
+      if(k < 0) return;
+      refNavHighlight(k); refNavBubble(k, y); refNavJump(k);
+      ev.preventDefault();
+    }
+    function idxEnd(){ bub.hidden = true; refNavHighlight(-1); }
+    ix.addEventListener("touchstart", idxMove, { passive: false });
+    ix.addEventListener("touchmove",  idxMove, { passive: false });
+    ix.addEventListener("touchend",   idxEnd);
+    ix.addEventListener("touchcancel", idxEnd);
+    ix.addEventListener("click", function(ev){ var k = refNavIndexAt(ev.clientY); if(k >= 0){ refNavHighlight(k); refNavJump(k); setTimeout(idxEnd, 400); } });
+    // スクロールバー：つまみを指に1:1で追従（つまみの中心が指に来るようにする）
+    function barTo(clientY){
+      var r = bar.getBoundingClientRect();
+      var th = thumb.offsetHeight || 40;
+      var y  = Math.max(0, Math.min(r.height - th, clientY - r.top - th / 2));
+      thumb.style.top = Math.round(y) + "px";
+      var maxScroll = refList.scrollHeight - refList.clientHeight;
+      var denom = Math.max(1, r.height - th);
+      refList.scrollTop = Math.round((y / denom) * maxScroll);
+      byId("refNavTop").hidden = !(refList.scrollTop > 320);
+    }
+    function barStart(ev){
+      refNavDragging = true;
+      var y = (ev.touches && ev.touches[0]) ? ev.touches[0].clientY : ev.clientY;
+      barTo(y); ev.preventDefault();
+    }
+    function barMove(ev){
+      if(!refNavDragging) return;
+      var y = (ev.touches && ev.touches[0]) ? ev.touches[0].clientY : ev.clientY;
+      barTo(y); ev.preventDefault();
+    }
+    function barEnd(){ if(refNavDragging){ refNavDragging = false; refNavSync(); } }
+    bar.addEventListener("touchstart", barStart, { passive: false });
+    bar.addEventListener("touchmove",  barMove,  { passive: false });
+    bar.addEventListener("touchend",   barEnd);
+    bar.addEventListener("touchcancel", barEnd);
+    bar.addEventListener("mousedown", barStart);
+    document.addEventListener("mousemove", barMove);
+    document.addEventListener("mouseup", barEnd);
+    // 最上部へ戻る
+    top.addEventListener("click", function(){ refList.scrollTop = 0; refNavSync(); });
+    // スクロールに合わせてつまみを同期（ドラッグ中は refNavSync 側で無視）
+    refList.addEventListener("scroll", function(){ refNavSync(); });
+    // 画面サイズ・アドレスバーの伸縮に追従
+    window.addEventListener("resize", refNavLayout);
+    window.addEventListener("orientationchange", refNavLayout);
+    if(window.visualViewport){ window.visualViewport.addEventListener("resize", refNavLayout); }
+  })();
+  function openReference(){
+    refExpandedId = null; refSearch.value = ""; renderRefList(); refList.scrollTop = 0; showScreen("reference");
+    refNavLayout(); refNavSync();   // 優先3：表示後に fixed の重ね位置を確定する（hidden のままでは実寸が取れない）
+  }
   byId("refHome").addEventListener("click", function(){ showScreen("home"); refreshHome(); });
   refSearch.addEventListener("input", function(){ refExpandedId = null; renderRefList(); refList.scrollTop = 0; });
   refSort.addEventListener("change", function(){ renderRefList(); refList.scrollTop = 0; });
@@ -7394,6 +7611,15 @@ document.addEventListener("DOMContentLoaded", function () {
     byId("setQuota").value = String(state.settings.quota);
     byId("setJodoshiCount").value = String(state.settings.jodoshiCount);
     byId("setNickMsg").hidden = true;
+    byId("setQuotaMsg").hidden = true;   // 追補：開き直したら前回のメッセージは消す
+  }
+  /* 追補：出題数の変更が「いつ効くか」を1行で知らせる。表示は 4.5 秒（短すぎて読めないことがないように）。 */
+  var _quotaMsgTimer = null;
+  function showQuotaMsg(text){
+    var m = byId("setQuotaMsg"); if(!m) return;
+    m.textContent = text; m.hidden = false;
+    if(_quotaMsgTimer) clearTimeout(_quotaMsgTimer);
+    _quotaMsgTimer = setTimeout(function(){ m.hidden = true; }, 4500);
   }
   byId("setNickSave").addEventListener("click", function(){   // ニックネーム保存（ローカルのみ）
     ensureSettings(state);
@@ -7417,12 +7643,17 @@ document.addEventListener("DOMContentLoaded", function () {
     state.settings.quota = v;                                  // 設定値は常に更新（翌日以降はこれが効く）
     if (locked) {
       state.todayQuota = old;                                  // 分岐1：凍結（旧セーブ＝todayQuota が null でも達成が巻き戻らない）
+      showQuotaMsg("本日は達成済みのため、明日のぶんから反映されます");
     } else if (carried && v > old) {
       state.todayQuota = old;                                  // 分岐2：持ち越し日の増枠は当日据え置き（達成不可能な日を作らない）
+      showQuotaMsg("前回の残りがあるため、増やしたぶんは明日のぶんから反映されます");
     } else {
       state.todayQuota = v;                                    // 分岐3：当日も新値
       if (state.todayCount >= v) { state.normDoneDate = today; state.carryOver = false; }   // 即達成
       else if (!carried && v > old) { ensureDailyAssignment(state, today); }                // 通常日の増枠 → top-up
+      showQuotaMsg(isNormDone(state) && state.normDoneDate === today
+                   ? "本日のぶんに反映し、達成となりました"
+                   : "本日のぶんに反映しました");
     }
     markDirty(); flush(state); refreshHome();
   });
