@@ -43,6 +43,11 @@
 html{-webkit-text-size-adjust:100%}
 /* B-1：ゴムバンド／連鎖スクロールの抑止（通常のスクロールは阻害しない。高さ固定は行わない） */
 html,body{overscroll-behavior:none}
+/* 【P18】未ログイン時のお問い合わせ案内。匿名投稿は submitted_by が null になり、
+   開発者が返信を届けられない（返信・既読の通知も受け取れない）ため、送信前にログインを促す。 */
+.fb-login-note{background:var(--paper);border:1px solid var(--shu);border-radius:9px;padding:12px 14px;margin-bottom:12px}
+.fb-login-note .t{font-weight:700;color:var(--shu);font-size:.88rem;margin-bottom:5px}
+.fb-login-note .d{font-size:.8rem;color:var(--sub);line-height:1.7;margin-bottom:10px}
 /* 【P17】起動時の初期表示（SEO用の静的本文）を、ローディング画面として自然に見せる。
    JS起動時に render() が innerHTML で上書きするため、この見た目は一瞬しか出ない。
    画面外へ飛ばす（隠しテキスト）手法は、クローキング扱いのリスクがあるため採らない。 */
@@ -4303,7 +4308,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.13.19.45";
+const APP_VERSION = "2026.07.13.20.15";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -5041,16 +5046,32 @@ function renderFeedback(){
     <a class="streak" href="#" id="backHome" style="text-decoration:underline">戻る</a></header>
   <div class="panel"><div class="inner">
     <p class="note">ご要望・不具合の報告などをお送りください。内容は開発者にのみ届きます。スクリーンショット等の添付も可能です（1ファイル2MBまで）。</p>
+    ${currentUser ? "" : `<div class="fb-login-note">
+      <div class="t">送信にはログインが必要です</div>
+      <div class="d">ログインしていない状態では、開発者が返信をお届けできません。ログインすると、返信や確認の通知をこの画面で受け取れます。</div>
+      <button class="btn-sub" id="fbLogin">ログイン / 新規登録</button>
+    </div>`}
     <input type="text" id="fbNick" maxlength="20" placeholder="ニックネーム（任意）" value="${esc(state.settings.nickname||"")}">
     <textarea id="fbBox" placeholder="ご要望・お問い合わせ内容"></textarea>
     <input type="file" id="fbFile">
-    <button class="btn-sub" id="fbSend">送信</button>
+    <button class="btn-sub" id="fbSend">${currentUser ? "送信" : "ログインして送信"}</button>
     <span class="msg" id="fbMsg"></span>
   </div></div>
   <div class="panel"><div class="inner" id="fbHistory"><p class="note">読み込み中…</p></div></div>`;
   document.getElementById("backHome").onclick = (e)=>{ e.preventDefault(); renderHome(); };
+  /* 【P18】未ログイン時はログイン画面へ誘導する（案内内のボタン） */
+  const fbLoginBtn = document.getElementById("fbLogin");
+  if(fbLoginBtn) fbLoginBtn.onclick = ()=>openAuthModal();
   document.getElementById("fbSend").onclick = async ()=>{
     const msg = document.getElementById("fbMsg");
+    /* 【P18】未ログインでの送信を止め、ログインを促す。
+       匿名投稿は submitted_by が null になり、返信も既読の通知も届けられないため。 */
+    if(!currentUser){
+      msg.className="msg err";
+      msg.textContent="送信にはログインが必要です。返信をお届けするため、ログインしてください。";
+      openAuthModal();
+      return;
+    }
     const nick = document.getElementById("fbNick").value.trim().slice(0,20);
     const text = document.getElementById("fbBox").value.trim();
     const fileEl = document.getElementById("fbFile");
