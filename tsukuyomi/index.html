@@ -878,7 +878,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-13e";
+const APP_VERSION = "2026-07-13f";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -7481,13 +7481,22 @@ document.addEventListener("DOMContentLoaded", function () {
     var items = ix.querySelectorAll(".ix");
     for(var n = 0; n < items.length; n++) items[n].className = (n === k) ? "ix on" : "ix";
   }
-  /* 指のY座標 → 目次の何番目か（要素の高さで割るだけ。elementFromPoint に頼らない） */
+  /* 指のY座標 → 目次の何番目か。
+     ★箱（.refnav-index）ではなく【項目が実際に占める帯】を等分する。
+       箱は justify-content:center ＋ .ref-list と同じ高さのため、上下に大きな余白があり、
+       箱を等分すると「文字が並んでいる位置」とズレる（「あ」を押すと「た」に飛ぶ症状の真因）。
+     ★ここでの getBoundingClientRect は【fixed 要素の画面上の位置】を得るためのもので、
+       地雷#16が禁じた「スクロール先の計算」ではない。着地計算（refNavJump）は offsetTop のまま。 */
   function refNavIndexAt(clientY){
     var ix = byId("refNavIndex");
     var items = ix.querySelectorAll(".ix");
     if(!items.length) return -1;
-    var r = ix.getBoundingClientRect();
-    var k = Math.floor((clientY - r.top) / (r.height / items.length));
+    var first = items[0].getBoundingClientRect();
+    var last  = items[items.length - 1].getBoundingClientRect();
+    var top   = first.top;
+    var span  = last.bottom - first.top;      // 項目が実際に占める帯の高さ
+    if(!(span > 0)) return -1;
+    var k = Math.floor((clientY - top) / (span / items.length));
     return Math.max(0, Math.min(items.length - 1, k));
   }
   function refNavBubble(k, clientY){
