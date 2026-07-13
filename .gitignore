@@ -26,3 +26,5 @@ accepted_ids.txt
 
 # archives
 *.zip
+TSUKUYOMI_*.html
+tsukuyomi_*.html
