@@ -43,6 +43,10 @@
 html{-webkit-text-size-adjust:100%}
 /* B-1：ゴムバンド／連鎖スクロールの抑止（通常のスクロールは阻害しない。高さ固定は行わない） */
 html,body{overscroll-behavior:none}
+/* 【WP17】ブラウザ純正のスクロールバーを隠す。単語一覧に自前のスクロールバーを置いたため、
+   純正のものと二重に見えてしまう。スクロール機能そのものは一切変わらない（見た目だけを消す）。 */
+html{scrollbar-width:none;-ms-overflow-style:none}
+html::-webkit-scrollbar,body::-webkit-scrollbar{width:0;height:0;display:none}
 /* A-2：ダブルタップ拡大の抑止（ピンチ拡大は残す＝弱視ユーザーの拡大手段を奪わない） */
 body{touch-action:manipulation}
 /* A-1 安全網：class無しの入力欄が body の clamp(13px…) を継承して16px未満になるのを防ぐ。
@@ -4284,7 +4288,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.13.03.00";
+const APP_VERSION = "2026.07.13.19.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
