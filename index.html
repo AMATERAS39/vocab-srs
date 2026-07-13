@@ -43,6 +43,24 @@
 html{-webkit-text-size-adjust:100%}
 /* B-1：ゴムバンド／連鎖スクロールの抑止（通常のスクロールは阻害しない。高さ固定は行わない） */
 html,body{overscroll-behavior:none}
+/* 【P19】起動演出。アイコンの円を画面中央にフェードイン→保持→フェードアウト（約3秒）。
+   ・アプリの初期化とは独立（演出のために起動は遅くならない）
+   ・タップでスキップ可
+   ・初期化が失敗しても、安全弁のタイマーで必ず消える（操作不能事故の防止） */
+#splash{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
+  background:var(--paper);animation:splashFade 3s ease forwards}
+#splash img{width:min(46vw,190px);height:auto;border-radius:50%;animation:splashPop 3s ease forwards}
+@keyframes splashFade{0%{opacity:0}18%{opacity:1}70%{opacity:1}100%{opacity:0;visibility:hidden}}
+@keyframes splashPop{0%{transform:scale(.86)}20%{transform:scale(1)}100%{transform:scale(1.05)}}
+/* 【P19】未ログイン時の入口画面。アプリ説明を【常設】する（時間でも画面遷移でも消さない）。
+   分岐はログイン状態のみで行う。時間による自動非表示は隠しテキスト判定のリスクがあるため禁止。 */
+#landing{padding-top:6vh}
+#landing h1{font-family:var(--serif);font-size:1.7rem;letter-spacing:.06em;border:none;margin-bottom:2px;text-align:center}
+#landing .lead{font-family:var(--serif);font-size:.86rem;color:var(--shu);letter-spacing:.16em;text-align:center;margin-bottom:22px}
+#landing .desc p{font-size:.86rem;line-height:1.95;color:var(--ink);margin-bottom:12px}
+#landing .desc a{color:var(--shu)}
+#landing .acts{margin:22px 0 6px}
+#landing .acts .btn-ghost{margin-top:9px}
 /* 【P18】未ログイン時のお問い合わせ案内。匿名投稿は submitted_by が null になり、
    開発者が返信を届けられない（返信・既読の通知も受け取れない）ため、送信前にログインを促す。 */
 .fb-login-note{background:var(--paper);border:1px solid var(--shu);border-radius:9px;padding:12px 14px;margin-bottom:12px}
@@ -333,15 +351,16 @@ h1{font-size:clamp(1.05rem,3vh,1.5rem);white-space:nowrap;overflow:hidden;text-o
 </style>
 </head>
 <body>
+<div id="splash"><img src="icon-512.webp" alt="AMATERAS"></div>
 <div class="wrap" id="app">
-  <!-- 【P17】起動時の初期表示 兼 検索エンジン向けの静的な本文。
-       JS起動時に render() が innerHTML で上書きするため、利用者にはローディング画面として一瞬だけ見える。
-       JS無効時には実際に表示されるため、隠しテキストではない。 -->
-  <div id="boot">
+  <!-- 【P19】起動時の初期表示 兼 検索エンジン向けの静的な本文。
+       JS起動後、未ログインなら renderLanding() が同じ説明文を【常設】で描き直す。
+       ログイン済みならアプリ画面に切り替わり、説明文は自然に表示されない。
+       時間による自動非表示は行わない（隠しテキスト＝クローキング判定を避けるため）。 -->
+  <div id="landing">
     <h1>AMATERAS</h1>
-    <div class="boot-sub">英単語学習アプリ</div>
-    <div class="boot-load">読み込み中…</div>
-    <div class="boot-seo">
+    <div class="lead">英単語学習アプリ</div>
+    <div class="desc">
       <p>間隔反復（SRS）で効率よく覚える、無料の英単語学習アプリです。大学受験レベルの英単語3,932語を収録し、選択式と記述式の2系統で出題します。両方に合格して初めて「定着」と判定するため、見覚えがあるだけの状態を防げます。</p>
       <p>語源による解説と、品詞ごとに整理された意味表示で、単語を体系的に覚えられます。学習の進捗はアカウントごとにクラウド保存され、スマートフォンとパソコンのどちらからでも続きから学習できます。インストール不要、ブラウザだけで使えます。</p>
       <p>古文単語版の <a href="/tsukuyomi/">TSUKUYOMI（古文単語アプリ）</a> もあります。</p>
@@ -349,6 +368,18 @@ h1{font-size:clamp(1.05rem,3vh,1.5rem);white-space:nowrap;overflow:hidden;text-o
   </div>
 </div>
 <div class="copyright-wrap"><span class="version-tag" id="versionTag"></span><span class="copyright">©2026 AMATERAS</span></div>
+
+<script>
+/* 【P19】起動演出の安全弁。本体スクリプトより前に置くため、本体が失敗しても必ず消える。 */
+(function(){
+  var s = document.getElementById("splash");
+  if(!s) return;
+  var kill = function(){ if(s && s.parentNode){ s.parentNode.removeChild(s); s = null; } };
+  s.addEventListener("click", kill);
+  s.addEventListener("touchstart", kill, {passive:true});
+  setTimeout(kill, 3100);
+})();
+</script>
 
 <script>
 /* =========================================================
@@ -4308,7 +4339,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.13.20.15";
+const APP_VERSION = "2026.07.13.21.30";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4832,6 +4863,42 @@ const app = document.getElementById("app");
 let session = null; // {queue:[{id,isNew,mode}], idx, revealed, counts:{}}
 
 function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+/* 【P19】アプリ説明の本文。入口画面と「アプリの説明」画面で共有する（同じ文面を2箇所に書かない） */
+const APP_DESC_HTML = `
+      <p>間隔反復（SRS）で効率よく覚える、無料の英単語学習アプリです。大学受験レベルの英単語3,932語を収録し、選択式と記述式の2系統で出題します。両方に合格して初めて「定着」と判定するため、見覚えがあるだけの状態を防げます。</p>
+      <p>語源による解説と、品詞ごとに整理された意味表示で、単語を体系的に覚えられます。学習の進捗はアカウントごとにクラウド保存され、スマートフォンとパソコンのどちらからでも続きから学習できます。インストール不要、ブラウザだけで使えます。</p>
+      <p>古文単語版の <a href="/tsukuyomi/">TSUKUYOMI（古文単語アプリ）</a> もあります。</p>`;
+
+/* 【P19】未ログインでも「ログインせずに使う」を押せばアプリを使える（既存の使い方を壊さない）。
+   一度押したらこのセッション中は入口画面を出さない。 */
+let skipLanding = false;
+
+/* 【P19】起動時とログイン状態の変化時だけ、ここを通す。
+   既存の renderHome() 呼び出し（戻るボタン等）は一切変更していない。 */
+function renderEntry(){
+  if(currentUser || skipLanding){ renderHome(); return; }
+  renderLanding();
+}
+
+/* 【P19】未ログイン時の入口画面。アプリ説明を常設する。
+   時間経過では消さない（分岐はログイン状態のみ）。 */
+function renderLanding(){
+  session = null;
+  app.innerHTML = `
+  <div id="landing">
+    <h1>AMATERAS</h1>
+    <div class="lead">英単語学習アプリ</div>
+    <div class="acts">
+      <button class="btn-primary" id="ldLogin">ログイン / 新規登録</button>
+      <button class="btn-ghost" id="ldSkip">ログインせずに使う</button>
+    </div>
+    <p class="note" style="text-align:center;margin-bottom:18px">ログインすると、学習の進捗がクラウドに保存され、機種を変えても続きから学習できます。</p>
+    <div class="desc">${APP_DESC_HTML}</div>
+  </div>`;
+  document.getElementById("ldLogin").onclick = ()=>openAuthModal();
+  document.getElementById("ldSkip").onclick  = ()=>{ skipLanding = true; renderHome(); };
+}
 
 function renderHome(){
   session = null;
@@ -6315,6 +6382,9 @@ function renderAbout(){
     <a class="streak" href="#" id="backHome" style="text-decoration:underline">戻る</a></header>
   <div class="panel about">
 
+    <h2>AMATERASとは</h2>
+    <div class="desc">${APP_DESC_HTML}</div>
+
     <h2>アプリについて</h2>
     <p class="note">大学入試レベルの英単語を、テスト形式のくり返しで長期記憶に定着させるアプリです。毎日少しずつ新しい単語が追加され、忘れた頃に復習が出るように設計されています。</p>
 
@@ -6880,7 +6950,8 @@ async function syncOnAuthChange(){
   state = { settings:{ newPerDay:30, rate:0.95, difficulty:1 }, words:{}, log:{}, custom:[], activeSession:null };
   await loadState();
   if(merged){ state = merged; scheduleSave(); }   /* (A-safe) 統合結果を確実に反映し、失敗時も次回saveでクラウドへ */
-  renderHome();
+  if(!currentUser) skipLanding = false;   /* 【P19】ログアウトしたら入口画面に戻す */
+  renderEntry();                          /* 【P19】ログイン成立ならホーム、ログアウトなら入口画面 */
   maybePromptSignupPassword();   /* 案件1：再描画の後に提示する（コード入力経由をカバー） */
   refreshNotifDots();            /* 赤ドット：ログイン成立直後に未読を判定 */
 }
@@ -6898,7 +6969,7 @@ async function syncOnAuthChange(){
   ensureUpdateFloat();            /* 追加2：画面に依存しない更新ボタンを常設 */
   await loadState();
   if(merged){ state = merged; scheduleSave(); }  /* (A-safe) 統合結果を確実に反映し、失敗時も次回saveでクラウドへ */
-  renderHome();
+  renderEntry();   /* 【P19】未ログインなら入口画面（アプリ説明を常設）。ログイン済みならホーム */
   startUpdateWatcher();           // 新バージョン公開の監視を開始
   { const vt = document.getElementById("versionTag"); if(vt) vt.textContent = "v." + APP_VERSION.replace(/-/g,"."); }  /* E-2：バージョン表示（値は不変・表示のみ） */
   if(IS_RECOVERY) openPwResetModal();   /* P-4：リセットリンク到来時は新PW入力UIを出す（イベント取りこぼしの保険） */
