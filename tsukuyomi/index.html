@@ -339,6 +339,9 @@
   .fb-hist-date{ font-size:.78rem; color:var(--sub); margin-top:.25rem; }
   .fb-hist-reply{ margin-top:.5rem; padding-top:.5rem; border-top:1px dashed var(--line); font-size:.9rem; color:var(--ink); white-space:pre-wrap; word-break:break-word; }
   .fb-hist-wait{ margin-top:.5rem; padding-top:.5rem; border-top:1px dashed var(--line); font-size:.85rem; color:var(--sub); }
+  /* P16：管理者が「既読にする」だけを押した状態。返信（.fb-hist-reply）とは別クラス・別色の控えめな表示 */
+  .fb-hist-seen{ margin-top:.5rem; padding-top:.5rem; border-top:1px dashed var(--line); font-size:.85rem; color:var(--sub); font-style:normal; }
+  .fb-hist-seen::before{ content:"\2713"; margin-right:.3rem; color:var(--midori); }   /* ✓ 印だけ緑。文字は控えめな灰 */
   /* ===== アプリ説明（本格版・§9about）。色は変数/クラス経由（SVG属性へ直書きしない） ===== */
   .about-content{ padding:.4rem .9rem 1.2rem; }
   .about-content h2{ font-family:var(--serif); font-size:1rem; margin:1.2rem 0 .3rem; padding-left:8px; border-left:3px solid var(--shu); color:var(--ink); }
@@ -842,7 +845,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-13a";
+const APP_VERSION = "2026-07-13b";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -7854,7 +7857,7 @@ document.addEventListener("DOMContentLoaded", function () {
     list.hidden = false; list.innerHTML = '<div class="login-note">読み込み中…</div>';
     try{
       var res = await sb.from("kobun_feedback")
-        .select("id, user_id, body, created_at, reply, replied_at")
+        .select("id, user_id, body, created_at, reply, replied_at, admin_read_at")   // P16：既読表示に admin_read_at が必要
         .order("created_at", { ascending: false })
         .limit(FB_HIST_LIMIT);
       var rows = fbMine(res && res.data ? res.data : []);
@@ -7868,10 +7871,15 @@ document.addEventListener("DOMContentLoaded", function () {
         var b = document.createElement("div"); b.className = "fb-hist-body"; b.textContent = r.body || "";
         var d = document.createElement("div"); d.className = "fb-hist-date"; d.textContent = fbFmtDate(r.created_at);
         item.appendChild(b); item.appendChild(d);
+        /* P16：3分岐。(1)返信あり →「返信：〜」／(2)返信は無いが管理者が既読にした →「確認しました（日時）」／
+           (3)どちらも無し →「返信をお待ちください」。★赤ドットの点灯・消灯の式には一切影響しない（表示のみ）。 */
         var rep = document.createElement("div");
         if(r.reply && String(r.reply).trim()){
           rep.className = "fb-hist-reply";
           rep.textContent = "返信：" + String(r.reply) + (r.replied_at ? "（" + fbFmtDate(r.replied_at) + "）" : "");
+        } else if(r.admin_read_at){
+          rep.className = "fb-hist-seen";
+          rep.textContent = "確認しました（" + fbFmtDate(r.admin_read_at) + "）";
         } else {
           rep.className = "fb-hist-wait";
           rep.textContent = "返信をお待ちください";
