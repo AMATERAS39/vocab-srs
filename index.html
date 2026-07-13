@@ -122,6 +122,14 @@ details.panel .inner{padding:0 18px 18px}
 .setting-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;font-size:.85rem}
 /* A-1：iOS Safari のフォーカス拡大防止（16px以上）。type=text も含める（setNick対策）。行高増はpaddingで吸収 */
 .setting-row select,.setting-row input[type=number],.setting-row input[type=text]{font-family:var(--sans);padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:16px;background:#fff}
+/* 【P21】設定行のはみ出し修正。.setting-row は display:flex だが、ラベル（span）に
+   縮小の下限が無く、入力欄が広いと（16px化の影響）ラベルが1文字ずつ折り返されて縦に見える。
+   ラベルに最小幅を与え、入らない場合は入力欄を次の行に送る。 */
+.setting-row{flex-wrap:wrap}
+.setting-row>span{flex:1 1 auto;min-width:8.5em}
+.setting-row input[type=text]{flex:0 1 170px;min-width:130px;max-width:100%}
+.setting-row input[type=number]{flex:0 0 84px}
+.setting-row select{flex:0 1 auto;max-width:62%}
 textarea{width:100%;min-height:130px;border:1px solid var(--line);border-radius:6px;padding:8px;font-size:16px;font-family:ui-monospace,monospace;background:#fff;color:var(--ink)}
 .btn-sub{padding:8px 14px;border:1px solid var(--ink);border-radius:6px;font-size:.82rem;font-weight:500;margin:8px 8px 0 0;background:#fff}
 .msg{font-size:.78rem;margin-top:8px;color:var(--midori)}
@@ -4339,7 +4347,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.14.09.30";
+const APP_VERSION = "2026.07.14.10.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -6338,8 +6346,7 @@ function renderSettings(){
       <input type="text" id="setNick" maxlength="20" value="${esc(state.settings.nickname||"")}" placeholder="未設定"></div>
     <div class="setting-row"><span>学習モード：1日に増える新しい単語の数</span>
       <input type="number" id="setNew" min="5" max="100" value="${state.settings.newPerDay}"></div>
-    <p class="note" style="margin:-4px 0 10px">この変更は<strong>明日のぶんから反映されます</strong>。今日ぶんを増やしたい場合は、ホーム画面の「新しい単語を追加する」をお使いください。</p>
-    <div class="setting-row"><span>難易度（☆が高いほど難しい単語まで出題）</span>
+    <div class="setting-row"><span>難易度</span>
       <select id="setDiff">${[1,2,3,4,5].map(n=>`<option value="${n}" ${chunkStars()===n?"selected":""}>${"★".repeat(n)}${"☆".repeat(5-n)}</option>`).join("")}</select></div>
     <div class="setting-row"><span>音声の読み上げ速度</span>
       <select id="setRate">${[0.5,0.6,0.7,0.8,0.9,0.95,1.0,1.1,1.2].map(r=>`<option value="${r}" ${Math.abs((state.settings.rate||0.95)-r)<0.001?"selected":""}>${r}</option>`).join("")}</select></div>
