@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -316,6 +316,13 @@
   .review-card .r-actions{ display:flex; gap:.5rem; margin-top:.5rem; align-items:center; }
   .review-card .r-actions .homebtn{ flex:1; padding:.5rem 0; font-size:.95rem; }
   .review-card .r-actions .ref-search{ flex:1; }
+  /* P14：受信箱の既読まわり（バッジと「既読にする」ボタン） */
+  .inbox-meta{ display:flex; flex-wrap:wrap; gap:.35rem; align-items:center; margin-top:.35rem; font-size:.78rem; color:var(--sub); }
+  .inbox-badge{ display:inline-block; border:1px solid var(--line); border-radius:999px; padding:.05rem .45rem; font-size:.72rem; line-height:1.6; color:var(--sub); background:var(--paper); }
+  .inbox-badge.read{ border-color:var(--midori); color:var(--midori); }      /* 管理者が既読にした */
+  .inbox-badge.uread{ border-color:var(--pol-neg); color:var(--pol-neg); }   /* 利用者が返信を読んだ（表示のみ） */
+  .review-card .r-read{ margin-top:.5rem; }
+  .review-card .r-read .homebtn{ width:100%; padding:.45rem 0; font-size:.9rem; }
   /* ===== 機能8・§10：更新通知バナー（上部固定・z-index 100） ===== */
   /* ===== 赤ドット（更新あり／管理者の未読）。円のみ・数字やテキストは出さない（仕様4） ===== */
   .icon-btn{ position:relative; }        /* ドットの基準（既存の見た目は不変） */
@@ -835,7 +842,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-12e";
+const APP_VERSION = "2026-07-13a";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -7661,26 +7668,94 @@ document.addEventListener("DOMContentLoaded", function () {
     dotsIsOwner = isOwner; renderDots();
   }
 
+  /* =========================================================
+     P14：受信箱の状態は「変数」で持つ（DOMに状態を持たせない）。
+     ・受信箱を開いても admin_read_at は書かない（＝利用者に「既読」通知を飛ばさない）。
+       開いた時点でやるのは、取得した行から赤ドットを「再計算」することだけ。
+     ・admin_read_at を書くのは「既読にする」ボタンを押した時と、返信を送信した時だけ。
+     ・管理者の赤ドット（未処理リスト）は、既読か返信をするまで消えない。
+     ========================================================= */
+  var inboxRows = [];   // 受信箱の行（管理者の未処理判定と再描画の唯一の情報源）
+
+  // 管理者から見て未処理か（第1弾の判定を不変のまま関数化：admin_read_at が null、または created_at より古い）
+  function inboxRowUnread(r){
+    if(!r.admin_read_at) return true;
+    return new Date(r.admin_read_at) < new Date(r.created_at);
+  }
+  // 赤ドットの再計算（書き込みは一切しない）。再描画で hidden が上書きされても変数から復元される。
+  function recalcInboxDots(){
+    unreadInbox = (sb && isOwner) ? inboxRows.some(inboxRowUnread) : false;
+    dotsIsOwner = isOwner;
+    renderDots();
+  }
+  // 「既読にする」：押した時だけ admin_read_at を現在時刻で更新する（利用者への通知はここで初めて飛ぶ）
+  async function markOneInboxRead(fb){
+    if(!(sb && isOwner) || !fb) return;
+    var ts = new Date().toISOString();
+    try{
+      var r = await sb.from("kobun_feedback").update({ admin_read_at: ts }).eq("id", fb.id);
+      if(r && r.error) throw r.error;
+      fb.admin_read_at = ts;              // 変数側を更新 → 再描画と再計算はここから
+      renderInboxList(); recalcInboxDots();
+      toast("既読にしました");
+    }catch(e){ toast("既読にできませんでした"); console.warn("[TSUKUYOMI 受信箱] 既読の記録に失敗", e); }
+  }
+  // 受信箱の描画（inboxRows から作り直す。既読済みの行には「既読にする」ボタンを出さない）
+  function renderInboxList(){
+    var box = byId("inboxList"); if(!box) return;
+    if(inboxRows.length === 0){ box.innerHTML = '<div class="login-note" style="text-align:center">まだ意見はありません</div>'; return; }
+    box.innerHTML = "";
+    inboxRows.forEach(function(fb){
+      var card = document.createElement("div"); card.className = "review-card";
+
+      var head = document.createElement("div");
+      head.textContent = (fb.nickname || "名無し") + "：" + (fb.body || "");
+      card.appendChild(head);
+
+      var meta = document.createElement("div"); meta.className = "inbox-meta";
+      var when = document.createElement("span"); when.textContent = fbFmtDate(fb.created_at); meta.appendChild(when);
+      if(fb.admin_read_at){                       // 管理者が既読にした（＝TSUKUYOMI では is_read 列の代わり）
+        var b1 = document.createElement("span"); b1.className = "inbox-badge read"; b1.textContent = "既読"; meta.appendChild(b1);
+      }
+      if(fb.user_read_at){                        // 利用者が返信を読んだ（表示のみ。管理者の赤ドット判定には使わない）
+        var b2 = document.createElement("span"); b2.className = "inbox-badge uread"; b2.textContent = "利用者が既読"; meta.appendChild(b2);
+      }
+      card.appendChild(meta);
+
+      var acts = document.createElement("div"); acts.className = "r-actions";
+      var inp = document.createElement("input");
+      inp.className = "ref-search"; inp.type = "text"; inp.placeholder = "返信"; inp.value = fb.reply || "";
+      var send = document.createElement("button");
+      send.className = "homebtn"; send.type = "button"; send.textContent = "送信";
+      send.addEventListener("click", function(){ replyFeedback(fb.id, inp.value.trim()); });
+      acts.appendChild(inp); acts.appendChild(send);
+      card.appendChild(acts);
+
+      if(!fb.admin_read_at){                      // 未読のときだけ「既読にする」を出す
+        var rd = document.createElement("div"); rd.className = "r-read";
+        var rb = document.createElement("button");
+        rb.className = "homebtn"; rb.type = "button"; rb.textContent = "既読にする";
+        rb.addEventListener("click", function(){ markOneInboxRead(fb); });
+        rd.appendChild(rb); card.appendChild(rd);
+      }
+      box.appendChild(card);
+    });
+  }
+  /* 受信箱を開く：取得 → 変数へ格納 → 描画 → 赤ドットの再計算（書き込みなし）。
+     ★markInboxRead() は呼ばない（開いただけで利用者に既読通知が飛ぶのを止めるため）。 */
   async function loadInbox(){
     var box = byId("inboxList"); box.innerHTML = '<div class="login-note">読み込み中…</div>';
     try{
       var res = await sb.from("kobun_feedback").select("*").order("created_at",{ascending:false});
-      var rows = (res && res.data) ? res.data : [];
-      markInboxRead(rows);   // 仕様2：受信箱を開いた＝表示した行を既読にする（admin_read_at を更新して消灯）
-      if(rows.length === 0){ box.innerHTML = '<div class="login-note" style="text-align:center">まだ意見はありません</div>'; return; }
-      box.innerHTML = "";
-      rows.forEach(function(fb){
-        var card = document.createElement("div"); card.className = "review-card";
-        card.innerHTML = '<div>' + esc(fb.nickname||"名無し") + '：' + esc(fb.body) + '</div>'
-          + '<div class="r-actions"><input class="ref-search" type="text" placeholder="返信" value="' + esc(fb.reply||"") + '"><button class="homebtn" type="button">送信</button></div>';
-        var inp = card.querySelector("input"), btn = card.querySelector("button");
-        btn.addEventListener("click", function(){ replyFeedback(fb.id, inp.value.trim()); });
-        box.appendChild(card);
-      });
+      inboxRows = (res && res.data) ? res.data : [];
+      renderInboxList();
+      recalcInboxDots();   // 開いた時点では「再計算するだけ」。未処理が残っていれば赤ドットは点いたまま。
     }catch(e){ box.innerHTML = '<div class="login-note">読み込みに失敗しました</div>'; }
   }
-  /* 表示した行のうち未読のものだけ admin_read_at を現在時刻で更新する（第1弾で書くのは admin_read_at のみ。
-     replied_at / user_read_at は第2弾用のため触らない）。失敗してもUIは壊さない。 */
+  /* ★P14：この関数は【もう呼ばれない】（定義のみ残置。非破壊・切り戻し用）。
+     受信箱を「開いただけ」で admin_read_at を書くと、利用者側に「既読」通知（赤ドット）が飛んでしまうため。
+     既読を書くのは markOneInboxRead（「既読にする」ボタン）と replyFeedback（返信送信）だけ。
+     ── 以下は旧仕様：表示した行のうち未読のものだけ admin_read_at を現在時刻で更新する。 */
   async function markInboxRead(rows){
     unreadInbox = false; renderDots();   // 開いた時点で消灯（☰ と「届いた意見」の両方）
     if(!(sb && isOwner) || !rows || rows.length === 0) return;
@@ -7698,11 +7773,21 @@ document.addEventListener("DOMContentLoaded", function () {
        replied_at を書かないと「返信が来た」で赤ドットが点かず、再点灯も成立しない。
        返信を空にしたときは replied_at を null に戻す（返信が無いのに点灯するのを防ぐ）。 */
     var body = (reply || "").trim();
-    var payload = body ? { reply: body, replied_at: new Date().toISOString() }
+    var ts   = new Date().toISOString();
+    /* P14：返信の送信は「処理済み」でもあるため、reply / replied_at / admin_read_at を同じ時刻でまとめて更新する。
+       返信を空にした（取り消した）ときは、返信が無いのに利用者へ通知が飛ばないよう admin_read_at は書かない。 */
+    var payload = body ? { reply: body, replied_at: ts, admin_read_at: ts }
                        : { reply: "",   replied_at: null };
     try{
       var r = await sb.from("kobun_feedback").update(payload).eq("id", id);
       if(r && r.error) throw r.error;
+      // 変数側にも反映してから再描画・再計算（DOMに状態を持たせない）
+      var row = inboxRows.filter(function(x){ return x.id === id; })[0];
+      if(row){
+        row.reply = payload.reply; row.replied_at = payload.replied_at;
+        if(payload.admin_read_at) row.admin_read_at = payload.admin_read_at;
+        renderInboxList(); recalcInboxDots();
+      }
       toast("返信を保存しました");
     }
     catch(e){ toast("保存に失敗しました"); }
