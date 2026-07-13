@@ -4339,7 +4339,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.13.21.30";
+const APP_VERSION = "2026.07.14.09.30";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4973,7 +4973,8 @@ function renderHome(){
     ${hasActive ? `<button class="btn-primary" id="resumeBtn">▶ 続きから再開（${(a.pos||0)+1}/${a.order.length}）</button>
       <button class="btn-ghost" id="newBtn">新規開始</button>`
     : (revs.length>0
-      ? `<button class="btn-primary" id="startBtn">学習を始める</button>`
+      ? `<button class="btn-primary" id="startBtn">学習を始める</button>
+         ${anyStockableWords() ? `<button class="btn-ghost" id="addNewBtn">新しい単語を追加する（${state.settings.newPerDay}語）</button>` : ``}`
       : (anyStockableWords()
         ? `<p class="note" style="margin:6px 0 10px">今日のノルマは完了しました。</p>
            <button class="btn-primary" id="extraBtn">追加でもっと学習する</button>`
@@ -5022,6 +5023,17 @@ function renderHome(){
   }else{
     const startB=document.getElementById("startBtn"); if(startB) startB.onclick = ()=>startSession("review");
     const eb=document.getElementById("extraBtn"); if(eb) eb.onclick = ()=>{ stockExtra(state.settings.newPerDay||10); startSession("review"); };
+    /* 【P20 案Y】未達成中でも、利用者が明示的に望んだときは新しい単語を追加できる。
+       K-1（未消化が残る間は新規を積まない）は「自動では積まない」という制御であり、
+       利用者の明示操作まで禁じるものではない、という総司令の裁定に基づく。
+       ここでは学習を始めず、ホームを描き直して「今日の復習対象」が増えたことを見せる。 */
+    const ab=document.getElementById("addNewBtn"); if(ab) ab.onclick = ()=>{
+      const n = state.settings.newPerDay || 10;
+      if(!confirm(`新しい単語を${n}語ぶん追加します。今日の学習量が増えます。よろしいですか？`)) return;
+      const added = stockExtra(n);
+      renderHome();
+      if(added === 0) alert("追加できる新しい単語がありませんでした。");
+    };
   }
   const wb=document.getElementById("weakBtn"); if(wb) wb.onclick = ()=>{ state.activeSession=null; startSession("weak"); };
   if(ps){
@@ -6326,6 +6338,7 @@ function renderSettings(){
       <input type="text" id="setNick" maxlength="20" value="${esc(state.settings.nickname||"")}" placeholder="未設定"></div>
     <div class="setting-row"><span>学習モード：1日に増える新しい単語の数</span>
       <input type="number" id="setNew" min="5" max="100" value="${state.settings.newPerDay}"></div>
+    <p class="note" style="margin:-4px 0 10px">この変更は<strong>明日のぶんから反映されます</strong>。今日ぶんを増やしたい場合は、ホーム画面の「新しい単語を追加する」をお使いください。</p>
     <div class="setting-row"><span>難易度（☆が高いほど難しい単語まで出題）</span>
       <select id="setDiff">${[1,2,3,4,5].map(n=>`<option value="${n}" ${chunkStars()===n?"selected":""}>${"★".repeat(n)}${"☆".repeat(5-n)}</option>`).join("")}</select></div>
     <div class="setting-row"><span>音声の読み上げ速度</span>
