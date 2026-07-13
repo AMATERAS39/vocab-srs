@@ -158,14 +158,19 @@ code{background:var(--paper);padding:1px 5px;border-radius:4px;font-size:.78rem}
 .ref-controls select,.ref-controls input{font-family:var(--sans);padding:6px 9px;border:1px solid var(--line);border-radius:6px;font-size:16px;background:#fff;flex:1;min-width:120px}
 .ref-count{font-size:.76rem;color:var(--sub);margin-bottom:10px}
 .ref-item{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:12px 14px;margin-bottom:8px}
-/* 【WP17】単語一覧：スライド目次・最上部ボタン。position:fixed は viewport 基準のため、
-   bodyスクロール構造を一切変更せずに固定表示できる（内部スクロール化はしない＝§4.4厳守） */
-.ref-sec{position:sticky;top:0;z-index:2;background:var(--paper);border-bottom:1px solid var(--line);font-family:var(--serif);font-weight:700;font-size:18px;color:var(--shu);padding:6px 2px 4px;margin:14px 0 6px;text-transform:uppercase;scroll-margin-top:8px}
-.idx-bar{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;width:24px;padding:6px 0;background:rgba(255,255,255,.85);border:1px solid var(--line);border-right:none;border-radius:8px 0 0 8px;touch-action:none;-webkit-user-select:none;user-select:none;cursor:pointer}
-.idx-bar span{display:block;font-size:10px;line-height:1.18;font-weight:700;color:var(--sub);text-transform:uppercase;padding:0 4px;pointer-events:none}
-.idx-bar.dots span{width:6px;height:6px;margin:3px 0;padding:0;border-radius:50%;background:var(--line);font-size:0;line-height:0}
-.idx-bubble{position:fixed;right:34px;z-index:41;display:none;min-width:56px;text-align:center;padding:8px 12px;border-radius:10px;background:var(--ink);color:#fff;font-family:var(--serif);font-weight:700;font-size:26px;text-transform:uppercase;pointer-events:none}
-.to-top{position:fixed;right:34px;bottom:calc(env(safe-area-inset-bottom, 0px) + 18px);z-index:40;display:none;width:44px;height:44px;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:16px;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.14);cursor:pointer}
+/* 【WP17】単語一覧：左端＝目次バー（読み順のみ）、右端＝スクロールバー（全並び順）、右下＝最上部ボタン。
+   ★position:sticky は使わない。見出しを sticky にすると、通り過ぎた見出しが全部 top:0 に貼り付き、
+     getBoundingClientRect().top が 0 を返して「下から上へ飛べない」不具合になる（実機で発生・再現済み）。
+     位置計算も rect ではなく offsetTop（文書基準・貼り付きの影響を受けない）を使う。 */
+.ref-sec{background:var(--paper);border-bottom:2px solid var(--shu);font-family:var(--serif);font-weight:700;font-size:19px;color:var(--shu);padding:4px 2px;margin:18px 0 8px;text-transform:uppercase;letter-spacing:.08em}
+.idx-bar{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;width:26px;padding:6px 0;background:rgba(255,255,255,.9);border:1px solid var(--line);border-left:none;border-radius:0 9px 9px 0;touch-action:none;-webkit-user-select:none;user-select:none;box-shadow:1px 0 6px rgba(0,0,0,.06)}
+.idx-bar span{display:block;font-size:10px;line-height:1.2;font-weight:700;color:var(--sub);text-transform:uppercase;padding:0 5px;pointer-events:none}
+.scrub{position:fixed;right:0;top:16%;bottom:16%;width:30px;z-index:40;touch-action:none;-webkit-user-select:none;user-select:none}
+.scrub-track{position:absolute;right:12px;top:0;bottom:0;width:4px;border-radius:2px;background:var(--line)}
+.scrub-thumb{position:absolute;right:5px;top:0;width:18px;height:46px;border-radius:9px;background:var(--sub);border:2px solid var(--card);box-shadow:0 1px 5px rgba(0,0,0,.18)}
+.scrub.on .scrub-thumb{background:var(--shu)}
+.idx-bubble{position:fixed;left:50%;transform:translateX(-50%);top:38%;z-index:41;display:none;min-width:64px;text-align:center;padding:10px 16px;border-radius:12px;background:var(--ink);color:#fff;font-family:var(--serif);font-weight:700;font-size:30px;text-transform:uppercase;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+.to-top{position:fixed;right:38px;bottom:calc(env(safe-area-inset-bottom, 0px) + 18px);z-index:40;display:none;width:44px;height:44px;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:16px;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.16)}
 .ref-head{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
 .ref-word{font-family:var(--serif);font-size:1.3rem;font-weight:700}
 .ref-lv{font-size:.66rem;font-weight:700;color:#fff;border-radius:4px;padding:1px 6px}
@@ -4279,7 +4284,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.13.01.30";
+const APP_VERSION = "2026.07.13.03.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -5799,7 +5804,7 @@ function renderDone(){
 }
 
 /* ---- 単語一覧（判定に一切関与しない全単語の閲覧）---- */
-let refFilter = { lv:"all", q:"", sort:"std" };
+let refFilter = { lv:"all", q:"", sort:"alpha" };  /* 【WP17】番号順(std)を廃止し、読み順(alpha)を既定にする */
 function renderReference(){
   session = null;
   const words = allWords().slice().sort((a,b)=>a.i-b.i);
@@ -5825,12 +5830,12 @@ function renderReference(){
     list = list.slice().sort((a,b)=>{ const ra=combined(a), rb=combined(b);
       if(ra==null&&rb==null) return a.i-b.i; if(ra==null) return 1; if(rb==null) return -1; return ra-rb||a.i-b.i; });
   }else if(refFilter.sort==="alpha"){
-    /* 【WP17】読み順（a→z）。新設。既存3種のロジックには一切触れない */
+    /* 【WP17】読み順（a→z）。既存3種のロジックには触れない */
     list = list.slice().sort((a,b)=>{ const x=(a.w||"").toLowerCase(), y=(b.w||"").toLowerCase();
       return x<y ? -1 : x>y ? 1 : a.i-b.i; });
   }
   /* 【WP17】読み順のときだけ、頭文字が変わる位置に見出しを差し込む。
-     見出しは list から生成するため、該当ゼロの文字は原理的に出ない（絞り込み・検索にも自動追従） */
+     見出しは list から生成するので、該当ゼロの文字は原理的に出ない（絞り込み・検索に自動追従） */
   let _lastSec = null;
   const items = list.map(w=>{
     let secHtml = "";
@@ -5861,8 +5866,7 @@ function renderReference(){
     </div>`;
   }).join("");
 
-  /* 【WP17】目次の見出しキー。読み順のときだけ a〜z（該当ゼロは list に無いので自動的に出ない）。
-     他の並び順は「順序に名前が付けられない」ため見出しを出さず、なぞりスクロールのみ提供する（総司令仕様）。 */
+  /* 【WP17】目次の見出しキー。読み順のときだけ a〜z（該当ゼロは list に無いので自動的に出ない） */
   const secKeys = (refFilter.sort==="alpha")
     ? [...new Set(list.map(w=>(w.w||"").charAt(0).toLowerCase()).filter(c=>/[a-z]/.test(c)))]
     : [];
@@ -5880,7 +5884,6 @@ function renderReference(){
           ${[1,2,3,4,5].map(l=>`<option value="${l}" ${refFilter.lv==String(l)?"selected":""}>Lv.${l} のみ</option>`).join("")}
         </select>
         <select id="refSort">
-          <option value="std" ${refFilter.sort==="std"?"selected":""}>番号順</option>
           <option value="alpha" ${refFilter.sort==="alpha"?"selected":""}>読み順（a→z）</option>
           <option value="asc" ${refFilter.sort==="asc"?"selected":""}>正答率が低い順</option>
           <option value="desc" ${refFilter.sort==="desc"?"selected":""}>正答率が高い順</option>
@@ -5902,62 +5905,116 @@ function renderReference(){
   bindRefNav(secKeys);
 }
 
-/* 【WP17】単語一覧のスライド目次・最上部ボタン。
-   ・語数が少ないときは出さない（12語以下では不要かつ邪魔）
-   ・読み順のときは a〜z の見出し、それ以外はドット（＝割合スクロール）
-   ・要素は app.innerHTML の中に置くため、他画面へ遷移すれば自動的に破棄される */
+/* ================= 【WP17】単語一覧のナビゲーション =================
+   ・左端：目次バー（読み順のときのみ。a〜z、該当ゼロは非表示）
+   ・右端：スクロールバー（全ての並び順。つまみを掴んで滑らかに高速移動）
+   ・右下：最上部へ戻るボタン
+   ・要素は app.innerHTML の中に置くため、他画面へ遷移すれば自動的に破棄される
+   ・位置計算は offsetTop（文書基準）を使う。getBoundingClientRect は使わない。
+     理由：見出しを sticky にすると通り過ぎた見出しが top:0 に貼り付き、rect.top が 0 を返して
+           「下から上へ飛べない」不具合になる。sticky は廃止したが、計算も rect 非依存にして二重に守る。 */
 function refNavHtml(secKeys, total){
   if(total <= 12) return "";
-  const dots = !secKeys.length;
-  const cells = dots ? Array.from({length:12},(_,n)=>String(n)) : secKeys;
-  return `<div class="idx-bar${dots?" dots":""}" id="refIdx">`
-    + cells.map(k=>`<span data-k="${k}">${dots?"":k}</span>`).join("")
-    + `</div><div class="idx-bubble" id="refBubble"></div>`
+  const idx = secKeys.length
+    ? `<div class="idx-bar" id="refIdx">${secKeys.map(k=>`<span data-k="${k}">${k}</span>`).join("")}</div>`
+    : "";
+  return idx
+    + `<div class="scrub" id="refScrub"><div class="scrub-track"></div><div class="scrub-thumb" id="refThumb"></div></div>`
+    + `<div class="idx-bubble" id="refBubble"></div>`
     + `<button class="to-top" id="refTop" title="最上部へ戻る" aria-label="最上部へ戻る">▲</button>`;
 }
+function refMaxScroll(){ return Math.max(1, document.documentElement.scrollHeight - window.innerHeight); }
+function refAbsTop(el){ let y=0; while(el){ y += el.offsetTop; el = el.offsetParent; } return y; }
+
 function bindRefNav(secKeys){
-  const bar = document.getElementById("refIdx");
-  const bub = document.getElementById("refBubble");
-  const top = document.getElementById("refTop");
-  if(bar && bub){
+  const bub  = document.getElementById("refBubble");
+  const bar  = document.getElementById("refIdx");
+  const scr  = document.getElementById("refScrub");
+  const thumb= document.getElementById("refThumb");
+  const top  = document.getElementById("refTop");
+  if(!bub) return;
+
+  const showBub = (txt)=>{ bub.textContent = txt; bub.style.display = "block"; };
+  const hideBub = ()=>{ bub.style.display = "none"; };
+
+  /* ---- 左端：目次バー（読み順のみ） ---- */
+  if(bar && secKeys.length){
     const spans = Array.prototype.slice.call(bar.querySelectorAll("span"));
-    const alpha = secKeys.length > 0;
     const go = (clientY)=>{
       const r = bar.getBoundingClientRect();
-      if(!r.height || !spans.length) return;
-      let idx = Math.floor((clientY - r.top) / (r.height / spans.length));
-      if(idx < 0) idx = 0;
-      if(idx > spans.length-1) idx = spans.length-1;
-      if(alpha){
-        const k = spans[idx].dataset.k;
-        const el = document.getElementById("refsec-" + k);
-        if(el) window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 8);
-        bub.textContent = k;
-      }else{
-        const frac = spans.length>1 ? idx/(spans.length-1) : 0;
-        const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-        window.scrollTo(0, Math.round(max * frac));
-        bub.textContent = Math.round(frac*100) + "%";
-      }
-      bub.style.display = "block";
-      bub.style.top = Math.max(8, Math.min(window.innerHeight - 64, clientY - 26)) + "px";
+      if(!r.height) return;
+      let i = Math.floor((clientY - r.top) / (r.height / spans.length));
+      if(i < 0) i = 0;
+      if(i > spans.length - 1) i = spans.length - 1;
+      const k = spans[i].dataset.k;
+      const el = document.getElementById("refsec-" + k);
+      if(el) window.scrollTo(0, Math.max(0, Math.min(refMaxScroll(), refAbsTop(el) - 10)));
+      showBub(k);
     };
-    const end = ()=>{ bub.style.display = "none"; };
-    bar.addEventListener("touchstart", (e)=>{ go(e.touches[0].clientY); e.preventDefault(); }, {passive:false});
-    bar.addEventListener("touchmove",  (e)=>{ go(e.touches[0].clientY); e.preventDefault(); }, {passive:false});
-    bar.addEventListener("touchend", end);
-    bar.addEventListener("touchcancel", end);
-    bar.addEventListener("click", (e)=>{ go(e.clientY); setTimeout(end, 700); });
+    bar.addEventListener("touchstart",(e)=>{ go(e.touches[0].clientY); e.preventDefault(); },{passive:false});
+    bar.addEventListener("touchmove", (e)=>{ go(e.touches[0].clientY); e.preventDefault(); },{passive:false});
+    bar.addEventListener("touchend", hideBub);
+    bar.addEventListener("touchcancel", hideBub);
+    bar.addEventListener("click", (e)=>{ go(e.clientY); setTimeout(hideBub, 700); });
   }
+
+  /* ---- 右端：スクロールバー（滑らかな高速移動。全ての並び順で使える） ---- */
+  if(scr && thumb){
+    const TH = 46;                      /* つまみの高さ（CSSと一致させる） */
+    let dragging = false;
+
+    const trackGeom = ()=>{
+      const r = scr.getBoundingClientRect();
+      return { top:r.top, travel: Math.max(1, r.height - TH) };
+    };
+    /* スクロール位置 → つまみの位置 */
+    const sync = ()=>{
+      if(!document.body.contains(thumb)){ window.removeEventListener("scroll", sync); return; }
+      if(dragging) return;
+      const g = trackGeom();
+      thumb.style.top = Math.round(g.travel * (window.scrollY / refMaxScroll())) + "px";
+      if(top) top.style.display = (window.scrollY > 320) ? "block" : "none";
+    };
+    /* 指の位置 → スクロール位置（つまみの中心が指に追従＝1:1で滑らか） */
+    const drag = (clientY)=>{
+      const g = trackGeom();
+      let y = clientY - g.top - TH / 2;
+      if(y < 0) y = 0;
+      if(y > g.travel) y = g.travel;
+      thumb.style.top = Math.round(y) + "px";
+      window.scrollTo(0, Math.round(refMaxScroll() * (y / g.travel)));
+      /* 吹き出し：読み順ならいま見えている見出しの文字、それ以外は割合 */
+      if(secKeys.length){
+        let cur = secKeys[0], best = -1;
+        for(const k of secKeys){
+          const el = document.getElementById("refsec-" + k);
+          if(el){ const t = refAbsTop(el); if(t <= window.scrollY + 60 && t > best){ best = t; cur = k; } }
+        }
+        showBub(cur);
+      }else{
+        showBub(Math.round((y / g.travel) * 100) + "%");
+      }
+    };
+    const start = (clientY)=>{ dragging = true; scr.classList.add("on"); drag(clientY); };
+    const end   = ()=>{ dragging = false; scr.classList.remove("on"); hideBub(); sync(); };
+
+    scr.addEventListener("touchstart",(e)=>{ start(e.touches[0].clientY); e.preventDefault(); },{passive:false});
+    scr.addEventListener("touchmove", (e)=>{ drag(e.touches[0].clientY);  e.preventDefault(); },{passive:false});
+    scr.addEventListener("touchend", end);
+    scr.addEventListener("touchcancel", end);
+    scr.addEventListener("mousedown", (e)=>{ start(e.clientY); e.preventDefault();
+      const mv = (ev)=>drag(ev.clientY);
+      const up = ()=>{ end(); window.removeEventListener("mousemove", mv); window.removeEventListener("mouseup", up); };
+      window.addEventListener("mousemove", mv); window.addEventListener("mouseup", up);
+    });
+    window.addEventListener("scroll", sync, {passive:true});
+    sync();
+  }
+
+  /* ---- 右下：最上部へ戻る ---- */
   if(top){
     top.onclick = ()=>{ try{ window.scrollTo({top:0, behavior:"smooth"}); }catch(_){ window.scrollTo(0,0); } };
-    const onScroll = ()=>{
-      /* 他画面へ遷移するとボタンはDOMから消えるので、その時点で監視を自分で外す（漏れ防止） */
-      if(!document.body.contains(top)){ window.removeEventListener("scroll", onScroll); return; }
-      top.style.display = (window.scrollY > 320) ? "block" : "none";
-    };
-    window.addEventListener("scroll", onScroll, {passive:true});
-    onScroll();
+    top.style.display = (window.scrollY > 320) ? "block" : "none";
   }
 }
 
@@ -6145,7 +6202,7 @@ function renderSettings(){
   <header><div><h1>設定</h1></div>
     <a class="streak" href="#" id="backHome" style="text-decoration:underline">戻る</a></header>
   <div class="panel"><div class="inner">
-    <div class="setting-row"><span>ニックネーム（ご要望送信時や格言に使われます）</span>
+    <div class="setting-row"><span>ニックネーム</span>
       <input type="text" id="setNick" maxlength="20" value="${esc(state.settings.nickname||"")}" placeholder="未設定"></div>
     <div class="setting-row"><span>学習モード：1日に増える新しい単語の数</span>
       <input type="number" id="setNew" min="5" max="100" value="${state.settings.newPerDay}"></div>
