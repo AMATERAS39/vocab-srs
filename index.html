@@ -43,6 +43,15 @@
 html{-webkit-text-size-adjust:100%}
 /* B-1：ゴムバンド／連鎖スクロールの抑止（通常のスクロールは阻害しない。高さ固定は行わない） */
 html,body{overscroll-behavior:none}
+/* 【P17】起動時の初期表示（SEO用の静的本文）を、ローディング画面として自然に見せる。
+   JS起動時に render() が innerHTML で上書きするため、この見た目は一瞬しか出ない。
+   画面外へ飛ばす（隠しテキスト）手法は、クローキング扱いのリスクがあるため採らない。 */
+#boot{text-align:center;padding:22vh 20px 0}
+#boot h1{font-family:var(--serif);font-size:2rem;font-weight:700;letter-spacing:.14em;color:var(--ink);border:none;margin-bottom:6px}
+#boot .boot-sub{font-family:var(--serif);font-size:.86rem;color:var(--shu);letter-spacing:.18em;margin-bottom:26px}
+#boot .boot-load{font-size:.8rem;color:var(--sub);letter-spacing:.1em}
+#boot .boot-seo{margin-top:34px;font-size:.74rem;line-height:1.8;color:var(--sub);opacity:.62;text-align:left;max-width:420px;margin-left:auto;margin-right:auto}
+#boot .boot-seo a{color:var(--sub)}
 /* 【WP17】ブラウザ純正のスクロールバーを隠す。単語一覧に自前のスクロールバーを置いたため、
    純正のものと二重に見えてしまう。スクロール機能そのものは一切変わらない（見た目だけを消す）。 */
 html{scrollbar-width:none;-ms-overflow-style:none}
@@ -320,13 +329,19 @@ h1{font-size:clamp(1.05rem,3vh,1.5rem);white-space:nowrap;overflow:hidden;text-o
 </head>
 <body>
 <div class="wrap" id="app">
-  <!-- 【P11】検索エンジンにクロールされる静的な本文。
-       JS起動時に render() が innerHTML で上書きするため、利用者の見た目は変わらない。
-       非表示の隠しテキストではない（JS無効時には実際に表示される）。 -->
-  <h1>AMATERAS｜英単語学習アプリ</h1>
-  <p>間隔反復（SRS）で効率よく覚える、無料の英単語学習アプリです。大学受験レベルの英単語3,932語を収録し、選択式と記述式の2系統で出題します。両方に合格して初めて「定着」と判定するため、見覚えがあるだけの状態を防げます。</p>
-  <p>語源による解説と、品詞ごとに整理された意味表示で、単語を体系的に覚えられます。学習の進捗はアカウントごとにクラウド保存され、スマートフォンとパソコンのどちらからでも続きから学習できます。インストール不要、ブラウザだけで使えます。</p>
-  <p>古文単語版の <a href="/tsukuyomi/">TSUKUYOMI（古文単語アプリ）</a> もあります。</p>
+  <!-- 【P17】起動時の初期表示 兼 検索エンジン向けの静的な本文。
+       JS起動時に render() が innerHTML で上書きするため、利用者にはローディング画面として一瞬だけ見える。
+       JS無効時には実際に表示されるため、隠しテキストではない。 -->
+  <div id="boot">
+    <h1>AMATERAS</h1>
+    <div class="boot-sub">英単語学習アプリ</div>
+    <div class="boot-load">読み込み中…</div>
+    <div class="boot-seo">
+      <p>間隔反復（SRS）で効率よく覚える、無料の英単語学習アプリです。大学受験レベルの英単語3,932語を収録し、選択式と記述式の2系統で出題します。両方に合格して初めて「定着」と判定するため、見覚えがあるだけの状態を防げます。</p>
+      <p>語源による解説と、品詞ごとに整理された意味表示で、単語を体系的に覚えられます。学習の進捗はアカウントごとにクラウド保存され、スマートフォンとパソコンのどちらからでも続きから学習できます。インストール不要、ブラウザだけで使えます。</p>
+      <p>古文単語版の <a href="/tsukuyomi/">TSUKUYOMI（古文単語アプリ）</a> もあります。</p>
+    </div>
+  </div>
 </div>
 <div class="copyright-wrap"><span class="version-tag" id="versionTag"></span><span class="copyright">©2026 AMATERAS</span></div>
 
@@ -4288,7 +4303,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.13.19.00";
+const APP_VERSION = "2026.07.13.19.45";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -5091,7 +5106,20 @@ async function refreshOwnFeedbackHistory(){
   if(!rows.length){ box.innerHTML = `<p class="note">過去の送信はまだありません。</p>`; return; }
   box.innerHTML = `<h2 style="margin-top:0">過去の送信・返信</h2>` + rows.map(r=>{
     const when = String(r.created_at||"").replace("T"," ").slice(0,16);
-    const reply = r.reply ? `<div class="inbox-item"><div class="note">開発者からの返信（${String(r.replied_at||"").replace("T"," ").slice(0,16)}）</div><div style="white-space:pre-wrap">${esc(String(r.reply))}</div></div>` : `<p class="note">まだ返信はありません。</p>`;
+    /* 【P16】利用者側の履歴表示。従来は r.reply の有無しか見ておらず、
+       「既読ボタンだけ押された」状態（reply は空・admin_read_at のみ入る）を表示できなかった。
+       その結果、赤ドットは点くのに画面には「まだ返信はありません」としか出ず、
+       利用者が何の通知か分からなかった。3条件に分岐させて是正する。
+       点灯式 tmax(replied_at, admin_read_at) > user_read_at と、
+       消灯（画面を開いた時の rpc mark_my_feedback_read）には一切触れない。 */
+    let reply;
+    if(r.reply){
+      reply = `<div class="inbox-item"><div class="note">開発者からの返信（${String(r.replied_at||"").replace("T"," ").slice(0,16)}）</div><div style="white-space:pre-wrap">${esc(String(r.reply))}</div></div>`;
+    }else if(r.admin_read_at){
+      reply = `<p class="note">開発者が確認しました（${String(r.admin_read_at).replace("T"," ").slice(0,16)}）。返信をお待ちください。</p>`;
+    }else{
+      reply = `<p class="note">まだ返信はありません。</p>`;
+    }
     return `<div class="inbox-item">
       <div class="note">${when}</div>
       <div style="white-space:pre-wrap">${esc(String(r.message||""))}</div>
