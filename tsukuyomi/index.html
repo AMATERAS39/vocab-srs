@@ -845,7 +845,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-13b";
+const APP_VERSION = "2026-07-13c";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -6113,7 +6113,12 @@ function normalizeSettings(s) {
   };
 }
 function ensureSettings(state) { state.settings = normalizeSettings(state.settings); return state.settings; }
-function quotaOf(state) { return (state && state.settings && state.settings.quota) || DAILY_QUOTA; }        // 今日のノルマ語数
+/* 今日のノルマ語数。当日の実効ノルマ（todayQuota）があればそれを、無ければ設定値を返す。
+   ★純粋関数（書き込みは一切しない）。todayQuota は日付が変わると ensureToday が null に戻すため、翌日は設定値に自動追随する。 */
+function quotaOf(state) {
+  if (state && typeof state.todayQuota === "number" && state.todayQuota > 0) return state.todayQuota;
+  return (state && state.settings && state.settings.quota) || DAILY_QUOTA;
+}
 function jodoshiCountOf(state) { return (state && state.settings && state.settings.jodoshiCount) || 10; }   // 助動詞1回の出題数
 
 /* 日付を「年-月-日」文字列に（時刻は持たない）。テストでは Date を渡せる。 */
@@ -6140,7 +6145,7 @@ function createInitialState(words) {
   const src = words || allWords();
   const prog = {};
   for (const w of src) prog[w.i] = emptyProgress();
-  return { prog, todayDate: null, todayCount: 0, settings: Object.assign({}, DEFAULT_SETTINGS),
+  return { prog, todayDate: null, todayCount: 0, todayQuota: null, settings: Object.assign({}, DEFAULT_SETTINGS),
            newAssign: { date: null, ids: [] }, normDoneDate: null, carryOver: false };
 }
 
@@ -6175,7 +6180,7 @@ function nextDueDate(p) {
 /* 日付が変わっていたらノルマを0に戻す。 */
 function ensureToday(state, dateStr) {
   const today = dateStr || todayStr();
-  if (state.todayDate !== today) { state.todayDate = today; state.todayCount = 0; }
+  if (state.todayDate !== today) { state.todayDate = today; state.todayCount = 0; state.todayQuota = null; } // 案A：当日の実効ノルマも初期化（null＝設定値に従う）
   return today;
 }
 function isNormDone(state)     { return state.todayCount >= quotaOf(state); }
@@ -6191,6 +6196,8 @@ function normalizeAssign(a){
   };
 }
 function ensureAssignFields(state){
+  // 案A：当日の実効ノルマ。正の数値でなければ null（＝設定値に従う）。無い旧セーブでも落ちない。
+  state.todayQuota = (typeof state.todayQuota === "number" && state.todayQuota > 0) ? state.todayQuota : null;
   state.newAssign = normalizeAssign(state.newAssign);
   state.normDoneDate = (typeof state.normDoneDate === "string") ? state.normDoneDate : null;
   state.carryOver = (state.carryOver === true);
@@ -6258,6 +6265,20 @@ function mergeStates(primary, secondary){
   var pnd = (typeof primary.normDoneDate === "string") ? primary.normDoneDate : null;
   var snd = (typeof secondary.normDoneDate === "string") ? secondary.normDoneDate : null;
   out.normDoneDate = ((snd || "") > (pnd || "")) ? snd : pnd;
+  /* 案A（Q2 裁定）：todayQuota は「同日なら todayCount が大きい側」を採用（同数なら大きい方）。
+     日付が違うなら、todayDate を採用した側の値をそのまま採る（out.todayCount の決め方と一貫させる）。 */
+  var pq = (typeof primary.todayQuota === "number" && primary.todayQuota > 0) ? primary.todayQuota : null;
+  var sq = (typeof secondary.todayQuota === "number" && secondary.todayQuota > 0) ? secondary.todayQuota : null;
+  if(pd && sd && pd === sd){
+    var pc = primary.todayCount || 0, sc = secondary.todayCount || 0;
+    if(sc > pc)      out.todayQuota = sq;
+    else if(pc > sc) out.todayQuota = pq;
+    else             out.todayQuota = (Math.max(pq || 0, sq || 0) > 0) ? Math.max(pq || 0, sq || 0) : null; // 同数なら大きい方
+  }
+  else if(sd && (!pd || sd > pd)) out.todayQuota = sq;
+  else                            out.todayQuota = pq;
+  // 達成の取りこぼし防止：マージ結果が達成条件を満たしていれば、達成日を補う
+  if (out.todayQuota && out.todayCount >= out.todayQuota) out.normDoneDate = out.todayDate;
   return out;
 }
 
@@ -6320,6 +6341,7 @@ function loadState() {
           prog: obj.prog,
           todayDate: (typeof obj.todayDate === "string") ? obj.todayDate : null,
           todayCount: (typeof obj.todayCount === "number") ? obj.todayCount : 0,
+          todayQuota: (typeof obj.todayQuota === "number" && obj.todayQuota > 0) ? obj.todayQuota : null, // 案A：当日の実効ノルマ
           custom: Array.isArray(obj.custom) ? obj.custom : [], // 配列でなければ正規化
           session: (obj.session && Array.isArray(obj.session.ids)) ? obj.session : null, // 出題セッションの続き
           settings: normalizeSettings(obj.settings), // 無い旧セーブは既定値で補完（後方互換）
@@ -6346,7 +6368,7 @@ function flush(state) {
   if (!_dirty) return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      prog: state.prog, todayDate: state.todayDate, todayCount: state.todayCount, custom: state.custom || [], session: state.session || null,
+      prog: state.prog, todayDate: state.todayDate, todayCount: state.todayCount, todayQuota: state.todayQuota || null, custom: state.custom || [], session: state.session || null,
       settings: state.settings || Object.assign({}, DEFAULT_SETTINGS),  // 設定はローカルのみ保存
       newAssign: state.newAssign || { date: null, ids: [] }, normDoneDate: state.normDoneDate || null, carryOver: state.carryOver === true // WP5：新規投入タイミング
     }));
@@ -6446,10 +6468,35 @@ function isDueBy(p, today) {
    ・前回達成 → 未出題を i 昇順で拾い leftover と合わせ quota まで（carryOver=false）。
    ・前回未達 → 新規は足さず leftover のみ持ち越し（carryOver=true）。
 --------------------------------------------------------- */
+/* 案A：当日の割当を、現在の quota まで「不足分だけ」埋める。
+   ・既存の ids は絶対に削除しない（減枠でも削らない。学習途中の語が消えると進捗が壊れるため）。
+   ・carryOver の値は変更しない。 */
+function topUpAssignment(state, today, na) {
+  var quota = quotaOf(state);
+  var ids = na.ids.slice();
+  if (ids.length >= quota) return;                   // 減枠時：分母が小さくなるだけ。割当は削らない
+  var have = {}; ids.forEach(function (i) { have[i] = true; });
+  var pool = allWords();                             // i 昇順
+  for (var k = 0; k < pool.length && ids.length < quota; k++) {
+    var w = pool[k];
+    if (have[w.i]) continue;
+    var p = state.prog[w.i];
+    if (p && p.lastAnswered === null) { ids.push(w.i); have[w.i] = true; }  // 未出題（未回答）の新規のみ
+  }
+  if (ids.length === na.ids.length) return;          // 追加なし（新規語が尽きている等）
+  state.newAssign = { date: today, ids: ids };
+  markDirty();
+}
+
 function ensureDailyAssignment(state, today) {
   today = today || todayStr();
   var na = normalizeAssign(state.newAssign);
-  if (na.date === today) return; // 今日はもう判定済み（1日1回）
+  if (na.date === today) {
+    /* 案A：当日はもう判定済み（1日1回）。ただし増枠に追随して不足分だけ「追加」する。
+       ★持ち越し日（carryOver=true）では発火させない（WP5＝前回の新規を答え切るまで新規を積まない、を無傷で守る）。 */
+    if (state.carryOver !== true) topUpAssignment(state, today, na);
+    return;
+  }
 
   // 割り当て済み新規のうち未回答（lastAnswered===null）
   var leftover = na.ids.filter(function (i) {
@@ -7357,7 +7404,27 @@ document.addEventListener("DOMContentLoaded", function () {
   byId("setQuota").addEventListener("change", function(){   // 今日のノルマ → 保存＋ホーム反映
     ensureSettings(state);
     var v = parseInt(this.value, 10); if(QUOTA_CHOICES.indexOf(v) < 0) v = 10;
-    state.settings.quota = v; markDirty(); flush(state); refreshHome();
+    /* 案A（Q1・Q3 裁定）：
+       old    = 変更「前」の実効ノルマ数（★settings.quota を書き換える前に退避する）
+       locked = 今日すでに達成 → 当日は増減とも据え置き（翌日から反映）
+       carried= 持ち越し日 → 増枠のみ当日据え置き（減枠は即日反映）
+       それ以外（通常日）→ 当日も新値。消化数が新ノルマ以上なら即達成、増枠なら不足分を top-up。 */
+    ensureToday(state);
+    var old     = (typeof state.todayQuota === "number" && state.todayQuota > 0) ? state.todayQuota : quotaOf(state);
+    var today   = todayStr();
+    var locked  = (state.normDoneDate === today);
+    var carried = (state.carryOver === true);
+    state.settings.quota = v;                                  // 設定値は常に更新（翌日以降はこれが効く）
+    if (locked) {
+      state.todayQuota = old;                                  // 分岐1：凍結（旧セーブ＝todayQuota が null でも達成が巻き戻らない）
+    } else if (carried && v > old) {
+      state.todayQuota = old;                                  // 分岐2：持ち越し日の増枠は当日据え置き（達成不可能な日を作らない）
+    } else {
+      state.todayQuota = v;                                    // 分岐3：当日も新値
+      if (state.todayCount >= v) { state.normDoneDate = today; state.carryOver = false; }   // 即達成
+      else if (!carried && v > old) { ensureDailyAssignment(state, today); }                // 通常日の増枠 → top-up
+    }
+    markDirty(); flush(state); refreshHome();
   });
   byId("setJodoshiCount").addEventListener("change", function(){   // 助動詞1回の出題数 → 保存
     ensureSettings(state);
@@ -7565,6 +7632,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (ns.session !== undefined) state.session = ns.session;
     if (ns.settings !== undefined) state.settings = normalizeSettings(ns.settings); // reset(初期化)や旧ローカルは適用／クラウドmergeはsettings無し=既存維持
     if (ns.newAssign !== undefined) state.newAssign = normalizeAssign(ns.newAssign);        // WP5
+    if (ns.todayQuota !== undefined) state.todayQuota = (typeof ns.todayQuota === "number" && ns.todayQuota > 0) ? ns.todayQuota : null; // 案A
     if (ns.normDoneDate !== undefined) state.normDoneDate = (typeof ns.normDoneDate === "string") ? ns.normDoneDate : null;
     if (ns.carryOver !== undefined) state.carryOver = (ns.carryOver === true);
     ensureProgress(state); ensureToday(state); ensureSettings(state); ensureAssignFields(state);
@@ -7911,7 +7979,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if(cloudSaveTimer){ clearTimeout(cloudSaveTimer); cloudSaveTimer = null; } // 保留中のデバウンスを取り消す
     try{
       await sb.from(CLOUD_TABLE).upsert({ user_id: currentUser.id, updated_at: new Date().toISOString(),
-        data: JSON.stringify({ prog: state.prog, todayDate: state.todayDate, todayCount: state.todayCount, custom: state.custom || [], session: state.session || null,
+        data: JSON.stringify({ prog: state.prog, todayDate: state.todayDate, todayCount: state.todayCount, todayQuota: state.todayQuota || null, custom: state.custom || [], session: state.session || null,
           newAssign: state.newAssign || { date: null, ids: [] }, normDoneDate: state.normDoneDate || null, carryOver: state.carryOver === true }) });
     }catch(e){ console.warn("[TSUKUYOMI クラウド] 即時保存失敗（ローカルには保存済み）", e); }
   }
@@ -7933,7 +8001,7 @@ document.addEventListener("DOMContentLoaded", function () {
     cloudSaveTimer = setTimeout(async function(){
       try{
         await sb.from(CLOUD_TABLE).upsert({ user_id: currentUser.id, updated_at: new Date().toISOString(),
-          data: JSON.stringify({ prog: state.prog, todayDate: state.todayDate, todayCount: state.todayCount, custom: state.custom || [], session: state.session || null,
+          data: JSON.stringify({ prog: state.prog, todayDate: state.todayDate, todayCount: state.todayCount, todayQuota: state.todayQuota || null, custom: state.custom || [], session: state.session || null,
             newAssign: state.newAssign || { date: null, ids: [] }, normDoneDate: state.normDoneDate || null, carryOver: state.carryOver === true }) });
       }catch(e){ console.warn("[TSUKUYOMI クラウド] 保存失敗", e); }
     }, 400);
