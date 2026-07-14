@@ -942,7 +942,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-14a";
+const APP_VERSION = "2026-07-14b";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -6565,6 +6565,28 @@ function isDueBy(p, today) {
    ・前回達成 → 未出題を i 昇順で拾い leftover と合わせ quota まで（carryOver=false）。
    ・前回未達 → 新規は足さず leftover のみ持ち越し（carryOver=true）。
 --------------------------------------------------------- */
+/* P24：新規語の選定。【レベル昇順 → 同レベル内ランダム】。
+   ・未出題の判定は既存コードと同一条件（state.prog[i] があり lastAnswered === null）。勝手に変えない。
+   ・excludeSet に入っている i は候補から外す（持ち越し分・既に割当済みの語を二重に積まないため）。
+   ・「何語積むか」は呼び出し側が quota で決める。この関数は「どの語を選ぶか」だけを担う。 */
+function pickNewIds(state, quota, excludeSet){
+  if (!(quota > 0)) return [];
+  var pool = [];
+  allWords().forEach(function (w) {
+    if (excludeSet && excludeSet[w.i]) return;
+    var p = state.prog[w.i];
+    if (p && p.lastAnswered === null) pool.push(w);      // 未出題（未回答）のみ＝既存の判定条件
+  });
+  var byLv = {};
+  pool.forEach(function (w) { (byLv[w.l] = byLv[w.l] || []).push(w); });
+  var ids = [];
+  Object.keys(byLv).map(Number).sort(function (a, b) { return a - b; }).forEach(function (lv) {
+    if (ids.length >= quota) return;
+    shuffle(byLv[lv].slice()).forEach(function (w) { if (ids.length < quota) ids.push(w.i); });
+  });
+  return ids;
+}
+
 /* 案A：当日の割当を、現在の quota まで「不足分だけ」埋める。
    ・既存の ids は絶対に削除しない（減枠でも削らない。学習途中の語が消えると進捗が壊れるため）。
    ・carryOver の値は変更しない。 */
@@ -6573,13 +6595,8 @@ function topUpAssignment(state, today, na) {
   var ids = na.ids.slice();
   if (ids.length >= quota) return;                   // 減枠時：分母が小さくなるだけ。割当は削らない
   var have = {}; ids.forEach(function (i) { have[i] = true; });
-  var pool = allWords();                             // i 昇順
-  for (var k = 0; k < pool.length && ids.length < quota; k++) {
-    var w = pool[k];
-    if (have[w.i]) continue;
-    var p = state.prog[w.i];
-    if (p && p.lastAnswered === null) { ids.push(w.i); have[w.i] = true; }  // 未出題（未回答）の新規のみ
-  }
+  // P24：不足分を「レベル昇順 → 同レベル内ランダム」で取る（積む語数は従来どおり quota - ids.length）
+  pickNewIds(state, quota - ids.length, have).forEach(function (i) { ids.push(i); have[i] = true; });
   if (ids.length === na.ids.length) return;          // 追加なし（新規語が尽きている等）
   state.newAssign = { date: today, ids: ids };
   markDirty();
@@ -6608,13 +6625,8 @@ function ensureDailyAssignment(state, today) {
     var quota = quotaOf(state);
     var inLeft = {}; leftover.forEach(function (i) { inLeft[i] = true; });
     var ids = leftover.slice();
-    var pool = allWords(); // i 昇順
-    for (var k = 0; k < pool.length && ids.length < quota; k++) {
-      var w = pool[k];
-      if (inLeft[w.i]) continue;
-      var p = state.prog[w.i];
-      if (p && p.lastAnswered === null) ids.push(w.i); // 未出題（未回答）の新規
-    }
+    // P24：新規は「レベル昇順 → 同レベル内ランダム」で選ぶ（持ち越し分は先頭に残したまま。積む語数は従来どおり）
+    pickNewIds(state, quota - ids.length, inLeft).forEach(function (i) { ids.push(i); });
     state.newAssign = { date: today, ids: ids.slice(0, quota) };
     state.carryOver = false;
   } else {
@@ -6651,7 +6663,20 @@ function selectDailyWords(state, opts) {
       g3.push(w);                              // ③ 期日・定着済
     }
   }
-  return [...g1, ...g2, ...g3, ...g4].slice(0, limit);
+  /* P23：出題【順序】だけを混ぜる。
+     ・顔ぶれは従来と完全に同一（take を i 順で切り出してから shuffle するため）。
+       ★先に shuffle してから slice すると顔ぶれが変わる。順序を逆にしないこと。
+     ・グループ順（g1→g2→g3→g4）は保つ（弱い復習語を先に出す設計を壊さない）。 */
+  const groups = [g1, g2, g3, g4];
+  const out = [];
+  let remain = limit;
+  for (const g of groups) {
+    if (remain <= 0) break;
+    const take = g.slice(0, remain);        // 入る分（i順のまま＝顔ぶれは従来と同一）
+    out.push(...shuffle(take.slice()));     // 入った分だけをグループ内でシャッフル
+    remain -= take.length;
+  }
+  return out;
 }
 
 
