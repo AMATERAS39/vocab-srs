@@ -4347,7 +4347,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.14.10.00";
+const APP_VERSION = "2026.07.14.10.45";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -6081,9 +6081,18 @@ function bindRefNav(secKeys){
   if(bar && secKeys.length){
     const spans = Array.prototype.slice.call(bar.querySelectorAll("span"));
     const go = (clientY)=>{
-      const r = bar.getBoundingClientRect();
-      if(!r.height) return;
-      let i = Math.floor((clientY - r.top) / (r.height / spans.length));
+      /* 【地雷#17】箱（flexコンテナ）の矩形を項目数で等分してはいけない。
+         .idx-bar は justify-content:center ＋ padding を持つため、子要素は箱の中央にだけ
+         固まって並ぶ。箱を等分した座標と、文字が実際に並んでいる位置が食い違い、
+         端で±1項目ぶんズレる（実測：a→b、z→y）。
+         【最初の子の上端〜最後の子の下端】＝文字が実際に占める帯を基準に等分する。
+         定数を置かず毎回その場で測るため、将来CSSを変えても壊れない。 */
+      if(!spans.length) return;
+      const fr = spans[0].getBoundingClientRect();
+      const lr = spans[spans.length - 1].getBoundingClientRect();
+      const band = lr.bottom - fr.top;
+      if(band <= 0) return;
+      let i = Math.floor((clientY - fr.top) / (band / spans.length));
       if(i < 0) i = 0;
       if(i > spans.length - 1) i = spans.length - 1;
       const k = spans[i].dataset.k;
