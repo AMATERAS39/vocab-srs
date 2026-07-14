@@ -4347,7 +4347,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.14.10.45";
+const APP_VERSION = "2026.07.14.11.50";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4746,7 +4746,10 @@ function stockToday(){
   /* ②難易度自動昇格：☆N以下の未ストック語が尽きたら☆を上げる */
   while(fresh.length===0 && diff<5){ diff++; fresh = candidates(diff); }
   if(diff !== chunkStars()) state.settings.difficulty = diff;
-  fresh = fresh.slice(0, state.settings.newPerDay);
+  /* 【P23-A】難易度内でランダムに選ぶ。従来は収録番号順に先頭からN語だったため、
+     元データが「レベル内アルファベット順」であることと相まって、
+     その日の新規語が a・b で始まる語ばかりに偏っていた（実測：347ブロック中342が昇順）。 */
+  fresh = shuffle(fresh).slice(0, state.settings.newPerDay);
   for(const w of fresh) ensureWordRecord(w.i, true);
   if(!state.log[t]) state.log[t] = {news:0, reviews:0};
   state.log[t].stocked = fresh.length;
@@ -4763,7 +4766,8 @@ function stockExtra(n){
   const candidates = d => allWords().filter(w=>{ const st=state.words[w.i]; return (!st || st.inReview===false) && w.l<=d; }).sort((a,b)=>a.i-b.i);
   let fresh = candidates(diff);
   while(fresh.length===0 && diff<5){ diff++; fresh = candidates(diff); }
-  fresh = fresh.slice(0, n);
+  /* 【P23-A】stockToday と同じく、難易度内でランダムに選ぶ */
+  fresh = shuffle(fresh).slice(0, n);
   for(const w of fresh) ensureWordRecord(w.i, true);
   const t = todayStr();
   if(!state.log[t]) state.log[t] = {news:0, reviews:0, stocked:0};
@@ -4915,11 +4919,7 @@ function renderHome(){
   const revs = dueReviews();
   const answered = (w)=>{ const st=state.words[w.i]; return st && ((st.cSeen||0)+(st.wSeen||0))>0; };
   const stockCount = allWords().filter(w=>{ const st=state.words[w.i]; return st && st.inReview!==false; }).length;
-  const weakCount = allWords().filter(w=>{
-    const st=state.words[w.i]; if(!st || st.mastered) return false;
-    const cr=(st.cSeen)?st.cCorrect/st.cSeen:1, wr=(st.wSeen)?st.wCorrect/st.wSeen:1;
-    return ((st.cSeen||0)+(st.wSeen||0))>0 && Math.min(cr,wr)<0.8;
-  }).length;
+  const weakCount = allWords().filter(isWeakWord).length;   /* 【P23-C】判定を共通関数に集約 */
   const hasActive = !!state.activeSession;
   const a = state.activeSession;
   const lvHtml = [1,2,3,4,5].map(lv=>{
@@ -5368,6 +5368,23 @@ async function deleteFeedback(id){
 /* ---- セッション ----
    各語を選択式→(誤答/スキップ時のみ確認)→記述式→判定 の順で処理する。
    判定(SRSの間隔更新)は記述式の結果のみで行う。 */
+/* 【P23-C】苦手語の判定。従来はホーム画面のカウントと buildQueue の2箇所に
+   同じ式が別々に書かれており、片方だけ直すとズレる構造だった。1箇所に集約する。
+   オーナー裁定により、しきい値を「正答率 80%未満」から【50%以下】へ変更。
+   出題順がランダム化された（P23-B）ことで、順序を覚えて正解していた語があぶり出され、
+   本当に苦手な語だけが50%以下に沈む。 */
+const WEAK_THRESHOLD = 0.5;
+function weakRate(st){
+  const cr = (st.cSeen) ? st.cCorrect/st.cSeen : 1;   /* 選択式の正答率 */
+  const wr = (st.wSeen) ? st.wCorrect/st.wSeen : 1;   /* 記述式の正答率 */
+  return Math.min(cr, wr);                            /* 低いほうを採る */
+}
+function isWeakWord(w){
+  const st = state.words[w.i];
+  if(!st || st.mastered) return false;
+  if(((st.cSeen||0)+(st.wSeen||0)) === 0) return false;   /* 一度も出ていない語は対象外（従来どおり） */
+  return weakRate(st) <= WEAK_THRESHOLD;
+}
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 /* --- 語義データの正規化（新旧両構造を吸収）---
    新: [品詞, [候補,...]]  候補 = "日本語" | ["原形パターン","日本語訳"]
@@ -5521,20 +5538,10 @@ function makePosQuiz(w){
 function buildQueue(mode){
   let ids;
   if(mode === "weak"){
-    const lowRate = (st)=>{
-      const cr = (st.cSeen)? st.cCorrect/st.cSeen : 1;
-      const wr = (st.wSeen)? st.wCorrect/st.wSeen : 1;
-      return Math.min(cr, wr);
-    };
-    const seenAny = (st)=> (st.cSeen||0)+(st.wSeen||0);
-    ids = allWords().filter(w=>{ const st=state.words[w.i]; return st && seenAny(st)>0 && !st.mastered && lowRate(st)<0.8; })
-      .sort((a,b)=>{
-        const sa=state.words[a.i], sb=state.words[b.i];
-        const ra=lowRate(sa), rb=lowRate(sb);
-        if(ra!==rb) return ra-rb;
-        return seenAny(sb)-seenAny(sa);
-      })
-      .map(w=>({id:w.i}));
+    /* 【P23-C】判定は isWeakWord() に集約（ホーム画面のカウントと必ず一致する）。
+       並び順は startSession() でシャッフルされるため、ここでのソートは行わない
+       （オーナー裁定：苦手モードも苦手語のなかでランダム）。 */
+    ids = allWords().filter(isWeakWord).map(w=>({id:w.i}));
   }else{
     ids = dueReviews().map(w=>({id:w.i}));
   }
@@ -5554,7 +5561,12 @@ function startSession(mode){
   const queue = buildQueue(mode||"review");
   if(queue.length===0) return;
   /* block: choice→write。各ブロックで phase: "main"(全語1回目)→"retry"(間違えた語の2回目) */
-  session = { queue, block:"choice", phase:"main", order:queue.map((_,i)=>i), pos:0,
+  /* 【P23-B】出題順を完全シャッフルする（オーナー裁定＝案2）。
+     従来は order が恒等順で、dueReviews() のタイブレークが収録番号順（a.i-b.i）だったため、
+     レベル内アルファベット順がそのまま出題順になっていた。順序を覚えられると定着判定が歪む。
+     完全シャッフルにより、新規語と復習語が混ざって出題され、本当に苦手な語があぶり出される。
+     queue そのものと dueReviews() の戻り値は変更していない（K-1 が .length を使うため）。 */
+  session = { queue, block:"choice", phase:"main", order:shuffle(queue.map((_,i)=>i)), pos:0,
               retry:[], mode:(mode||"review"), counts:{ok:0,ng:0} };
   saveSession();
   renderCard();
@@ -5573,7 +5585,7 @@ function advance(){
   /* order を消化しきった */
   if(s.phase === "main"){
     if(s.retry.length){
-      s.phase = "retry"; s.order = s.retry.slice(); s.retry = []; s.pos = 0;
+      s.phase = "retry"; s.order = shuffle(s.retry.slice()); s.retry = []; s.pos = 0;  /* 【P23-B】やり直しも順序を固定しない */
       saveSession(); return renderCard();
     }
     // retry無し → 次ブロックへ
