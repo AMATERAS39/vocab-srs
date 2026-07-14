@@ -43,13 +43,15 @@
 html{-webkit-text-size-adjust:100%}
 /* B-1：ゴムバンド／連鎖スクロールの抑止（通常のスクロールは阻害しない。高さ固定は行わない） */
 /* 【P25】overscroll-behavior:none を全画面に掛けると、ホームのように
-   「画面より少しだけ長い」ページ（実測：画面844px に対しページ956px＝はみ出し112px）で
-   iOS Safari のスクロールが弾かれ、最下部のコピーライトまで辿り着けなくなる（オーナー実機報告）。
-   共通規約（§4.4／P10）の趣旨は「引っ張りバウンドの抑止」であり、それが必要なのは
-   単語一覧のような長大なスクロール画面。よって単語一覧（body.ref-open）に限定して適用する。
-   TSUKUYOMI の構造には影響しない（AMATERAS 内部で完結する回避策）。 */
+   「画面より少しだけ長い」ページ（実測：画面844px／ページ956px＝はみ出し112px）で
+   iOS Safari のスクロールが弾かれ、最下部まで辿り着けない（オーナー実機報告）。
+   共通規約（§4.4／P10）の趣旨は「引っ張りバウンドの抑止」であり、それが要るのは
+   単語一覧のような長大なスクロール画面のみ。そこに限定して適用する。
+   ★:has() は iOS Safari の対応が不確実なため使わない。html にも直接クラスを付ける。
+   ★このクラスは P24（帯の非表示）とは【別物】にする。1つのフラグに2つの役割を
+     兼務させると、片方の都合がもう片方を壊す（統合指示書 地雷#15 と同型）。 */
 html,body{overscroll-behavior:auto}
-body.ref-open,html:has(body.ref-open){overscroll-behavior:none}
+html.noBounce,body.noBounce{overscroll-behavior:none}
 /* 【P19】起動演出。アイコンの円を画面中央にフェードイン→保持→フェードアウト（約3秒）。
    ・アプリの初期化とは独立（演出のために起動は遅くならない）
    ・タップでスキップ可
@@ -4368,7 +4370,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.14.14.10";
+const APP_VERSION = "2026.07.14.14.30";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4937,7 +4939,11 @@ function renderLanding(){
 /* 【P24】単語一覧以外の画面では、最下部の帯を必ず戻す。
    単語一覧から抜ける経路は複数（戻るボタン、メニュー、更新など）あるため、
    フラグの解除は「画面を描く側」で行い、消し忘れが起きない構造にする。 */
-function refClose(){ document.body.classList.remove("ref-open"); }
+function refClose(){
+  document.body.classList.remove("ref-open");             /* 【P24】帯を戻す */
+  document.body.classList.remove("noBounce");             /* 【P25】スクロールを自由に戻す */
+  document.documentElement.classList.remove("noBounce");
+}
 
 function renderHome(){
   refClose();
@@ -6088,7 +6094,9 @@ function renderReference(){
   qi.onkeydown = (e)=>{ if(e.key==="Enter") renderReference(); };
   app.querySelectorAll("[data-play]").forEach(b=>{ b.onclick = ()=>speak(b.dataset.play); });
   bindRefNav(secKeys);
-  document.body.classList.add("ref-open");   /* 【P24】単語一覧の間だけ、最下部の帯を隠す */
+  document.body.classList.add("ref-open");                 /* 【P24】最下部の帯を隠す */
+  document.body.classList.add("noBounce");                /* 【P25】長大スクロール画面のみバウンド抑止 */
+  document.documentElement.classList.add("noBounce");     /*        html にも直接付ける（:has()は使わない） */
 }
 
 /* ================= 【WP17】単語一覧のナビゲーション =================
