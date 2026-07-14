@@ -375,6 +375,12 @@
         box-shadow:0 0 0 2px var(--card); pointer-events:none; }
   .icon-btn > .dot{ top:1px; right:1px; }                    /* アイコンボタンの右上 */
   .menu-item > .dot{ top:50%; right:.8rem; margin-top:-4px; } /* メニュー項目の右端（縦中央） */
+  /* P18：意見箱の未ログイン案内カード（未ログインのときだけ出す。時間では消さない） */
+  .fb-guard{ border:1px solid var(--line); border-radius:8px; background:var(--card);
+             padding:.7rem .8rem; margin-bottom:.7rem; }
+  .fb-guard p{ font-family:var(--sans); font-size:.82rem; line-height:1.7; color:var(--sub); margin:0 0 .55rem; }
+  .fb-guard .homebtn{ padding:.5rem 0; font-size:.9rem; }
+
   /* WP15：意見箱の送信履歴（入力欄は増やさないので 16px 規則には影響しない） */
   .fb-hist{ margin-top:1rem; border-top:1px solid var(--line); padding-top:.8rem; }
   .fb-hist-title{ font-family:var(--serif); font-size:1rem; color:var(--sub); margin-bottom:.5rem; }
@@ -862,6 +868,12 @@
         <button class="icon-btn" id="fbClose" type="button" aria-label="閉じる"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
       <div class="login-body">
+        <!-- P18：未ログイン案内。匿名投稿（user_id=null）には返信も既読通知も永久に届かないため、
+             送信前にログインへ誘導する。ログイン済みなら JS が hidden にする（seoIntro と同じ型）。 -->
+        <div class="fb-guard" id="fbGuard" hidden>
+          <p>返信をお受け取りいただくには、ログインが必要です。ログインせずに送ったご意見には、管理者からの返信も既読のお知らせも届きません。</p>
+          <button class="homebtn primary" id="fbGuardLogin" type="button">ログインする</button>
+        </div>
         <input class="ref-search" id="fbNick" type="text" placeholder="ニックネーム（任意）">
         <textarea class="ref-search" id="fbBody" rows="4" placeholder="ご意見・ご要望"></textarea>
         <button class="homebtn primary" id="fbSubmit" type="button">送信する</button>
@@ -930,7 +942,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-13g";
+const APP_VERSION = "2026-07-14a";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -7742,6 +7754,11 @@ document.addEventListener("DOMContentLoaded", function () {
   byId("miInbox").addEventListener("click", function () { setMenuView("menuInbox"); loadInbox(); });
   byId("inboxBack").addEventListener("click", showMenuList);
   byId("inboxClose").addEventListener("click", closeMenu);
+  byId("fbGuardLogin").addEventListener("click", function () {   // P18：既存のログイン画面をそのまま開く
+    if(!cloudConfigured()){ toast("クラウド未設定です（オーナーがSupabase値を設定すると使えます）"); return; }
+    endSignupPrompt();
+    showMenuLogin();
+  });
   byId("miLogin").addEventListener("click", function () {
     if(!cloudConfigured()){ toast("クラウド未設定です（オーナーがSupabase値を設定すると使えます）"); return; }
     endSignupPrompt();   // WP10：開き直したら新規登録モードは持ち越さない（フラグ残留の防止）
@@ -7907,6 +7924,7 @@ document.addEventListener("DOMContentLoaded", function () {
     /* 案件B-2：アプリ説明（SEO本文）は未ログイン時だけ表示する。
        ★時間では消さない。onAuthStateChange の再描画のたびにここを通るので、状態は必ず変数から再評価される。 */
     { var seo = byId("seoIntro"); if(seo) seo.hidden = !!currentUser; }
+    { var fg = byId("fbGuard"); if(fg) fg.hidden = !!currentUser; }   // P18：未ログインのときだけ案内カードを出す
     if(isOwner && !wasOwner) checkInboxUnread(); // オーナーになった瞬間に1回だけ未読を問い合わせる
     /* WP15：利用者の未読返信。ログイン主体が変わったときだけ1回問い合わせ、ログアウト時は即消灯。
        onAuthStateChange の再描画のたびにここを通るので、DOM の hidden が上書きされても変数から必ず復元される。 */
@@ -8009,6 +8027,13 @@ document.addEventListener("DOMContentLoaded", function () {
   }
   async function submitFeedback(){
     if(!cloudConfigured()){ toast("準備中（クラウド未設定）"); return; }
+    /* P18：★送信前ガード。未ログインでは投稿させない。
+       user_id=null の匿名投稿には、管理者の返信も既読通知も永久に届かないため（P16で断絶として露出した穴）。 */
+    if(!currentUser){
+      var g = byId("fbGuard"); if(g) g.hidden = false;    // 案内カードを必ず見せる
+      toast("ログインすると送信できます");
+      return;
+    }
     var body = byId("fbBody").value.trim();
     if(!body){ toast("本文を入力してください"); return; }
     try{
