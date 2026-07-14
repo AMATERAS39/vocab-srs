@@ -353,7 +353,13 @@ h1{font-size:clamp(1.05rem,3vh,1.5rem);white-space:nowrap;overflow:hidden;text-o
 .menu-drop button{white-space:nowrap}
 
 /* ==== 画面遷移のちらつき軽減 ==== */
-#app{background:var(--paper)}
+/* 【P24】#app の背景は body と同じ var(--paper) の二重指定であり、完全に無駄。
+   ところが単語一覧では #app の高さが約60万px（画面720個ぶん）に達するため、
+   iOS Safari に「60万pxの色付き矩形」を描かせることになり、描画が破綻して
+   帯状の塗り残しが画面に現れる（オーナーの実機報告）。スクロールの引っかかりも
+   同じ負荷に由来すると考えられる（推測・断定はしない）。
+   body の背景だけで見た目は完全に同じ。#app の背景指定を外す。 */
+#app{background:transparent}
 .wcard{background:var(--card);will-change:contents}
 .word-display{contain:paint}
 
@@ -4370,7 +4376,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.14.14.30";
+const APP_VERSION = "2026.07.14.15.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
