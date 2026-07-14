@@ -42,7 +42,14 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
 /* B-1：ゴムバンド／連鎖スクロールの抑止（通常のスクロールは阻害しない。高さ固定は行わない） */
-html,body{overscroll-behavior:none}
+/* 【P25】overscroll-behavior:none を全画面に掛けると、ホームのように
+   「画面より少しだけ長い」ページ（実測：画面844px に対しページ956px＝はみ出し112px）で
+   iOS Safari のスクロールが弾かれ、最下部のコピーライトまで辿り着けなくなる（オーナー実機報告）。
+   共通規約（§4.4／P10）の趣旨は「引っ張りバウンドの抑止」であり、それが必要なのは
+   単語一覧のような長大なスクロール画面。よって単語一覧（body.ref-open）に限定して適用する。
+   TSUKUYOMI の構造には影響しない（AMATERAS 内部で完結する回避策）。 */
+html,body{overscroll-behavior:auto}
+body.ref-open,html:has(body.ref-open){overscroll-behavior:none}
 /* 【P19】起動演出。アイコンの円を画面中央にフェードイン→保持→フェードアウト（約3秒）。
    ・アプリの初期化とは独立（演出のために起動は遅くならない）
    ・タップでスキップ可
@@ -4361,7 +4368,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.14.13.30";
+const APP_VERSION = "2026.07.14.14.10";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
