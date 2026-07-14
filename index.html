@@ -214,7 +214,7 @@ code{background:var(--paper);padding:1px 5px;border-radius:4px;font-size:.78rem}
 .scrub-thumb{position:absolute;right:5px;top:0;width:18px;height:46px;border-radius:9px;background:var(--sub);border:2px solid var(--card);box-shadow:0 1px 5px rgba(0,0,0,.18)}
 .scrub.on .scrub-thumb{background:var(--shu)}
 .idx-bubble{position:fixed;left:50%;transform:translateX(-50%);top:38%;z-index:41;display:none;min-width:64px;text-align:center;padding:10px 16px;border-radius:12px;background:var(--ink);color:#fff;font-family:var(--serif);font-weight:700;font-size:30px;text-transform:uppercase;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.25)}
-.to-top{position:fixed;right:38px;bottom:calc(env(safe-area-inset-bottom, 0px) + 18px);z-index:40;display:none;width:44px;height:44px;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:16px;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.16)}
+.to-top{position:fixed;right:38px;bottom:calc(env(safe-area-inset-bottom, 0px) + 68px);z-index:60;display:none;width:44px;height:44px;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:16px;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.16)}
 .ref-head{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
 .ref-word{font-family:var(--serif);font-size:1.3rem;font-weight:700}
 .ref-lv{font-size:.66rem;font-weight:700;color:#fff;border-radius:4px;padding:1px 6px}
@@ -263,6 +263,12 @@ body{font-size:clamp(13px,1.9vh,16px)}
 .home-ico{cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;border:1px solid var(--line);border-radius:9px;background:var(--card)}
 .home-svg{width:19px;height:19px;fill:var(--ink)}
 .copyright-wrap{max-width:580px;margin:0 auto;padding:0 16px 18px;display:flex;justify-content:space-between;align-items:center}
+/* 【P24】単語一覧では、ページ最下部の帯（©表示）を消す。
+   #app が約60万pxの高さになるため、iOS Safari が下端の要素を再描画しきれず、
+   白い帯がスクロール中に画面へ貼りついたまま残る（＝残像）現象が起きる。
+   その帯に ▲ボタンが埋もれて押せなくなっていた（オーナーの実機報告・写真で確認）。
+   発生源そのものを消し、あわせて ▲ボタンを z-index:60 / bottom:68px へ逃がして二重に防ぐ。 */
+body.ref-open .copyright-wrap{display:none}
 .copyright{font-size:.62rem;color:var(--sub);opacity:.75}
 .version-tag{font-size:.62rem;color:var(--sub);opacity:.75}
 .menu-btn{position:relative;background:var(--card);border:1px solid var(--line);border-radius:9px;cursor:pointer;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:0}
@@ -4347,7 +4353,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.14.11.50";
+const APP_VERSION = "2026.07.14.12.45";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4896,6 +4902,7 @@ function renderEntry(){
 /* 【P19】未ログイン時の入口画面。アプリ説明を常設する。
    時間経過では消さない（分岐はログイン状態のみ）。 */
 function renderLanding(){
+  refClose();
   session = null;
   app.innerHTML = `
   <div id="landing">
@@ -4912,7 +4919,13 @@ function renderLanding(){
   document.getElementById("ldSkip").onclick  = ()=>{ skipLanding = true; renderHome(); };
 }
 
+/* 【P24】単語一覧以外の画面では、最下部の帯を必ず戻す。
+   単語一覧から抜ける経路は複数（戻るボタン、メニュー、更新など）あるため、
+   フラグの解除は「画面を描く側」で行い、消し忘れが起きない構造にする。 */
+function refClose(){ document.body.classList.remove("ref-open"); }
+
 function renderHome(){
+  refClose();
   session = null;
   if(state.activeSession && !state.activeSession.order) state.activeSession = null;
   stockToday();
@@ -5055,6 +5068,7 @@ function renderHome(){
 }
 /* ==== データ追加ページ（メニューから） ==== */
 function renderData(){
+  refClose();   /* 【P24】単語一覧を離れたら最下部の帯を戻す */
   session = null;
   app.innerHTML = `
   <header><div><h1>単語データの追加</h1></div>
@@ -5127,6 +5141,7 @@ function renderData(){
 
 /* ==== ご要望・お問い合わせ（誰でも送信可・オーナーにのみ届く） ==== */
 function renderFeedback(){
+  refClose();
   session = null;
   app.innerHTML = `
   <header><div><h1>ご要望・お問い合わせ</h1></div>
@@ -5238,6 +5253,7 @@ async function refreshOwnFeedbackHistory(){
 
 /* ==== 受信箱（オーナー専用：単語の承認 ＋ ご要望の閲覧） ==== */
 async function renderInbox(){
+  refClose();
   session = null;
   if(!isOwner()){ renderHome(); return; }
   app.innerHTML = `
@@ -5634,6 +5650,7 @@ function resumeSession(){
   return true;
 }
 function renderCard(){
+  refClose();
   const s = session;
   const item = curItem();
   if(!item){ return; }
@@ -5939,6 +5956,7 @@ function handleAct(act, el){
 /* 選択式のPCキーボード操作を登録（選択式ブロック中のみ作動） */
 document.addEventListener("keydown", choiceKeydown);
 function renderDone(){
+  refClose();   /* 【P24】単語一覧を離れたら最下部の帯を戻す */
   const c = session.counts;
   const mode = session.mode;
   session = null;
@@ -6055,6 +6073,7 @@ function renderReference(){
   qi.onkeydown = (e)=>{ if(e.key==="Enter") renderReference(); };
   app.querySelectorAll("[data-play]").forEach(b=>{ b.onclick = ()=>speak(b.dataset.play); });
   bindRefNav(secKeys);
+  document.body.classList.add("ref-open");   /* 【P24】単語一覧の間だけ、最下部の帯を隠す */
 }
 
 /* ================= 【WP17】単語一覧のナビゲーション =================
@@ -6268,6 +6287,7 @@ function startPosSession(fresh){
   renderPosCard();
 }
 function renderPosCard(){
+  refClose();   /* 【P24】単語一覧を離れたら最下部の帯を戻す */
   const ps = state.posSession;
   if(!ps || ps.pos >= ps.ids.length){ return renderPosDone(); }
   const w = byId(ps.ids[ps.pos]);
@@ -6332,6 +6352,7 @@ function posHandle(act, el){
   }
 }
 function renderPosDone(){
+  refClose();   /* 【P24】単語一覧を離れたら最下部の帯を戻す */
   state.posSession = null; saveState();
   app.innerHTML = `<div class="panel done-card"><div class="stamp">完了</div>
     <h2 style="font-family:var(--serif);font-size:1.1rem;margin-bottom:8px">品詞モードが終了</h2>
@@ -6358,6 +6379,7 @@ function confirmResetAllProgress(){
   resetAllProgress();
 }
 function renderSettings(){
+  refClose();
   session = null;
   app.innerHTML = `
   <header><div><h1>設定</h1></div>
@@ -6416,6 +6438,7 @@ function renderSettings(){
 }
 /* ==== アプリの説明 ==== */
 function renderAbout(){
+  refClose();
   session = null;
   const shot = (key,cap)=> SVG_IMG[key] ? `<figure class="shot">${SVG_IMG[key]}<figcaption>${esc(cap)}</figcaption></figure>` : "";
   app.innerHTML = `
