@@ -73,6 +73,15 @@ html.noBounce,body.noBounce{overscroll-behavior:none}
 /* 【P18】未ログイン時のお問い合わせ案内。匿名投稿は submitted_by が null になり、
    開発者が返信を届けられない（返信・既読の通知も受け取れない）ため、送信前にログインを促す。 */
 .fb-login-note{background:var(--paper);border:1px solid var(--shu);border-radius:9px;padding:12px 14px;margin-bottom:12px}
+/* 【P26】PWA（ホーム画面に追加）への案内。
+   iOS Safari では、スクロール時にアドレスバー／ツールバーが伸縮してビューポートの高さが変わり、
+   再描画が追いつかず「帯状の塗り残し」「スクロール位置の補正」「引っかかり」が起きる
+   （オーナーの実機で、PWAでは同症状が出ないことを確認済み。OS側の描画のためCSSでは解消できない）。
+   ホーム画面に追加すればアドレスバーが無くなり、症状が出ない。すでにPWAで使っている人には出さない。 */
+.pwa-note{background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:12px 14px;margin-bottom:14px}
+.pwa-note .t{font-weight:700;color:var(--ink);font-size:.88rem;margin-bottom:5px}
+.pwa-note .d{font-size:.8rem;color:var(--sub);line-height:1.75}
+.pwa-note .d b{color:var(--shu)}
 .fb-login-note .t{font-weight:700;color:var(--shu);font-size:.88rem;margin-bottom:5px}
 .fb-login-note .d{font-size:.8rem;color:var(--sub);line-height:1.7;margin-bottom:10px}
 /* 【P17】起動時の初期表示（SEO用の静的本文）を、ローディング画面として自然に見せる。
@@ -4376,7 +4385,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.14.15.00";
+const APP_VERSION = "2026.07.14.15.30";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4936,6 +4945,7 @@ function renderLanding(){
       <button class="btn-ghost" id="ldSkip">ログインせずに使う</button>
     </div>
     <p class="note" style="text-align:center;margin-bottom:18px">ログインすると、学習の進捗がクラウドに保存され、機種を変えても続きから学習できます。</p>
+    ${pwaNoteHtml()}
     <div class="desc">${APP_DESC_HTML}</div>
   </div>`;
   document.getElementById("ldLogin").onclick = ()=>openAuthModal();
@@ -5427,6 +5437,25 @@ function isWeakWord(w){
   if(!st || st.mastered) return false;
   if(((st.cSeen||0)+(st.wSeen||0)) === 0) return false;   /* 一度も出ていない語は対象外（従来どおり） */
   return weakRate(st) <= WEAK_THRESHOLD;
+}
+/* 【P26】ホーム画面に追加された状態（PWA／スタンドアロン）で開いているか */
+function isStandalone(){
+  try{
+    return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches)
+        || window.navigator.standalone === true;
+  }catch(_){ return false; }
+}
+function pwaNoteHtml(){
+  if(isStandalone()) return "";   /* すでにアプリとして使っている人には出さない */
+  const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const how = ios
+    ? `画面下の<b>共有ボタン</b>（□に↑）→ <b>「ホーム画面に追加」</b>`
+    : `ブラウザのメニュー → <b>「ホーム画面に追加」</b>（または「アプリをインストール」）`;
+  return `<div class="pwa-note">
+    <div class="t">ホーム画面に追加すると快適に使えます</div>
+    <div class="d">${how} を選ぶと、アイコンから直接ひらけます。<br>
+    アドレスバーが消えて画面を広く使えるほか、単語一覧のスクロールがなめらかになります。</div>
+  </div>`;
 }
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 /* --- 語義データの正規化（新旧両構造を吸収）---
@@ -6435,6 +6464,7 @@ function renderSettings(){
     <p class="note" style="margin-top:8px">各設定の詳しい意味は「アプリの説明」を参照してください。</p>
     <button class="btn-sub" id="saveSet">設定を保存</button>
     <span class="msg" id="setMsg"></span>
+    ${pwaNoteHtml()}
     <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
       <button id="resetAll" style="background:var(--shu);color:#fff;border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:14px">すべての進捗をリセット</button>
       <p class="note" style="margin:6px 0 0;color:var(--sub);font-size:12px">学習進捗（回答履歴・ノルマ・中断中のセッション）をすべて消去します。設定と追加した単語は残ります。元に戻せません。</p>
