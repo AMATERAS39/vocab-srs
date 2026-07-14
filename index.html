@@ -4385,7 +4385,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.14.15.30";
+const APP_VERSION = "2026.07.14.16.30";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -5568,6 +5568,29 @@ function coreSegments(str){
     .map(s=>s.replace(/^[〜～]/,"").replace(/^(を|は|が|に|と|も)/,"").trim())
     .filter(Boolean);
 }
+/* 【P28】訳語の「意味核」どうしが重なるかを判定する。完全一致に加え、
+   3文字以上の断片が相手にすっぽり含まれる場合も「重なり」とみなす
+   （例：「重要な」⊂「決定的に重要な」、「評価する」⊂「高く評価する」）。
+   これにより、正解と見分けのつかない誤答肢（正しく答えても不正解になる罠）を防ぐ。
+   ただし差分が否定接頭辞（不・非・未・無・反）で終わる場合は、意味が正反対なので
+   重なりとみなさない（「適切な」と「不適切な」は良い誤答肢のペアとして残す）。 */
+const P28_NEG_HEAD = /[不非未無反]$/;
+function p28SegContains(longer, shorter){   // longer が shorter を含み、その差分が否定接頭辞でない
+  const idx = longer.indexOf(shorter);
+  if(idx < 0) return false;
+  const head = longer.slice(0, idx);
+  return !(head.length > 0 && P28_NEG_HEAD.test(head));
+}
+function p28SegOverlap1(a, b){
+  if(a === b) return true;
+  if(a.length >= 3 && p28SegContains(b, a)) return true;
+  if(b.length >= 3 && p28SegContains(a, b)) return true;
+  return false;
+}
+function sensesOverlap(aSegs, bSegs){
+  for(const a of aSegs){ for(const b of bSegs){ if(p28SegOverlap1(a, b)) return true; } }
+  return false;
+}
 function makePosQuiz(w){
   const norm = normEntries(w);
   const st = state.words[w.i];
@@ -5583,17 +5606,20 @@ function makePosQuiz(w){
     const it = norm[k].items[Math.floor(Math.random()*norm[k].items.length)]; // 候補を1つ
     const correct = it.ja;
     const correctSegs = coreSegments(correct);
+    /* 【P28】自分（この単語）の全語義の意味核。別語義に含まれる訳が誤答肢に出るのを防ぐ。
+       例：run に別語義「Aに衝突する」があるとき、「走る」の誤答肢に「衝突する」を出さない。 */
+    const ownSegs = [...new Set([...ownJa].flatMap(coreSegments))];
     /* 誤答肢：同品詞・同レベル → 同品詞・全レベル → 全品詞、の順で補充。
-       正解と同じ意味の単位（「・」区切りの断片）を含む候補は、
-       他の単語の訳であっても誤答として出さない（例：include「含む」の誤答に
-       involve「含む・伴う」を出さない） */
+       正解や自分の別語義と意味が重なる候補は、他の単語の訳であっても誤答として出さない。
+       重なりは完全一致だけでなく包含関係も見る（sensesOverlap）。 */
     const distractors = [];
     const tryPush = (arr)=>{
       for(const cand of shuffle(arr.slice())){
         if(distractors.length >= 3) break;
         if(cand === correct || ownJa.has(cand) || distractors.includes(cand)) continue;
         const candSegs = coreSegments(cand);
-        if(candSegs.some(cs=>correctSegs.includes(cs))) continue;
+        if(sensesOverlap(candSegs, correctSegs)) continue;   /* 正解との包含（value「〜を高く評価する」に「〜を評価する」を出さない）*/
+        if(sensesOverlap(candSegs, ownSegs)) continue;       /* 自語義との包含（run「走る」に「衝突する」を出さない）*/
         distractors.push(cand);
       }
     };
@@ -7064,6 +7090,21 @@ async function submitPwReset(){
   setTimeout(()=>{ location.reload(); }, 900);   /* 更新後は通常ログインとして進める（reloadでIS_RECOVERYが解け、以降はC-3が通常どおり働く） */
 }
 async function doLogout(){
+  /* 【P29】ログアウト時にローカルの学習データを必ず消す。
+     これをしないと、signOut 後の loadState が localStorage から前の利用者の進捗を読み戻し、
+     同じ端末を共有した別人に進捗が見えてしまう（プライバシー事故）。
+     手順の順序が重要：
+       1) 保留中のデバウンス保存を取り消す（dirty=false）。
+          これをしないと、ログアウト直後に currentUser=null の状態で保存が発火し、
+          クラウドではなく localStorage に前の利用者のデータが書き戻される競合が起きる。
+       2) localStorage の進捗キーを消し、メモリ上の state を初期状態へ戻す。
+          signOut() が発火させる onAuthStateChange → loadState より【前】に、同期的に消す。
+     クラウドへは一切書き込まない（backendSet は currentUser が無いとクラウドを触らないため、
+     空stateがクラウドへ上書きされる事故は構造的に起きない）。 */
+  if(saveTimer){ clearTimeout(saveTimer); saveTimer = null; }
+  dirty = false;
+  try{ localStorage.removeItem(STORE_KEY); }catch(_){}
+  state = { settings:{ newPerDay:30, rate:0.95, difficulty:1 }, words:{}, log:{}, custom:[], activeSession:null };
   clearLastUid();                 /* C-3：ログアウトで記録を消し、再ログイン時に再度確認できるようにする */
   if(sb) await sb.auth.signOut();
 }
