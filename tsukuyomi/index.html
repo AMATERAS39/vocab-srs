@@ -942,7 +942,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-14b";
+const APP_VERSION = "2026-07-14c";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -6011,6 +6011,25 @@ function coreSegments(str){
   return String(str).split(/[・;；／/]/).map(function(s){ return s.replace(/^[〜～]/,"").trim(); }).filter(Boolean);
 }
 
+/* P25：意味核が重なるかを判定する。完全一致だけでなく【包含関係】も見る。
+   ・従来は coreSegments で分割したあと【完全一致】でしか比べていなかったため、
+     正解「気味が悪いほど寂しい」に対して誤答肢「気味が悪い」が通ってしまった。
+   ★短い語（2文字以下）は包含チェックをしない。「よい」が「こころよい」に含まれる等で
+     過剰に除外され、誤答肢が枯渇するのを防ぐため。 */
+function sensesOverlap(a, b){
+  var A = coreSegments(a), B = coreSegments(b);
+  for (var x = 0; x < A.length; x++){
+    for (var y = 0; y < B.length; y++){
+      var p = A[x], q = B[y];
+      if (!p || !q) continue;
+      if (p === q) return true;                                   // 完全一致
+      if (p.length >= 3 && q.length >= 3 &&
+          (p.indexOf(q) >= 0 || q.indexOf(p) >= 0)) return true;  // 包含（3文字以上のときだけ）
+    }
+  }
+  return false;
+}
+
 function pickDummies(w, sense) {
   const correct = sense.ja;
   const correctSegs = coreSegments(correct);
@@ -6020,7 +6039,10 @@ function pickDummies(w, sense) {
     for (const cand of shuffle(arr.slice())) {
       if (dummies.length >= 3) break;
       if (cand === correct || ownJa.has(cand) || dummies.includes(cand)) continue;
-      if (coreSegments(cand).some(function(cs){ return correctSegs.includes(cs); })) continue; // 意味核が重なる誤答を除外
+      if (sensesOverlap(cand, correct)) continue;                       // P25：正解と意味核が重なる候補を除外（包含も見る）
+      var dup = false;
+      ownJa.forEach(function(j){ if (sensesOverlap(cand, j)) dup = true; });   // P25：自分の他の語義と重なる候補も除外
+      if (dup) continue;
       dummies.push(cand);
     }
   };
@@ -6062,7 +6084,10 @@ function pickDummiesPol(w, sense, pol) {
     for (const cand of shuffle(arr.slice())) {
       if (dummies.length >= 3) break;
       if (cand === correct || ownJa.has(cand) || dummies.includes(cand)) continue;
-      if (coreSegments(cand).some(function(cs){ return correctSegs.includes(cs); })) continue; // 意味核が重なる誤答を除外
+      if (sensesOverlap(cand, correct)) continue;                       // P25：正解と意味核が重なる候補を除外（包含も見る）
+      var dup = false;
+      ownJa.forEach(function(j){ if (sensesOverlap(cand, j)) dup = true; });   // P25：自分の他の語義と重なる候補も除外
+      if (dup) continue;
       dummies.push(cand);
     }
   };
