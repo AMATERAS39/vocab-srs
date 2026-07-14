@@ -954,7 +954,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-14c";
+const APP_VERSION = "2026-07-14d";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -8537,7 +8537,18 @@ document.addEventListener("DOMContentLoaded", function () {
   async function signOutCloud(){
     clearLastUid();  // C-3：ログアウトで記録を消し、再ログイン時に再度統合確認できるようにする
     if(sb){ try{ await sb.auth.signOut(); }catch(_){} }
-    currentUser = null; isOwner = false; updateAuthUI(); showMenuList(); toast("ログアウトしました");
+    currentUser = null; isOwner = false;
+    /* ★ログアウトでローカルの進捗を消し、まっさらなゲスト状態に戻す。
+       ・ログイン中も flush(state) がローカルに書き続けているため、消さないと
+         ログインユーザーの進捗がそのままゲストの進捗として残る（端末を共有すると他人に見える）。
+       ・データ損失は起きない：migrateGuestProgress は統合の可否によらず必ず removeItem するので、
+         ログイン後にローカルへ書かれた内容はクラウドにも必ずある。再ログインで完全に復元される。
+       ★applyState は「ローカル保存＋refreshHome」だけを行う（saveCloud は呼ばない）。
+         空の state をクラウドに書くと利用者のデータが消えるため、絶対に saveCloud を呼ばないこと。 */
+    try{ localStorage.removeItem(STORAGE_KEY); }catch(_){}
+    var fresh = createInitialState(); fresh.custom = []; fresh.session = null;  // 進行中セッションも破棄
+    applyState(fresh);                                                          // 既存の全リセットと同じ型
+    updateAuthUI(); showMenuList(); toast("ログアウトしました");
   }
   async function computeOwner(){
     isOwner = false;
@@ -8635,8 +8646,8 @@ document.addEventListener("DOMContentLoaded", function () {
     if(isStandalone()){ card.hidden = true; return; }          // PWAで開いている人には出さない
     var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     body.textContent = isIOS
-      ? "画面下の共有ボタン（□に↑）から「ホーム画面に追加」を選ぶと、アイコンから直接ひらけます。アドレスバーが消えるぶん、画面を広く使えます。"
-      : "ブラウザのメニューから「ホーム画面に追加」（または「アプリをインストール」）を選ぶと、アイコンから直接ひらけます。アドレスバーが消えるぶん、画面を広く使えます。";
+      ? "画面下の共有ボタン（□に↑）から「ホーム画面に追加」を選ぶと、アイコンから直接ひらけます。アドレスバーが消えるぶん、画面を広く使え、画面下に余白（帯）が出る現象もなくなります。"
+      : "ブラウザのメニューから「ホーム画面に追加」（または「アプリをインストール」）を選ぶと、アイコンから直接ひらけます。アドレスバーが消えるぶん、画面を広く使え、画面下に余白（帯）が出る現象もなくなります。";
     card.hidden = false;
   }
   initPwaNote();
