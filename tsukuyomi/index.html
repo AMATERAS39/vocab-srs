@@ -87,6 +87,12 @@
   #splashImg{ width:132px; height:132px; border-radius:50%; box-shadow:0 6px 24px rgba(60,40,20,.28);
               background:var(--card); }
 
+  /* P26：PWA（ホーム画面に追加）への案内。ブラウザで開いているときだけ出す。 */
+  .pwa-note{ margin:0 1.1rem .9rem; padding:.7rem .8rem; border:1px solid var(--line); border-radius:8px;
+             background:var(--card); }
+  .pwa-note .pw-t{ font-family:var(--serif); font-size:.92rem; color:var(--ink); margin-bottom:.35rem; }
+  .pwa-note p{ font-family:var(--sans); font-size:.8rem; line-height:1.7; color:var(--sub); margin:0; }
+
   /* 案件B-2：ホーム下部のアプリ説明（SEO本文）。
      ★時間では消さない。ログイン状態だけで出し分ける。通常の文字サイズ・通常色（隠しテキストにしない）。 */
   .seo-intro{ padding:.9rem 1.1rem 1.1rem; border-top:1px solid var(--line); }
@@ -476,6 +482,12 @@
         <button class="homebtn" id="btnJodoshi" type="button">助動詞を学ぶ</button>
         <button class="homebtn subtle" id="btnRedoToday" type="button" hidden>今日の学習をやり直す</button>
       </div>
+    </div>
+    <!-- P26：PWAへの導線。ブラウザで開いているときだけ出す（PWAで開いていれば JS が hidden にする）。
+         ★ログイン状態には関係なく出す（seoIntro とは条件が違う）。 -->
+    <div class="pwa-note" id="pwaNote" hidden>
+      <div class="pw-t">ホーム画面に追加すると快適に使えます</div>
+      <p id="pwaNoteBody"></p>
     </div>
     <!-- 案件B-2：アプリ説明（常設）。未ログイン時に表示し、ログイン後だけ JS が hidden にする。
          ★時間では消さない／画面外へ飛ばさない／背景と同化させない／極端に小さくしない。 -->
@@ -8606,6 +8618,28 @@ document.addEventListener("DOMContentLoaded", function () {
     render();
     return true;
   }
+
+  /* P26：PWA（ホーム画面に追加）への導線。
+     ・すでにPWAで開いている人には出さない（isStandalone）。
+     ・ログイン状態には関係なく、ブラウザで開いていれば出す（seoIntro とは条件が違うので updateAuthUI では触らない）。
+     ・★TSUKUYOMI では「スクロールがなめらかになる」とは書かない（実機で同種の症状が再現しないため）。 */
+  function isStandalone(){
+    try{
+      return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches)
+          || window.navigator.standalone === true;
+    }catch(_){ return false; }
+  }
+  function initPwaNote(){
+    var card = byId("pwaNote"), body = byId("pwaNoteBody");
+    if(!card || !body) return;
+    if(isStandalone()){ card.hidden = true; return; }          // PWAで開いている人には出さない
+    var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    body.textContent = isIOS
+      ? "画面下の共有ボタン（□に↑）から「ホーム画面に追加」を選ぶと、アイコンから直接ひらけます。アドレスバーが消えるぶん、画面を広く使えます。"
+      : "ブラウザのメニューから「ホーム画面に追加」（または「アプリをインストール」）を選ぶと、アイコンから直接ひらけます。アドレスバーが消えるぶん、画面を広く使えます。";
+    card.hidden = false;
+  }
+  initPwaNote();
 
   // 起動：中断した出題があれば続きから、無ければホーム
   refreshHome();
