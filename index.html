@@ -198,6 +198,14 @@ code{background:var(--paper);padding:1px 5px;border-radius:4px;font-size:.78rem}
 .explain-word{font-size:1.05rem;font-weight:700;color:var(--sub);text-align:center;margin-bottom:6px;font-family:var(--serif)}
 .btn-ghost{display:block;width:100%;padding:12px;border:1.5px solid var(--ink);border-radius:8px;font-size:.95rem;font-weight:700;background:#fff;margin-top:10px}
 /* 単語一覧 */
+/* 【P24】単語一覧の外側パネルは、背景・枠線・角丸を描かない。
+   理由：3,932枚のカードを収めるため #refPanel の高さは約60万px（画面723個ぶん）に達する。
+   .panel の既定は background:var(--card)（純白）＋border＋border-radius であり、
+   iOS Safari はこの巨大な白い矩形を描画しきれず、一部が「白い帯」として画面に残る
+   （オーナーの実機報告・写真で確認。カードの白と同色のため背景の一部に見える）。
+   この背景と枠線は、中の .ref-item（1枚ずつ白いカード）に完全に隠れており、
+   もともと利用者には一切見えていない。描画から外しても見た目は1pxも変わらない。 */
+#refPanel{background:transparent;border:none;border-radius:0}
 .ref-controls{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 .ref-controls select,.ref-controls input{font-family:var(--sans);padding:6px 9px;border:1px solid var(--line);border-radius:6px;font-size:16px;background:#fff;flex:1;min-width:120px}
 .ref-count{font-size:.76rem;color:var(--sub);margin-bottom:10px}
@@ -4353,7 +4361,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.14.12.45";
+const APP_VERSION = "2026.07.14.13.30";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -6047,7 +6055,7 @@ function renderReference(){
       <div class="date-line">判定なし・閲覧のみ</div></div>
       <a class="streak" href="#" id="backHome" style="text-decoration:underline">戻る</a>
     </header>
-    <div class="panel">
+    <div class="panel" id="refPanel">
       <div class="ref-controls">
         <select id="refLv">
           <option value="all" ${refFilter.lv==="all"?"selected":""}>全レベル</option>
