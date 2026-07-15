@@ -4385,7 +4385,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.14.16.30";
+const APP_VERSION = "2026.07.15.10.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -5868,10 +5868,18 @@ function renderChoiceBody(item, w){
   }
 
   /* quiz 画面（回答中） */
-  const hint = `<div class="hint choice-hint">選択肢を2回タップで確定（PCは数字キー→もう一度／Enter）</div>`;
+  const multi = q.blanks.length >= 2;
+  const allPicked = q.blanks.every(k=>item.picks[k]);   // 地雷#17回避：都度評価（フラグに焼き付けない）
+  const hint = multi
+    ? `<div class="hint choice-hint">各項目を1つずつ選び、すべて選ぶと出る「回答」で確定（もう一度タップで選択解除）</div>`
+    : `<div class="hint choice-hint">選択肢を2回タップで確定（PCは数字キー→もう一度／Enter）</div>`;
+  const submitBtn = (multi && allPicked)
+    ? `<div class="reveal-next"><button class="btn-primary" data-act="choiceSubmit">回答</button></div>`
+    : ``;
   return `<div class="word-display">${esc(w.w)}</div>
     ${hint}
-    <div class="prompt-zone">${rows}</div>`;
+    <div class="prompt-zone">${rows}</div>
+    ${submitBtn}`;
 }
 
 /* ---- 選択式：2タップ確定ロジック（クリック／キーボード共通） ---- */
@@ -5880,8 +5888,15 @@ function choiceSelect(k, o){
   if(!item || item.choiceDone) return;
   if(!item.confirmed) item.confirmed = {};
   if(item.confirmed[k]) return;            // 確定済みブランクは触れない
-  if(item.picks[k] === o){                 // 同じ肢を2回目 → このブランクを確定
-    choiceConfirmBlank(k);
+  const multi = item.quiz.blanks.length >= 2;
+  if(item.picks[k] === o){                 // 同じ肢を再タップ
+    if(multi){                             // 複数選択：確定せず【選択解除】（トグル）
+      delete item.picks[k];
+      saveSession();
+      renderCard();
+    }else{                                 // 単一選択：従来どおり確定
+      choiceConfirmBlank(k);
+    }
   }else{                                   // 別の肢／初回 → 選択（乗り換え）
     item.picks[k] = o;
     saveSession();
@@ -5929,6 +5944,23 @@ function choiceKeydown(e){
   if(!item || item.choiceDone) return;
   if(!item.confirmed) item.confirmed = {};
   const q = item.quiz;
+  const multi = q.blanks.length >= 2;
+  if(multi){
+    /* 複数選択：まだ選択の無い最初の空欄を対象に。全空欄選択済みなら Enter で「回答」 */
+    const activeK = q.blanks.find(k=>!item.picks[k]);
+    if(e.key === "Enter"){
+      if(activeK === undefined){ e.preventDefault(); handleAct("choiceSubmit"); }
+      return;
+    }
+    if(activeK === undefined) return;
+    if(/^[1-9]$/.test(e.key)){
+      const idx = parseInt(e.key) - 1;
+      const opts = q.quizzes[activeK].opts;
+      if(idx < opts.length){ e.preventDefault(); choiceSelect(activeK, opts[idx]); }
+    }
+    return;
+  }
+  /* 単一選択：現状維持（先頭の未確定ブランクを選択、同数字／Enterで確定） */
   const activeK = q.blanks.find(k=>!item.confirmed[k]);
   if(activeK === undefined) return;
   if(e.key === "Enter"){
@@ -5975,6 +6007,15 @@ function handleAct(act, el){
   /* ==== ブロックA：選択式（2タップ確定） ==== */
   if(act==="pick"){
     choiceSelect(parseInt(el.dataset.k), el.dataset.val);
+    return;
+  }
+  if(act==="choiceSubmit"){ // 複数選択：全空欄をまとめて確定して採点へ合流
+    const q = item.quiz;
+    if(item.choiceDone) return;
+    if(q.blanks.length < 2) return;                 // 単一選択には無い
+    if(!q.blanks.every(k=>item.picks[k])) return;   // 全選択でなければ no-op（stale DOM対策）
+    q.blanks.forEach(k=>{ item.confirmed[k] = true; });
+    gradeChoice();                                  // 既存の採点入口へ合流（新経路は作らない）
     return;
   }
   if(act==="choiceReveal"){ // marked（色分け）→ 解説画面へ
