@@ -209,6 +209,8 @@ code{background:var(--paper);padding:1px 5px;border-radius:4px;font-size:.78rem}
 .opt-btn:disabled{cursor:default}
 .opt-num{display:inline-block;min-width:1.4em;font-weight:700;color:var(--sub);margin-right:6px}
 .blank-block.confirmed .blank-slot{color:var(--midori)}
+.blank-block.correct .blank-slot{color:var(--midori)}
+.blank-block.wrong   .blank-slot{color:var(--shu)}
 .choice-hint{font-size:.72rem;color:var(--sub);text-align:center;margin-bottom:8px}
 /* ==== バッチJ：解説は独立画面。Nextは右下、選択式解説には見出し語を小さく添える ==== */
 .reveal-next{display:flex;justify-content:flex-end;margin-top:12px}
@@ -4385,7 +4387,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.15.10.00";
+const APP_VERSION = "2026.07.15.11.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -5852,9 +5854,17 @@ function renderChoiceBody(item, w){
       const dis = (item.choiceDone || confirmed) ? "disabled" : "";
       return `<button class="${cls}" data-act="pick" data-k="${k}" data-val="${esc(o)}" ${dis}><span class="opt-num">${oi+1}</span>${esc(o)}</button>`;
     }).join("");
-    const slot = confirmed ? `✓ ${esc(picked)}` : (picked?esc(picked):"〔　？　〕");
+    let slot, blockExtra;
+    if(item.choiceDone){
+      const ok = (picked === correct);
+      slot = `${ok ? "✓" : "✕"} ${picked ? esc(picked) : "（未選択）"}`;
+      blockExtra = ok ? " correct" : " wrong";
+    }else{
+      slot = confirmed ? `✓ ${esc(picked)}` : (picked?esc(picked):"〔　？　〕");
+      blockExtra = confirmed ? " confirmed" : "";
+    }
     const label = `<span class="pos-badge">${esc(e.pos)}</span>`;
-    return `<div class="blank-block${confirmed?" confirmed":""}">
+    return `<div class="blank-block${blockExtra}">
       <div class="entry">${label}<span class="meaning blank-slot">${slot}</span></div>
       <div class="opt-list">${optHtml}</div>
     </div>`;
@@ -5871,7 +5881,7 @@ function renderChoiceBody(item, w){
   const multi = q.blanks.length >= 2;
   const allPicked = q.blanks.every(k=>item.picks[k]);   // 地雷#17回避：都度評価（フラグに焼き付けない）
   const hint = multi
-    ? `<div class="hint choice-hint">各項目を1つずつ選び、すべて選ぶと出る「回答」で確定（もう一度タップで選択解除）</div>`
+    ? `<div class="hint choice-hint">各項目を1つずつ選び、すべて選ぶと出る「回答」で確定（全て選んだあとは、同じ項目をもう一度タップしても確定）</div>`
     : `<div class="hint choice-hint">選択肢を2回タップで確定（PCは数字キー→もう一度／Enter）</div>`;
   const submitBtn = (multi && allPicked)
     ? `<div class="reveal-next"><button class="btn-primary" data-act="choiceSubmit">回答</button></div>`
@@ -5882,26 +5892,39 @@ function renderChoiceBody(item, w){
     ${submitBtn}`;
 }
 
+/* 複数選択：全空欄をまとめて確定して採点入口 gradeChoice へ合流する共通ヘルパー。
+   回答ボタン（handleAct の choiceSubmit）とダブルタップ（choiceSelect）の両方から呼ぶ。 */
+function choiceSubmitAll(){
+  const item = curItem(); if(!item || item.choiceDone) return;
+  const q = item.quiz;
+  if(q.blanks.length < 2) return;                 // 単一選択には無い
+  if(!q.blanks.every(k=>item.picks[k])) return;   // 全選択でなければ no-op（stale DOM対策）
+  q.blanks.forEach(k=>{ item.confirmed[k] = true; });
+  gradeChoice();                                  // 既存の採点入口へ合流（新経路は作らない）
+}
 /* ---- 選択式：2タップ確定ロジック（クリック／キーボード共通） ---- */
 function choiceSelect(k, o){
   const item = curItem();
   if(!item || item.choiceDone) return;
   if(!item.confirmed) item.confirmed = {};
   if(item.confirmed[k]) return;            // 確定済みブランクは触れない
-  const multi = item.quiz.blanks.length >= 2;
+  const q = item.quiz;
+  const multi = q.blanks.length >= 2;
   if(item.picks[k] === o){                 // 同じ肢を再タップ
-    if(multi){                             // 複数選択：確定せず【選択解除】（トグル）
-      delete item.picks[k];
-      saveSession();
-      renderCard();
-    }else{                                 // 単一選択：従来どおり確定
-      choiceConfirmBlank(k);
+    if(multi){
+      if(q.blanks.every(kk=>item.picks[kk])) choiceSubmitAll();  // 全選択済み → ダブルタップ確定
+      // 未選択が残る → 何もしない（選択を維持・解除しない）
+    }else{
+      choiceConfirmBlank(k);               // 単一選択：従来どおり確定
     }
-  }else{                                   // 別の肢／初回 → 選択（乗り換え）
-    item.picks[k] = o;
-    saveSession();
-    renderCard();
+    return;
   }
+  // 別の肢／初回 → 選択（乗り換え）。仕様B：この描画のみスクロール位置を保持して跳ねを防ぐ
+  item.picks[k] = o;
+  saveSession();
+  const _y = window.scrollY;
+  renderCard();
+  window.scrollTo(0, _y);
 }
 function choiceConfirmBlank(k){
   const item = curItem();
@@ -5949,7 +5972,7 @@ function choiceKeydown(e){
     /* 複数選択：まだ選択の無い最初の空欄を対象に。全空欄選択済みなら Enter で「回答」 */
     const activeK = q.blanks.find(k=>!item.picks[k]);
     if(e.key === "Enter"){
-      if(activeK === undefined){ e.preventDefault(); handleAct("choiceSubmit"); }
+      if(activeK === undefined){ e.preventDefault(); choiceSubmitAll(); }
       return;
     }
     if(activeK === undefined) return;
@@ -6009,13 +6032,8 @@ function handleAct(act, el){
     choiceSelect(parseInt(el.dataset.k), el.dataset.val);
     return;
   }
-  if(act==="choiceSubmit"){ // 複数選択：全空欄をまとめて確定して採点へ合流
-    const q = item.quiz;
-    if(item.choiceDone) return;
-    if(q.blanks.length < 2) return;                 // 単一選択には無い
-    if(!q.blanks.every(k=>item.picks[k])) return;   // 全選択でなければ no-op（stale DOM対策）
-    q.blanks.forEach(k=>{ item.confirmed[k] = true; });
-    gradeChoice();                                  // 既存の採点入口へ合流（新経路は作らない）
+  if(act==="choiceSubmit"){ // 複数選択：回答ボタン → 共通ヘルパーで確定・採点
+    choiceSubmitAll();
     return;
   }
   if(act==="choiceReveal"){ // marked（色分け）→ 解説画面へ
