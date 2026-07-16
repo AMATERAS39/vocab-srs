@@ -4386,7 +4386,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.16.22.00";
+const APP_VERSION = "2026.07.16.23.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4438,7 +4438,7 @@ async function initSupabase(){
 }
 
 let state = {
-  settings:{ newPerDay:30, rate:0.95, difficulty:1 }, // difficulty: 1〜5（☆。Lv.N以下をストック）
+  settings:{ newPerDay:30, rate:0.95, difficulty:1, blankCount:"auto" }, // difficulty: 1〜5（☆。Lv.N以下をストック）／blankCount: 複数選択で同時に問う品詞数（"auto"＝従来のrevStageベース）
   words:{},      // id -> {step,due,reps,lapses,mastered,learnedOn,revStage,failStreak,
                  //        cSeen,cCorrect,wSeen,wCorrect}  ※c=選択式 w=記述式
   log:{},        // "YYYY-MM-DD" -> {news,reviews,stocked}
@@ -4556,7 +4556,7 @@ async function loadState(){
       const s = JSON.parse(v);
       state = Object.assign(state, s);
       if(!Array.isArray(state.custom)) state.custom = [];
-      state.settings = Object.assign({newPerDay:30,rate:0.95,difficulty:1}, s.settings||{});
+      state.settings = Object.assign({newPerDay:30,rate:0.95,difficulty:1,blankCount:"auto"}, s.settings||{});
       delete state.settings.modes; // 旧設定の掃除
       /* 旧difficulty(easy/mid/hard)を☆数値へ移行 */
       if(typeof state.settings.difficulty === "string"){
@@ -5161,7 +5161,7 @@ function renderData(){
       if(!o.state || typeof o.state.words!=="object") throw new Error("バックアップ形式ではありません");
       state = o.state;
       if(!Array.isArray(state.custom)) state.custom = [];
-      state.settings = Object.assign({newPerDay:30,rate:0.95,difficulty:1,posChunk:30}, state.settings||{});
+      state.settings = Object.assign({newPerDay:30,rate:0.95,difficulty:1,posChunk:30,blankCount:"auto"}, state.settings||{});
       if(typeof state.settings.difficulty === "string"){
         state.settings.difficulty = ({easy:1,mid:2,hard:3})[state.settings.difficulty] || 1;
       }
@@ -5593,7 +5593,12 @@ function makePosQuiz(w){
   const norm = normEntries(w);
   const st = state.words[w.i];
   const revStage = st ? (st.revStage||0) : 0;
-  const nBlank = blankCountByStage(norm.length, revStage);
+  /* 複数選択の個数：設定 blankCount が "auto" のときだけ従来の revStage ベース（挙動不変）。
+     数値指定時はその個数を品詞数(norm.length)でクランプ（品詞1つの語は必ず1＝単一選択）。 */
+  const bc = (state.settings && state.settings.blankCount) || "auto";
+  const nBlank = (bc === "auto")
+    ? blankCountByStage(norm.length, revStage)
+    : Math.min(parseInt(bc), norm.length);
   const idxs = shuffle(norm.map((_,k)=>k)).slice(0, nBlank).sort((a,b)=>a-b);
   const ownJa = new Set(norm.flatMap(e=>e.ja));
   const poolSameLv = jaPoolByPos(w.i, w.l);
@@ -6541,6 +6546,12 @@ function renderSettings(){
       <input type="number" id="setNew" min="5" max="100" value="${state.settings.newPerDay}"></div>
     <div class="setting-row"><span>難易度</span>
       <select id="setDiff">${[1,2,3,4,5].map(n=>`<option value="${n}" ${chunkStars()===n?"selected":""}>${"★".repeat(n)}${"☆".repeat(5-n)}</option>`).join("")}</select></div>
+    <div class="setting-row"><span>複数選択：同時に問う品詞の数</span>
+      <select id="setBlank">
+        <option value="auto" ${(state.settings.blankCount||"auto")==="auto"?"selected":""}>自動</option>
+        ${[2,3,4,5].map(n=>`<option value="${n}" ${String(state.settings.blankCount)===String(n)?"selected":""}>${n}個</option>`).join("")}
+      </select></div>
+    <p class="note" style="margin:2px 0 8px;color:var(--sub);font-size:12px">※複数選択になるのは、品詞が2つ以上ある語だけです。品詞が1つの語は常に単一で出ます。</p>
     <div class="setting-row"><span>音声の読み上げ速度</span>
       <select id="setRate">${[0.5,0.6,0.7,0.8,0.9,0.95,1.0,1.1,1.2].map(r=>`<option value="${r}" ${Math.abs((state.settings.rate||0.95)-r)<0.001?"selected":""}>${r}</option>`).join("")}</select></div>
     <div class="setting-row"><span>品詞モード：1回に出題する問題数</span>
@@ -6580,6 +6591,8 @@ function renderSettings(){
     state.settings.nickname = document.getElementById("setNick").value.trim().slice(0,20);
     state.settings.newPerDay = Math.max(5, Math.min(100, parseInt(document.getElementById("setNew").value)||30));
     state.settings.difficulty = Math.max(1, Math.min(5, parseInt(document.getElementById("setDiff").value)||1));
+    { const bv = document.getElementById("setBlank").value;
+      state.settings.blankCount = (bv === "auto") ? "auto" : Math.max(2, Math.min(5, parseInt(bv)||2)); }
     state.settings.rate = Math.max(0.5, Math.min(1.2, parseFloat(document.getElementById("setRate").value)||0.95));
     state.settings.posChunk = Math.max(5, Math.min(100, parseInt(document.getElementById("setPos").value)||30));
     await saveState();
@@ -7169,14 +7182,14 @@ async function doLogout(){
   if(saveTimer){ clearTimeout(saveTimer); saveTimer = null; }
   dirty = false;
   try{ localStorage.removeItem(STORE_KEY); }catch(_){}
-  state = { settings:{ newPerDay:30, rate:0.95, difficulty:1 }, words:{}, log:{}, custom:[], activeSession:null };
+  state = { settings:{ newPerDay:30, rate:0.95, difficulty:1, blankCount:"auto" }, words:{}, log:{}, custom:[], activeSession:null };
   clearLastUid();                 /* C-3：ログアウトで記録を消し、再ログイン時に再度確認できるようにする */
   if(sb) await sb.auth.signOut();
 }
 /* ログイン／ログアウト時：未ログイン中の進捗をアカウントへ統合 → 読み直して再描画 */
 async function syncOnAuthChange(){
   const merged = await maybeMigrateOnLogin();
-  state = { settings:{ newPerDay:30, rate:0.95, difficulty:1 }, words:{}, log:{}, custom:[], activeSession:null };
+  state = { settings:{ newPerDay:30, rate:0.95, difficulty:1, blankCount:"auto" }, words:{}, log:{}, custom:[], activeSession:null };
   await loadState();
   if(merged){ state = merged; scheduleSave(); }   /* (A-safe) 統合結果を確実に反映し、失敗時も次回saveでクラウドへ */
   migrateReviveOldRecords();   /* 一度きりの旧データ救済（既存レコードのみ・冪等）。ログアウト時は state.words 空で空回り */
