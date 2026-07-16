@@ -4386,7 +4386,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.15.12.00";
+const APP_VERSION = "2026.07.16.22.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -5843,7 +5843,8 @@ function renderChoiceBody(item, w){
     const correct = q.quizzes[k].correct;
     const optHtml = q.quizzes[k].opts.map((o,oi)=>{
       let cls = "opt-btn";
-      if(item.choiceDone){
+      /* P31 C-2：語全体の採点後(choiceDone)だけでなく、そのブランクを個別確定(confirmed)した時点でも正誤色分けする */
+      if(item.choiceDone || confirmed){
         if(o===correct) cls += " correct";
         else if(o===picked) cls += " wrong";
       }else if(o===picked){ cls += " picked"; }
@@ -5851,13 +5852,14 @@ function renderChoiceBody(item, w){
       return `<button class="${cls}" data-act="pick" data-k="${k}" data-val="${esc(o)}" ${dis}><span class="opt-num">${oi+1}</span>${esc(o)}</button>`;
     }).join("");
     let slot, blockExtra;
-    if(item.choiceDone){
+    if(item.choiceDone || confirmed){
+      /* P31 C-2：語全体の採点後だけでなく、個別確定(confirmed)時点でも正誤で色分け表示する */
       const ok = (picked === correct);
       slot = `${ok ? "✓" : "✕"} ${picked ? esc(picked) : "（未選択）"}`;
       blockExtra = ok ? " correct" : " wrong";
     }else{
-      slot = confirmed ? `✓ ${esc(picked)}` : (picked?esc(picked):"〔　？　〕");
-      blockExtra = confirmed ? " confirmed" : "";
+      slot = picked ? esc(picked) : "〔　？　〕";
+      blockExtra = "";
     }
     const label = `<span class="pos-badge">${esc(e.pos)}</span>`;
     return `<div class="blank-block${blockExtra}">
@@ -5907,12 +5909,9 @@ function choiceSelect(k, o){
   const q = item.quiz;
   const multi = q.blanks.length >= 2;
   if(item.picks[k] === o){                 // 同じ肢を再タップ
-    if(multi){
-      if(q.blanks.every(kk=>item.picks[kk])) choiceSubmitAll();  // 全選択済み → ダブルタップ確定
-      // 未選択が残る → 何もしない（選択を維持・解除しない）
-    }else{
-      choiceConfirmBlank(k);               // 単一選択：従来どおり確定
-    }
+    /* P31 C-1：単一・複数を問わず「そのブランク単独を個別確定」に統一。
+       choiceConfirmBlank は未選択を弾き、全ブランク確定で gradeChoice へ合流する。 */
+    choiceConfirmBlank(k);
     return;
   }
   // 別の肢／初回 → 選択（乗り換え）。仕様B：この描画のみスクロール位置を保持して跳ねを防ぐ
@@ -5931,13 +5930,17 @@ function choiceConfirmBlank(k){
   if(q.blanks.every(b=>item.confirmed[b])){ // 全ブランク確定 → 採点
     gradeChoice();
   }else{
+    /* P31 C-5：個別確定後の再描画でもスクロール位置を保持（複数選択で他ブランクへ移る際の跳ね対策） */
     saveSession();
+    const _y = window.scrollY;
     renderCard();
+    window.scrollTo(0, _y);
   }
 }
 function gradeChoice(){
   const item = curItem();
   if(!item) return;
+  if(item.choiceDone) return;   // P31 C-4：採点済みなら no-op（個別確定／回答ボタン／ダブルタップの一度だけ合流を保証）
   const q = item.quiz;
   const w = byId(item.id);
   item.choiceDone = true;
