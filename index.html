@@ -4386,7 +4386,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.16.23.00";
+const APP_VERSION = "2026.07.16.23.10";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -5924,7 +5924,7 @@ function choiceSelect(k, o){
   saveSession();
   const _y = window.scrollY;
   renderCard();
-  window.scrollTo(0, _y);
+  requestAnimationFrame(()=>window.scrollTo(0, _y));  /* P31症状A：レイアウト確定後に位置復元し先頭リセットを防ぐ */
 }
 function choiceConfirmBlank(k){
   const item = curItem();
@@ -5939,7 +5939,7 @@ function choiceConfirmBlank(k){
     saveSession();
     const _y = window.scrollY;
     renderCard();
-    window.scrollTo(0, _y);
+    requestAnimationFrame(()=>window.scrollTo(0, _y));  /* P31症状A：レイアウト確定後に位置復元し先頭リセットを防ぐ */
   }
 }
 function gradeChoice(){
