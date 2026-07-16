@@ -4386,7 +4386,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.16.23.20";
+const APP_VERSION = "2026.07.17.06.50";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4772,47 +4772,40 @@ function persistBanner(){
 }
 
 /* ---- 今日のキュー ---- */
-/* ---- ストック方式 ----
-   開いた日に未出単語を newPerDay 語だけ「ストック（学習対象）」に登録する。
-   登録=state.words にエントリ作成（step0, 翌日から復習対象）。以降 SRS で出題。 */
-function stockToday(){
-  const t = todayStr();
-  if(state.log[t] && state.log[t].stocked!=null) return;
-  if(dueReviews().length > 0) return;   // K-1：未消化のノルマが残る間は新規を積まない（見送り時は stocked を確定させない）
+/* ---- ストック方式（P33：チャンク制）----
+   未出単語を「ストック（学習対象）」に登録する。登録=state.words にエントリ作成（step0）。以降 SRS で出題。
+   P33で「1日1回」制限とK-1早期returnを撤去し、チャンク開始時に不足分だけ補充する形（stockFill）へ移行した。 */
+
+/* 【P33】新規補充の共通ヘルパー：未ストック語を最大 n 語だけストックし、実際に足した件数を返す。
+   選定は従来（難易度☆候補→自動昇格→レベル内ランダム P23-A）を踏襲。stockToday/stockExtra から重複していたロジックをここへ一本化。 */
+function stockFill(n){
+  if(n <= 0) return 0;
   let diff = chunkStars();
   const candidates = d => allWords().filter(w=>{ const st=state.words[w.i]; return (!st) && w.l<=d; }).sort((a,b)=>a.i-b.i);
   let fresh = candidates(diff);
-  /* ②難易度自動昇格：☆N以下の未ストック語が尽きたら☆を上げる */
+  /* 難易度自動昇格：☆N以下の未ストック語が尽きたら☆を上げる */
   while(fresh.length===0 && diff<5){ diff++; fresh = candidates(diff); }
   if(diff !== chunkStars()) state.settings.difficulty = diff;
-  /* 【P23-A】難易度内でランダムに選ぶ。従来は収録番号順に先頭からN語だったため、
-     元データが「レベル内アルファベット順」であることと相まって、
-     その日の新規語が a・b で始まる語ばかりに偏っていた（実測：347ブロック中342が昇順）。 */
-  fresh = shuffle(fresh).slice(0, state.settings.newPerDay);
+  /* 【P23-A】難易度内でランダムに選ぶ（元データがレベル内アルファベット順のため、先頭からだと偏る） */
+  fresh = shuffle(fresh).slice(0, n);
   for(const w of fresh) ensureWordRecord(w.i, true);
-  if(!state.log[t]) state.log[t] = {news:0, reviews:0};
-  state.log[t].stocked = fresh.length;
-  saveState();
+  if(fresh.length){
+    const t = todayStr();
+    if(!state.log[t]) state.log[t] = {news:0, reviews:0};
+    state.log[t].stocked = (state.log[t].stocked||0) + fresh.length;   /* 記録は残す（読み手はゼロ＝死フィールド） */
+    saveState();
+  }
+  return fresh.length;
 }
-/* 未ストックの単語がまだ残っているか（＝「追加でもっと学習する」を出せるか判定） */
+/* 【P33】旧 stockToday：日付キー1日1回制限とK-1早期returnは撤去済み。呼び出し元も撤去済み（死関数として互換のため残置）。 */
+function stockToday(){ /* no-op（P33でチャンク開始時の stockFill へ移行） */ }
+/* 未ストックの単語がまだ残っているか（＝新規補充の余地があるか判定） */
 function anyStockableWords(){
   return allWords().some(w=>{ const st = state.words[w.i]; return !st; });
 }
-/* 1日のノルマ達成後でも、追加で新しい単語を今すぐストックして学習を始められるようにする。
-   stockToday() の「1日1回だけ」制限を無視して、newPerDay と同じ件数を追加投入する。 */
+/* 【P33】旧 stockExtra：案Yの明示追加投入。stockFill へ委譲（互換のため関数は残す）。 */
 function stockExtra(n){
-  let diff = chunkStars();
-  const candidates = d => allWords().filter(w=>{ const st=state.words[w.i]; return (!st) && w.l<=d; }).sort((a,b)=>a.i-b.i);
-  let fresh = candidates(diff);
-  while(fresh.length===0 && diff<5){ diff++; fresh = candidates(diff); }
-  /* 【P23-A】stockToday と同じく、難易度内でランダムに選ぶ */
-  fresh = shuffle(fresh).slice(0, n);
-  for(const w of fresh) ensureWordRecord(w.i, true);
-  const t = todayStr();
-  if(!state.log[t]) state.log[t] = {news:0, reviews:0, stocked:0};
-  state.log[t].stocked = (state.log[t].stocked||0) + fresh.length;
-  saveState();
-  return fresh.length;
+  return stockFill(n);
 }
 function dueReviews(){
   const t = todayStr();
@@ -4966,8 +4959,8 @@ function renderHome(){
   refClose();
   session = null;
   if(state.activeSession && !state.activeSession.order) state.activeSession = null;
-  stockToday();
-  const revs = dueReviews();
+  /* 【P33】stockToday() 呼び出しを撤去（ストックはチャンク開始時に buildChunk→stockFill で行う）。 */
+  const hasStudy = (allWords().filter(isWeakWord).length + dueReviews().length + (anyStockableWords()?1:0)) > 0; /* 出せる語があるか（弱点・復習due・新規のいずれか） */
   const answered = (w)=>{ const st=state.words[w.i]; return st && ((st.cSeen||0)+(st.wSeen||0))>0; };
   const stockCount = allWords().filter(w=>{ const st=state.words[w.i]; return st && st.inReview!==false; }).length;
   const weakCount = allWords().filter(isWeakWord).length;   /* 【P23-C】判定を共通関数に集約 */
@@ -5024,18 +5017,13 @@ function renderHome(){
   <div class="panel">
     <h2>学習</h2>
     <div class="queue-row">
-      <div class="queue-box review"><div class="num">${revs.length}</div><div class="lbl">今日の復習対象</div></div>
       <div class="queue-box"><div class="num">${stockCount}</div><div class="lbl">ストック総数</div></div>
     </div>
     ${hasActive ? `<button class="btn-primary" id="resumeBtn">▶ 続きから再開（${(a.pos||0)+1}/${a.order.length}）</button>
       <button class="btn-ghost" id="newBtn">新規開始</button>`
-    : (revs.length>0
-      ? `<button class="btn-primary" id="startBtn">学習を始める</button>
-         ${anyStockableWords() ? `<button class="btn-ghost" id="addNewBtn">新しい単語を追加する（${state.settings.newPerDay}語）</button>` : ``}`
-      : (anyStockableWords()
-        ? `<p class="note" style="margin:6px 0 10px">今日のノルマは完了しました。</p>
-           <button class="btn-primary" id="extraBtn">追加でもっと学習する</button>`
-        : `<p class="note" style="margin:6px 0 10px">今日のノルマは完了しました。すべての単語がストック済みです。</p>`))}
+    : (hasStudy
+      ? `<button class="btn-primary" id="startBtn">学習を始める</button>`
+      : `<p class="note" style="margin:6px 0 10px">今日出せる単語がありません。またあとで開いてみてください。</p>`)}
   </div>
 
   <div class="panel">
@@ -5077,19 +5065,9 @@ function renderHome(){
     document.getElementById("resumeBtn").onclick = ()=>resumeSession();
     document.getElementById("newBtn").onclick = ()=>{ state.activeSession=null; startSession("review"); };
   }else{
+    /* 【P33】「学習を始める」＝1チャンク開始（buildChunk が復習優先＋不足分の新規補充を行う）。
+       旧・案Y（extraBtn/addNewBtn）は撤去し、追加投入は完了画面の「もう1チャンク」に統合した。 */
     const startB=document.getElementById("startBtn"); if(startB) startB.onclick = ()=>startSession("review");
-    const eb=document.getElementById("extraBtn"); if(eb) eb.onclick = ()=>{ stockExtra(state.settings.newPerDay||10); startSession("review"); };
-    /* 【P20 案Y】未達成中でも、利用者が明示的に望んだときは新しい単語を追加できる。
-       K-1（未消化が残る間は新規を積まない）は「自動では積まない」という制御であり、
-       利用者の明示操作まで禁じるものではない、という総司令の裁定に基づく。
-       ここでは学習を始めず、ホームを描き直して「今日の復習対象」が増えたことを見せる。 */
-    const ab=document.getElementById("addNewBtn"); if(ab) ab.onclick = ()=>{
-      const n = state.settings.newPerDay || 10;
-      if(!confirm(`新しい単語を${n}語ぶん追加します。今日の学習量が増えます。よろしいですか？`)) return;
-      const added = stockExtra(n);
-      renderHome();
-      if(added === 0) alert("追加できる新しい単語がありませんでした。");
-    };
   }
   const wb=document.getElementById("weakBtn"); if(wb) wb.onclick = ()=>{ state.activeSession=null; startSession("weak"); };
   if(ps){
@@ -5636,6 +5614,18 @@ function makePosQuiz(w){
   }
   return { blanks:idxs, quizzes };
 }
+/* セッションのキュー要素を1つ作る（choice→write の初期状態）。buildQueue と buildChunk で共用。 */
+function makeQueueItem(id){
+  const w = byId(id);
+  return {
+    id,
+    quiz: makePosQuiz(w),
+    stage:"quiz", picks:{}, confirmed:{}, choiceDone:false, choiceOk:null,
+    cTries:0, cPassed:false, cFailed:false,
+    answeredWrite:false, writeOk:null,
+    wTries:0, wPassed:false, wFailed:false
+  };
+}
 function buildQueue(mode){
   let ids;
   if(mode === "weak"){
@@ -5646,29 +5636,50 @@ function buildQueue(mode){
   }else{
     ids = dueReviews().map(w=>({id:w.i}));
   }
-  return ids.map(x=>{
-    const w = byId(x.id);
-    return {
-      id:x.id,
-      quiz: makePosQuiz(w),
-      stage:"quiz", picks:{}, confirmed:{}, choiceDone:false, choiceOk:null,
-      cTries:0, cPassed:false, cFailed:false,
-      answeredWrite:false, writeOk:null,
-      wTries:0, wPassed:false, wFailed:false
-    };
-  });
+  return ids.map(x=>makeQueueItem(x.id));
+}
+/* 【P33】チャンク構成則：1チャンク＝設定N問を優先度順で最大N問選ぶ。
+   優先度：弱点(isWeakWord) → 通常の復習due(弱点以外) → 新規(未ストック語)。
+   復習(弱点＋due)が残る限り復習で埋め、不足分だけ新規を stockFill で補充する（K-1の精神を構成則に内包）。
+   定着済(mastered)は dueReviews が既に除外しているので出さない。 */
+function buildChunk(){
+  const N = Math.max(1, state.settings.newPerDay || 30);
+  const picked = [];
+  const seen = new Set();
+  const push = id => { if(!seen.has(id)){ seen.add(id); picked.push(id); } };
+  /* ① 弱点（苦手）を優先 */
+  for(const w of allWords().filter(isWeakWord)){
+    if(picked.length >= N) break;
+    push(w.i);
+  }
+  /* ② 通常の復習due（弱点以外）。dueReviews は既に優先度順に並んでいる。 */
+  if(picked.length < N){
+    for(const w of dueReviews()){
+      if(picked.length >= N) break;
+      push(w.i);   // 弱点で既に入った語は seen で自動スキップ
+    }
+  }
+  /* ③ 不足分だけ新規を補充してから、その新規を対象へ加える */
+  if(picked.length < N){
+    const need = N - picked.length;
+    stockFill(need);                       // 未ストック語を need 語だけストック（実際に足りなければそのぶんだけ）
+    /* stockFill 直後、まだキューに入っていない未定着・未回答の新規を拾う（due到来を待たず今チャンクで出す） */
+    for(const w of dueReviews()){          // ストック直後の新規は due<=today で dueReviews に載る
+      if(picked.length >= N) break;
+      push(w.i);
+    }
+  }
+  return picked.map(id=>makeQueueItem(id));
 }
 function startSession(mode){
-  const queue = buildQueue(mode||"review");
+  const m = mode || "review";
+  /* 【P33】通常学習(review)はチャンク制。苦手モード(weak)は従来どおり全弱点をキュー化。 */
+  const queue = (m === "weak") ? buildQueue("weak") : buildChunk();
   if(queue.length===0) return;
   /* block: choice→write。各ブロックで phase: "main"(全語1回目)→"retry"(間違えた語の2回目) */
-  /* 【P23-B】出題順を完全シャッフルする（オーナー裁定＝案2）。
-     従来は order が恒等順で、dueReviews() のタイブレークが収録番号順（a.i-b.i）だったため、
-     レベル内アルファベット順がそのまま出題順になっていた。順序を覚えられると定着判定が歪む。
-     完全シャッフルにより、新規語と復習語が混ざって出題され、本当に苦手な語があぶり出される。
-     queue そのものと dueReviews() の戻り値は変更していない（K-1 が .length を使うため）。 */
+  /* 【P23-B】出題順を完全シャッフルする（オーナー裁定＝案2）。 */
   session = { queue, block:"choice", phase:"main", order:shuffle(queue.map((_,i)=>i)), pos:0,
-              retry:[], mode:(mode||"review"), counts:{ok:0,ng:0} };
+              retry:[], mode:m, counts:{ok:0,ng:0} };
   saveSession();
   renderCard();
 }
@@ -6108,14 +6119,22 @@ function renderDone(){
   state.activeSession = null;
   saveState();
   const label = mode==="weak" ? "苦手モード" : "今回の学習";
+  /* 【P33】次チャンクに出せる語（弱点・復習due・新規のいずれか）が残っているか。残数の数字は出さない。 */
+  const more = (allWords().filter(isWeakWord).length + dueReviews().length + (anyStockableWords()?1:0)) > 0;
   app.innerHTML = `
     <div class="panel done-card">
       <div class="stamp">完了</div>
       <h2 style="font-family:var(--serif);font-size:1.1rem;margin-bottom:8px">${label}が終了</h2>
       <div class="done-stats">${mode==="review" ? `定着 ◎ ${c.ok}　未定着 ✕ ${c.ng}` : `◎ ${c.ok}　✕ ${c.ng}`}<br>連続 ${streak()} 日目。</div>
-      <button class="btn-primary" id="homeBtn">ホームに戻る</button>
+      ${more
+        ? `<button class="btn-primary" id="againBtn">もう1チャンク</button>
+           <button class="btn-ghost" id="homeBtn">ホームに戻る</button>`
+        : `<p class="note" style="margin:6px 0 12px">今日はここまで。おつかれさまでした。</p>
+           <button class="btn-primary" id="homeBtn">ホームに戻る</button>`}
     </div>`;
   document.getElementById("homeBtn").onclick = renderHome;
+  const ab = document.getElementById("againBtn");
+  if(ab) ab.onclick = ()=>startSession("review");   /* 【P33】もう1チャンク＝buildChunk 再実行 */
 }
 
 /* ---- 単語一覧（判定に一切関与しない全単語の閲覧）---- */
@@ -6542,7 +6561,7 @@ function renderSettings(){
   <div class="panel"><div class="inner">
     <div class="setting-row"><span>ニックネーム</span>
       <input type="text" id="setNick" maxlength="20" value="${esc(state.settings.nickname||"")}" placeholder="未設定"></div>
-    <div class="setting-row"><span>学習モード：1日に増える新しい単語の数</span>
+    <div class="setting-row"><span>1回の出題数</span>
       <input type="number" id="setNew" min="5" max="100" value="${state.settings.newPerDay}"></div>
     <div class="setting-row"><span>難易度</span>
       <select id="setDiff">${[1,2,3,4,5].map(n=>`<option value="${n}" ${chunkStars()===n?"selected":""}>${"★".repeat(n)}${"☆".repeat(5-n)}</option>`).join("")}</select></div>
@@ -6621,12 +6640,12 @@ function renderAbout(){
     <p class="note"><strong>左上の本アイコン</strong>＝単語一覧を開きます。<br>
     <strong>右上の☰</strong>＝メニュー（設定・単語データの追加・アプリの説明）。<br>
     <strong>日付の下</strong>＝格言や豆知識（毎回変わります）。<br>
-    <strong>「学習」</strong>＝1日のノルマ。今日の復習対象とストック総数、開始ボタンが並びます。</p>
+    <strong>「学習」</strong>＝1回ぶんの学習（1チャンク）。ストック総数と開始ボタンが並びます。</p>
     ${shot("home_bottom","ホーム画面（下部）")}
     <p class="note"><strong>品詞モード</strong>と<strong>レベル別進捗</strong>。進捗バーの数字は左から「定着済／復習中／収録」です。</p>
 
     <h2>モードの種類</h2>
-    <p class="note"><strong>学習</strong>＝1日のノルマ。選択式と記述式で定着を判定します。<br>
+    <p class="note"><strong>学習</strong>＝1回ぶん（1チャンク）の学習。選択式と記述式で定着を判定します。復習を優先し、足りない分だけ新しい単語が加わります。<br>
     <strong>苦手モード</strong>＝正答率60%未満の単語を集中的に演習（復習期日とは無関係）。<br>
     <strong>品詞モード</strong>＝品詞をすべて選ぶモード。記録なし。<br>
     <strong>単語一覧</strong>＝全単語を閲覧。</p>
@@ -6689,10 +6708,10 @@ function renderAbout(){
 
     <h2>設定について</h2>
     ${shot("settings","設定")}
-    <p class="note"><strong>1日に増える新しい単語の数</strong>＝学習モードで毎日あらたに学習対象へ加わる単語の数。<br>
+    <p class="note"><strong>1回の出題数</strong>＝「学習」を1回始めたときに出る問題数（1チャンク）。復習を優先して埋め、足りない分だけ新しい単語が加わります。変更は次の1チャンクから反映されます。<br>
     <strong>難易度</strong>＝出題される単語のレベルの上限（☆が高いほど難しい単語まで）。<br>
     <strong>音声の読み上げ速度</strong>＝発音を聞くときの速さ。<br>
-    <strong>品詞モードの1回の問題数</strong>＝品詞モードを1回始めたときの出題数。学習モードの「新しい単語の数」とは別の、品詞モード専用の設定です。</p>
+    <strong>品詞モードの1回の問題数</strong>＝品詞モードを1回始めたときの出題数。学習の「1回の出題数」とは別の、品詞モード専用の設定です。</p>
 
     <h2>難易度と空欄について</h2>
     <p class="note">難易度☆を設定すると、そのレベル以下の単語が出題されます（☆が高いほど、より難しい単語まで含まれます）。設定した範囲の単語をすべて学習し終えると、自動的に次のレベルへ上がります。なお<strong>復習は、難易度の設定に関係なく</strong>出題されます。<br>
