@@ -474,13 +474,10 @@
     </div>
     <div class="home-body">
       <div class="kotoba-card" id="kotobaCard" role="button" tabindex="0" aria-label="格言（タップで別の一枚に更新）"></div>
-      <div class="home-progress"><span id="remainLabel">今日の残り</span> <b id="remain">10</b> / <b id="quotaLabel">10</b> 語</div>
       <div class="home-actions">
-        <button class="homebtn primary" id="btnToday" type="button">今日の学習を始める</button>
-        <button class="homebtn" id="btnExtra" type="button" hidden>追加でもっと学習</button>
+        <button class="homebtn primary" id="btnToday" type="button">学習を始める</button>
         <button class="homebtn" id="btnWeak" type="button">苦手を復習</button>
         <button class="homebtn" id="btnJodoshi" type="button">助動詞を学ぶ</button>
-        <button class="homebtn subtle" id="btnRedoToday" type="button" hidden>今日の学習をやり直す</button>
       </div>
     </div>
     <!-- P26：PWAへの導線。ブラウザで開いているときだけ出す（PWAで開いていれば JS が hidden にする）。
@@ -537,6 +534,7 @@
     <!-- 終了 -->
     <div class="body end" id="end" hidden>
       <p class="endmsg">学習はここまで</p>
+      <button class="homebtn primary" id="btnMoreChunk" type="button" hidden>もう1チャンク</button>
       <button class="restart" id="toHome" type="button">ホームへ戻る</button>
     </div>
 
@@ -682,7 +680,7 @@
         </div>
         <!-- 2) 出題数の設定 -->
         <div class="set-group">
-          <div class="set-label">今日のノルマ（1日に増えるストック数）</div>
+          <div class="set-label">1回の出題数</div>
           <select class="ref-sort" id="setQuota"></select>
           <div class="set-hint" id="setQuotaMsg" hidden></div>   <!-- 追補：いつ反映されるかを明示 -->
         </div>
@@ -731,19 +729,17 @@
       <line class="cs-ink" x1="262" y1="24" x2="280" y2="24" stroke-width="2"/>
       <line class="cs-ink" x1="262" y1="30" x2="280" y2="30" stroke-width="2"/>
       <line class="cs-ink" x1="262" y1="36" x2="280" y2="36" stroke-width="2"/>
-      <text class="cf-sub" x="150" y="66" font-size="11" text-anchor="middle" font-family="sans-serif">今日ののこり　7 / 10 語</text>
-      <rect class="cf-shu" x="60" y="78" width="180" height="18" rx="9"/><text class="cf-white" x="150" y="91" font-size="10" text-anchor="middle" font-family="sans-serif">今日の学習を始める</text>
-      <rect class="cf-field cs-line" x="60" y="102" width="180" height="16" rx="8"/><text class="cf-ink" x="150" y="114" font-size="9" text-anchor="middle" font-family="sans-serif">追加でもっと学習</text>
-      <rect class="cf-field cs-line" x="60" y="122" width="180" height="16" rx="8"/><text class="cf-ink" x="150" y="134" font-size="9" text-anchor="middle" font-family="sans-serif">苦手を復習</text>
+      <rect class="cf-shu" x="60" y="84" width="180" height="18" rx="9"/><text class="cf-white" x="150" y="97" font-size="10" text-anchor="middle" font-family="sans-serif">学習を始める</text>
+      <rect class="cf-field cs-line" x="60" y="108" width="180" height="16" rx="8"/><text class="cf-ink" x="150" y="120" font-size="9" text-anchor="middle" font-family="sans-serif">苦手を復習</text>
+      <rect class="cf-field cs-line" x="60" y="128" width="180" height="16" rx="8"/><text class="cf-ink" x="150" y="140" font-size="9" text-anchor="middle" font-family="sans-serif">助動詞を学ぶ</text>
     </svg>
     <div class="cap">ホーム画面（模式図）</div>
   </div>
-  <p><b>左上の本の形のアイコン</b>＝単語一覧（全語の閲覧）。<b>右上の☰</b>＝メニュー（設定・アプリの説明・単語追加・ログイン）。<b>のこり X / ノルマ数 語</b>＝今日のノルマの残り。下に3つのモードボタンが並びます。</p>
+  <p><b>左上の本の形のアイコン</b>＝単語一覧（全語の閲覧）。<b>右上の☰</b>＝メニュー（設定・アプリの説明・単語追加・ログイン）。下にモードボタンが並びます。</p>
 
   <h2>モードの種類</h2>
-  <p><b>今日の学習</b>＝1日のノルマ（既定10語。設定で10〜50語に変更できます）。ここだけが定着と復習スケジュールを進めます。<br>
-  <b>追加でもっと学習</b>＝ノルマ達成後の追加練習（正答率だけ数え、スケジュールは進めません）。<br>
-  <b>苦手を復習</b>＝正答率60%以下の語を集中演習（同じく正答率だけ）。<br>
+  <p><b>学習を始める</b>＝1回ぶんの出題（既定10問。設定で10〜50問に変更できます）。復習の期日が来た語を優先し、足りないぶんを新しい語で補います。ここだけが定着と復習スケジュールを進めます。学習後に<b>「もう1チャンク」</b>でさらに続けられます。<br>
+  <b>苦手を復習</b>＝正答率60%以下の語を集中演習（正答率だけ数え、スケジュールは進めません）。<br>
   <b>単語一覧</b>＝全語を辞書のように閲覧。</p>
 
   <h2>学習の流れ</h2>
@@ -792,7 +788,7 @@
   <p class="sub">各語の左上の <span class="tag">Lv.3</span> は<b>難易度</b>の目安です（Lv.1が基本、数字が大きいほど難関入試向けの語）。</p>
 
   <h2>定着判定</h2>
-  <p>「今日の学習」で正解するたびに定着度が1つ上がり（1日1回まで）、<b>3回連続で定着すると「定着済」</b>になります。定着済のあとでも復習で間違えると定着済から外れ、復習中に戻ります（忘却曲線に忠実に、降格あり）。正答率だけを数える「追加でもっと」「苦手を復習」は、定着やスケジュールには影響しません。</p>
+  <p>「学習を始める」（本学習）で正解するたびに定着度が1つ上がり（1日1回まで）、<b>3回連続で定着すると「定着済」</b>になります。定着済のあとでも復習で間違えると定着済から外れ、復習中に戻ります（忘却曲線に忠実に、降格あり）。正答率だけを数える「苦手を復習」は、定着やスケジュールには影響しません。</p>
 
   <h2>語誌（コアイメージ）について</h2>
   <p>語の中心にある「核となるイメージ」や成り立ちです。たとえば「ものものし」の“重々しく厳めしい”という芯をつかむと、良い意味（堂々としている）と悪い意味（おおげさだ）が1本でつながり、覚えやすくなります。</p>
@@ -954,7 +950,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-14d";
+const APP_VERSION = "2026-07-16a";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -6247,12 +6243,12 @@ function normalizeSettings(s) {
   };
 }
 function ensureSettings(state) { state.settings = normalizeSettings(state.settings); return state.settings; }
-/* 今日のノルマ語数。当日の実効ノルマ（todayQuota）があればそれを、無ければ設定値を返す。
-   ★純粋関数（書き込みは一切しない）。todayQuota は日付が変わると ensureToday が null に戻すため、翌日は設定値に自動追随する。 */
+/* 1チャンクの問題数。設定値（settings.quota）を返す純粋関数（書き込みなし）。 */
 function quotaOf(state) {
-  if (state && typeof state.todayQuota === "number" && state.todayQuota > 0) return state.todayQuota;
   return (state && state.settings && state.settings.quota) || DAILY_QUOTA;
 }
+// P33：1チャンクの問題数＝設定値（settings.quota、無ければ DAILY_QUOTA=10）。
+// 旧 todayQuota は読まない（チャンク制へ移行。todayQuota は保存・マージ・リセットはされるが誰も読まない死フィールド）。
 function jodoshiCountOf(state) { return (state && state.settings && state.settings.jodoshiCount) || 10; }   // 助動詞1回の出題数
 
 /* 日付を「年-月-日」文字列に（時刻は持たない）。テストでは Date を渡せる。 */
@@ -6679,40 +6675,42 @@ function selectDailyWords(state, opts) {
   const today = o.date || todayStr();
   const limit = (o.limit == null) ? quotaOf(state) : o.limit;
 
-  // WP5-D：新規枠 g4 は「割り当てられた新規（newAssign.ids）のうち未回答」だけに限定
-  const assignedSet = {};
-  (state.newAssign && Array.isArray(state.newAssign.ids) ? state.newAssign.ids : []).forEach(function (i) { assignedSet[i] = true; });
-
-  const g1 = [], g2 = [], g3 = [], g4 = [];
-  for (const w of allWords()) {              // KOBUN_WORDS は i 昇順
+  // P33：チャンク制。復習を優先度順に limit まで詰め、不足分だけ新規で補充する。
+  //   ・日次割当セット（newAssign）に依存しない＝毎チャンクを現在のSRS状態から新鮮に計算する。
+  //   ・これにより「残数が翌日へ積み上がる簿記」が構造ごと無くなる。
+  const g1 = [], g2 = [], g3 = [];
+  for (const w of allWords()) {                 // KOBUN_WORDS は i 昇順
     const p = state.prog[w.i] || emptyProgress();
-    if (p.lastAnswered === today) continue;   // 今日すでに答えた語は除外
+    if (p.lastAnswered === today) continue;      // 今日すでに答えた語は除外（1日1回）
     const st = wordStatus(p);
-    if (st === "未出題") {
-      if (assignedSet[w.i] && p.lastAnswered === null) g4.push(w); // 割り当てられた新規のみ（未回答）
-      continue;
-    }
-    if (!isDueBy(p, today)) continue;         // 期日が来ていない復習中/定着済は通常ノルマに入れない
-    if (st === "復習中") {
-      if (isWeakRate(p)) g1.push(w);          // ① 期日・復習中・60%以下
-      else               g2.push(w);          // ② 期日・復習中・60%超
-    } else {                                   // 定着済
-      g3.push(w);                              // ③ 期日・定着済
-    }
+    if (st === "未出題") continue;               // ★新規は後で補充（旧：割当セット依存を廃止）
+    if (!isDueBy(p, today)) continue;            // 期日前の復習中/定着済は入れない
+    if (st === "復習中") { if (isWeakRate(p)) g1.push(w); else g2.push(w); }
+    else g3.push(w);                             // 定着済（再確認）
   }
-  /* P23：出題【順序】だけを混ぜる。
-     ・顔ぶれは従来と完全に同一（take を i 順で切り出してから shuffle するため）。
-       ★先に shuffle してから slice すると顔ぶれが変わる。順序を逆にしないこと。
-     ・グループ順（g1→g2→g3→g4）は保つ（弱い復習語を先に出す設計を壊さない）。 */
-  const groups = [g1, g2, g3, g4];
+
+  // ① 復習を優先度順（g1→g2→g3）に limit まで。各群内は提示順シャッフル（P23）。
   const out = [];
   let remain = limit;
-  for (const g of groups) {
+  for (const g of [g1, g2, g3]) {
     if (remain <= 0) break;
-    const take = g.slice(0, remain);        // 入る分（i順のまま＝顔ぶれは従来と同一）
-    out.push(...shuffle(take.slice()));     // 入った分だけをグループ内でシャッフル
+    const take = g.slice(0, remain);            // i順で切り出す＝顔ぶれは決定的
+    out.push(...shuffle(take.slice()));         // 入った分だけ順序を混ぜる
     remain -= take.length;
   }
+
+  // ② 不足分を新規で補充（P27：レベル昇順→レベル内ランダムで選定）。
+  if (remain > 0) {
+    const chosen = {};
+    out.forEach(function (w) { chosen[w.i] = true; });
+    const byI = {};
+    allWords().forEach(function (w) { byI[w.i] = w; });
+    const newWords = pickNewIds(state, remain, chosen)
+      .map(function (i) { return byI[i]; })
+      .filter(Boolean);
+    out.push(...shuffle(newWords.slice()));      // 提示順はシャッフル（P23と整合）
+  }
+
   return out;
 }
 
@@ -6831,7 +6829,7 @@ document.addEventListener("DOMContentLoaded", function () {
   var endEl = byId("end");
   // 機能5骨格：画面・ホームの部品
   var homeScreen = byId("homeScreen"), quizScreen = byId("quizScreen"), refScreen = byId("refScreen"), jodoshiMenuScreen = byId("jodoshiMenuScreen"), jodoshiQuizScreen = byId("jodoshiQuizScreen");
-  var remainEl = byId("remain"), toastEl = byId("toast");
+  var toastEl = byId("toast");   // P33：remainEl（残数表示）は撤去済みのため宣言も削除
   var refSearch = byId("refSearch"), refSort = byId("refSort"), refList = byId("refList");
 
   // 記録（state）はアプリ全体で1つだけ作り、ホーム／クイズで共有する。
@@ -6915,19 +6913,12 @@ document.addEventListener("DOMContentLoaded", function () {
     return !!(ss && Array.isArray(ss.ids) && typeof ss.idx === "number" && ss.idx < ss.ids.length);
   }
   function refreshHome() {
-    var today = ensureToday(state);               // 日付が変われば todayCount=0
-    ensureDailyAssignment(state, today);          // WP5-C：日次の新規割り当て（1日最大1回）
-    flush(state);                                 // 割り当ての変化を保存（_dirty のときだけ書き込み）
-    var rl = byId("remainLabel"); if (rl) rl.textContent = state.carryOver ? "前回の残り" : "今日の残り"; // WP5-E：ラベル切替
-    remainEl.textContent = Math.max(0, quotaOf(state) - (state.todayCount || 0));
-    var qlab = byId("quotaLabel"); if (qlab) qlab.textContent = quotaOf(state); // ノルマ分母も反映
+    ensureToday(state);                           // 日付が変われば todayCount=0／todayQuota=null
+    flush(state);                                 // 変化があれば保存（_dirty のときだけ書き込み）
+    // P33：残数表示（home-progress）は撤去済み。日次割当（ensureDailyAssignment）も呼ばない。
     var btn = byId("btnToday");
     if (hasResumable()) btn.textContent = "学習を続ける（" + (state.session.idx + 1) + "問目 / " + state.session.ids.length + "問）";
-    else btn.textContent = "今日の学習を始める";
-    // A：追加でもっと学習は、今日のノルマ（10問）達成後だけ表示
-    var ex = byId("btnExtra"); if (ex) ex.hidden = !isNormDone(state);
-    // B1：今日の進み（回答済み or 中断セッション）がある時だけ「今日の学習をやり直す」を表示
-    var rr = byId("btnRedoToday"); if (rr) rr.hidden = !((state.todayCount || 0) > 0 || hasResumable());
+    else btn.textContent = "学習を始める";
   }
   // 語リスト → 画面配列（1語＝1画面。両極性語も1画面）
   function buildScreens(words) {
@@ -7131,10 +7122,21 @@ document.addEventListener("DOMContentLoaded", function () {
   // ---- 次へ／終了 ----
   nextBtn.addEventListener("click", function () {
     idx++;
-    if (idx >= total) { if (quizMode === "norm") { state.session = null; } markDirty(); flush(state); saveCloud(); clearGraded(); cardEl.hidden = true; kaisetuEl.hidden = true; endEl.hidden = false; window.scrollTo(0, 0); }
+    if (idx >= total) {
+      if (quizMode === "norm") { state.session = null; } markDirty(); flush(state); saveCloud(); clearGraded();
+      cardEl.hidden = true; kaisetuEl.hidden = true; endEl.hidden = false;
+      // P33：次に出せるチャンクがあるときだけ「もう1チャンク」を出す（無ければ隠す＝静かに待つ）。
+      var moreW = selectDailyWords(state);
+      byId("btnMoreChunk").hidden = (buildScreens(moreW).length === 0);
+      window.scrollTo(0, 0);
+    }
     else render();
   });
 
+  // P33：終了画面「もう1チャンク」。norm（定着・復習スケジュールを進める本学習）で次の1チャンクを始める。
+  byId("btnMoreChunk").addEventListener("click", function () {
+    launchQuiz(selectDailyWords(state), "今は出題できる語がありません。復習の期日が来た語から、またご案内します。", "norm");
+  });
   // 終了画面「ホームへ戻る」
   byId("toHome").addEventListener("click", function () { flush(state); saveCloud(); clearGraded(); showScreen("home"); refreshHome(); });
   // 修正2：出題中の左上ホームボタン → ホームへ戻る（残り語数も更新）
@@ -7348,20 +7350,11 @@ document.addEventListener("DOMContentLoaded", function () {
   // ホームのボタン配線
   byId("btnToday").addEventListener("click", function () {
     if (hasResumable()) { resumeSessionIfAny(); }       // 中断した続きから
-    else { launchQuiz(selectDailyWords(state)); }        // 新しく今日の10問
+    else { launchQuiz(selectDailyWords(state)); }        // 新しく1チャンク
   });
-  byId("btnExtra").addEventListener("click", function () { launchQuiz(selectExtraWords(state), "追加で学習できる語が今はありません", "extra"); });
   byId("btnWeak").addEventListener("click", function () { launchQuiz(selectWeakWords(state), "今は苦手な語がありません", "extra"); }); // ④苦手モード（extra）
-  // B1：今日の学習をやり直す（非破壊。今日ののこりと進行中チャンクだけ戻す。定着度・正答率は残す）
-  byId("btnRedoToday").addEventListener("click", async function () {
-    var ok = await askConfirm({
-      msg: "今の10問の進みと『今日ののこり』をやり直します。これまでに覚えた度合い（定着度）や正答率は残ります。よろしいですか？",
-      okLabel: "やり直す", cancelLabel: "やめる"
-    });
-    if (!ok) return;
-    state.todayCount = 0; state.session = null;   // ここだけ戻す（各語の prog は一切触らない）
-    markDirty(); flush(state); refreshHome();
-  });
+  // P33：btnExtra（追加でもっと学習）と btnRedoToday（今日の学習をやり直す）は撤去。
+  //   DOMと対でハンドラも削除した（片方だけ残すと byId(...) が null で addEventListener が落ちるため）。
   byId("menuBtn").addEventListener("click", function () { openMenu(); });   // ②メニューを開く
   /* WP15（Q2 承認済み）：☰ を開いたときに未読返信を再チェック（60秒スロットル）。
      アプリを開いたままでも、メニューを開けば返信の赤ドットに気づける。既存のリスナは触らず、別に足す。 */
@@ -7762,35 +7755,12 @@ document.addEventListener("DOMContentLoaded", function () {
     markDirty(); flush(state);
     var m = byId("setNickMsg"); m.hidden = false; setTimeout(function(){ m.hidden = true; }, 1600);
   });
-  byId("setQuota").addEventListener("change", function(){   // 今日のノルマ → 保存＋ホーム反映
+  byId("setQuota").addEventListener("change", function(){   // P33：1回の出題数 → 保存＋ホーム反映
     ensureSettings(state);
-    var v = parseInt(this.value, 10); if(QUOTA_CHOICES.indexOf(v) < 0) v = 10;
-    /* 案A（Q1・Q3 裁定）：
-       old    = 変更「前」の実効ノルマ数（★settings.quota を書き換える前に退避する）
-       locked = 今日すでに達成 → 当日は増減とも据え置き（翌日から反映）
-       carried= 持ち越し日 → 増枠のみ当日据え置き（減枠は即日反映）
-       それ以外（通常日）→ 当日も新値。消化数が新ノルマ以上なら即達成、増枠なら不足分を top-up。 */
-    ensureToday(state);
-    var old     = (typeof state.todayQuota === "number" && state.todayQuota > 0) ? state.todayQuota : quotaOf(state);
-    var today   = todayStr();
-    var locked  = (state.normDoneDate === today);
-    var carried = (state.carryOver === true);
-    state.settings.quota = v;                                  // 設定値は常に更新（翌日以降はこれが効く）
-    if (locked) {
-      state.todayQuota = old;                                  // 分岐1：凍結（旧セーブ＝todayQuota が null でも達成が巻き戻らない）
-      showQuotaMsg("本日は達成済みのため、明日のぶんから反映されます");
-    } else if (carried && v > old) {
-      state.todayQuota = old;                                  // 分岐2：持ち越し日の増枠は当日据え置き（達成不可能な日を作らない）
-      showQuotaMsg("前回の残りがあるため、増やしたぶんは明日のぶんから反映されます");
-    } else {
-      state.todayQuota = v;                                    // 分岐3：当日も新値
-      if (state.todayCount >= v) { state.normDoneDate = today; state.carryOver = false; }   // 即達成
-      else if (!carried && v > old) { ensureDailyAssignment(state, today); }                // 通常日の増枠 → top-up
-      showQuotaMsg(isNormDone(state) && state.normDoneDate === today
-                   ? "本日のぶんに反映し、達成となりました"
-                   : "本日のぶんに反映しました");
-    }
+    var v = parseInt(this.value, 10); if (QUOTA_CHOICES.indexOf(v) < 0) v = 10;
+    state.settings.quota = v;
     markDirty(); flush(state); refreshHome();
+    showQuotaMsg("次の学習から反映されます");
   });
   byId("setJodoshiCount").addEventListener("change", function(){   // 助動詞1回の出題数 → 保存
     ensureSettings(state);
