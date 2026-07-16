@@ -4386,7 +4386,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.16.23.10";
+const APP_VERSION = "2026.07.16.23.20";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -5922,9 +5922,9 @@ function choiceSelect(k, o){
   // 別の肢／初回 → 選択（乗り換え）。仕様B：この描画のみスクロール位置を保持して跳ねを防ぐ
   item.picks[k] = o;
   saveSession();
-  const _y = window.scrollY;
+  const _y = window.scrollY; const _pz = document.querySelector(".prompt-zone"); const _pt = _pz ? _pz.scrollTop : 0;
   renderCard();
-  requestAnimationFrame(()=>window.scrollTo(0, _y));  /* P31症状A：レイアウト確定後に位置復元し先頭リセットを防ぐ */
+  requestAnimationFrame(()=>{ window.scrollTo(0, _y); const z = document.querySelector(".prompt-zone"); if(z) z.scrollTop = _pt; });  /* P31症状A：ページ全体＋選択肢枠(.prompt-zone)のスクロール位置をレイアウト確定後に復元 */
 }
 function choiceConfirmBlank(k){
   const item = curItem();
@@ -5937,9 +5937,9 @@ function choiceConfirmBlank(k){
   }else{
     /* P31 C-5：個別確定後の再描画でもスクロール位置を保持（複数選択で他ブランクへ移る際の跳ね対策） */
     saveSession();
-    const _y = window.scrollY;
+    const _y = window.scrollY; const _pz = document.querySelector(".prompt-zone"); const _pt = _pz ? _pz.scrollTop : 0;
     renderCard();
-    requestAnimationFrame(()=>window.scrollTo(0, _y));  /* P31症状A：レイアウト確定後に位置復元し先頭リセットを防ぐ */
+    requestAnimationFrame(()=>{ window.scrollTo(0, _y); const z = document.querySelector(".prompt-zone"); if(z) z.scrollTop = _pt; });  /* P31症状A：ページ全体＋選択肢枠(.prompt-zone)のスクロール位置をレイアウト確定後に復元 */
   }
 }
 function gradeChoice(){
