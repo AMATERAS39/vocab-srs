@@ -4386,7 +4386,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.17.06.50";
+const APP_VERSION = "2026.07.17.09.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4438,7 +4438,7 @@ async function initSupabase(){
 }
 
 let state = {
-  settings:{ newPerDay:30, rate:0.95, difficulty:1, blankCount:"auto" }, // difficulty: 1〜5（☆。Lv.N以下をストック）／blankCount: 複数選択で同時に問う品詞数（"auto"＝従来のrevStageベース）
+  settings:{ newPerDay:30, rate:0.95, difficulty:1, blankCount:"auto", dailyNew:30 }, // difficulty: 1〜5（☆。Lv.N以下をストック）／blankCount: 複数選択で同時に問う品詞数（"auto"＝従来のrevStageベース）／dailyNew: 1日に新しく覚え始める語数（newPerDay=1回の出題数Nと分離）
   words:{},      // id -> {step,due,reps,lapses,mastered,learnedOn,revStage,failStreak,
                  //        cSeen,cCorrect,wSeen,wCorrect}  ※c=選択式 w=記述式
   log:{},        // "YYYY-MM-DD" -> {news,reviews,stocked}
@@ -4557,6 +4557,7 @@ async function loadState(){
       state = Object.assign(state, s);
       if(!Array.isArray(state.custom)) state.custom = [];
       state.settings = Object.assign({newPerDay:30,rate:0.95,difficulty:1,blankCount:"auto"}, s.settings||{});
+      if(state.settings.dailyNew == null) state.settings.dailyNew = state.settings.newPerDay;  /* 【P33是正B】旧stateは newPerDay を dailyNew の既定に（新規ペース不変） */
       delete state.settings.modes; // 旧設定の掃除
       /* 旧difficulty(easy/mid/hard)を☆数値へ移行 */
       if(typeof state.settings.difficulty === "string"){
@@ -4835,6 +4836,9 @@ function accuracy(id){
 /* 回答を1回分記録（リトライ含む・正答率の母数）。kind: "c"(選択式) | "w"(記述式) */
 function recordAnswer(id, kind, ok){
   const st = state.words[id];
+  /* 【P33是正A】その日すでに成績を確定した語（gradedOn===today）は当日反復とみなし、正答率を汚さない。
+     gradedOn 未設定（新規・旧state）は today と異なるため初回扱い（正しく加算される）。 */
+  if(st.gradedOn === todayStr()) return;
   if(kind==="c"){ st.cSeen=(st.cSeen||0)+1; if(ok) st.cCorrect=(st.cCorrect||0)+1; }
   else{ st.wSeen=(st.wSeen||0)+1; if(ok) st.wCorrect=(st.wCorrect||0)+1; }
 }
@@ -4960,7 +4964,7 @@ function renderHome(){
   session = null;
   if(state.activeSession && !state.activeSession.order) state.activeSession = null;
   /* 【P33】stockToday() 呼び出しを撤去（ストックはチャンク開始時に buildChunk→stockFill で行う）。 */
-  const hasStudy = (allWords().filter(isWeakWord).length + dueReviews().length + (anyStockableWords()?1:0)) > 0; /* 出せる語があるか（弱点・復習due・新規のいずれか） */
+  const hasStudy = anyChunkableToday(); /* 【P33是正】出せる語があるか（プール未確定なら due>0 or 新規余地、確定後は未消化の有無） */
   const answered = (w)=>{ const st=state.words[w.i]; return st && ((st.cSeen||0)+(st.wSeen||0))>0; };
   const stockCount = allWords().filter(w=>{ const st=state.words[w.i]; return st && st.inReview!==false; }).length;
   const weakCount = allWords().filter(isWeakWord).length;   /* 【P23-C】判定を共通関数に集約 */
@@ -5140,6 +5144,7 @@ function renderData(){
       state = o.state;
       if(!Array.isArray(state.custom)) state.custom = [];
       state.settings = Object.assign({newPerDay:30,rate:0.95,difficulty:1,posChunk:30,blankCount:"auto"}, state.settings||{});
+      if(state.settings.dailyNew == null) state.settings.dailyNew = state.settings.newPerDay;  /* 【P33是正B】バックアップ復元でも newPerDay を dailyNew の既定に */
       if(typeof state.settings.difficulty === "string"){
         state.settings.difficulty = ({easy:1,mid:2,hard:3})[state.settings.difficulty] || 1;
       }
@@ -5638,42 +5643,61 @@ function buildQueue(mode){
   }
   return ids.map(x=>makeQueueItem(x.id));
 }
-/* 【P33】チャンク構成則：1チャンク＝設定N問を優先度順で最大N問選ぶ。
-   優先度：弱点(isWeakWord) → 通常の復習due(弱点以外) → 新規(未ストック語)。
-   復習(弱点＋due)が残る限り復習で埋め、不足分だけ新規を stockFill で補充する（K-1の精神を構成則に内包）。
-   定着済(mastered)は dueReviews が既に除外しているので出さない。 */
-function buildChunk(){
-  const N = Math.max(1, state.settings.newPerDay || 30);
-  const picked = [];
+/* 【P33是正C】プール制：1日の総量（プール）＝その日の復習due（全部）＋新規M語（固定・1日1回投入）。
+   プールはその日の最初のチャンク開始時に確定し、日付キーで保持（state.log[t].pool / .cursor）。
+   プール順は優先度順（弱点→通常due→新規）。翌日は日付が変われば作り直す。 */
+function ensureTodayPool(){
+  const t = todayStr();
+  if(!state.log[t]) state.log[t] = {news:0, reviews:0};
+  if(Array.isArray(state.log[t].pool)) return state.log[t];   // 既に今日のプール確定済み（冪等）
+  const ids = [];
   const seen = new Set();
-  const push = id => { if(!seen.has(id)){ seen.add(id); picked.push(id); } };
+  const push = id => { if(!seen.has(id)){ seen.add(id); ids.push(id); } };
   /* ① 弱点（苦手）を優先 */
-  for(const w of allWords().filter(isWeakWord)){
-    if(picked.length >= N) break;
-    push(w.i);
+  for(const w of allWords().filter(isWeakWord)) push(w.i);
+  /* ② 通常の復習due（弱点以外）。dueReviews は既に優先度順。 */
+  for(const w of dueReviews()) push(w.i);
+  /* ③ 新規Mを1回だけ投入（M＝dailyNew。未設定は newPerDay を既定）。stockFill 直後 due<=today で拾える。 */
+  const M = state.settings.dailyNew!=null ? state.settings.dailyNew : (state.settings.newPerDay||30);
+  if(M > 0){
+    stockFill(M);
+    for(const w of dueReviews()) push(w.i);   // ストック直後の新規が加わる（既存は seen でスキップ）
   }
-  /* ② 通常の復習due（弱点以外）。dueReviews は既に優先度順に並んでいる。 */
-  if(picked.length < N){
-    for(const w of dueReviews()){
-      if(picked.length >= N) break;
-      push(w.i);   // 弱点で既に入った語は seen で自動スキップ
-    }
-  }
-  /* ③ 不足分だけ新規を補充してから、その新規を対象へ加える */
-  if(picked.length < N){
-    const need = N - picked.length;
-    stockFill(need);                       // 未ストック語を need 語だけストック（実際に足りなければそのぶんだけ）
-    /* stockFill 直後、まだキューに入っていない未定着・未回答の新規を拾う（due到来を待たず今チャンクで出す） */
-    for(const w of dueReviews()){          // ストック直後の新規は due<=today で dueReviews に載る
-      if(picked.length >= N) break;
-      push(w.i);
-    }
-  }
-  return picked.map(id=>makeQueueItem(id));
+  state.log[t].pool = ids;
+  state.log[t].cursor = 0;
+  saveState();
+  return state.log[t];
+}
+/* 【P33是正C】チャンク＝プールの [cursor, cursor+N) を切り出し、cursor を進める。もう1チャンク＝続きの N 問。 */
+function buildChunk(){
+  const t = todayStr();
+  const lg = ensureTodayPool();
+  const N = Math.max(1, state.settings.newPerDay || 30);
+  const pool = lg.pool || [];
+  const start = lg.cursor || 0;
+  const slice = pool.slice(start, start + N);
+  lg.cursor = start + slice.length;   // 実際に出した数だけ進める
+  saveState();
+  return slice.map(id=>makeQueueItem(id));
+}
+/* 【P33是正D】その日のプールに未消化が残っているか（完了画面の「もう1チャンク」出し分け用・残数の数字は出さない）。 */
+function chunkRemaining(){
+  const t = todayStr();
+  const lg = state.log[t];
+  if(!lg || !Array.isArray(lg.pool)) return anyChunkableToday();
+  return (lg.cursor || 0) < lg.pool.length;
+}
+/* まだ今日のプールを作っていない段階での「出せる語があるか」判定（ホームの開始ボタン／穏やかな案内の出し分け）。 */
+function anyChunkableToday(){
+  const t = todayStr();
+  const lg = state.log[t];
+  if(lg && Array.isArray(lg.pool)) return (lg.cursor||0) < lg.pool.length;
+  const M = state.settings.dailyNew!=null ? state.settings.dailyNew : (state.settings.newPerDay||30);
+  return dueReviews().length > 0 || (M > 0 && anyStockableWords());
 }
 function startSession(mode){
   const m = mode || "review";
-  /* 【P33】通常学習(review)はチャンク制。苦手モード(weak)は従来どおり全弱点をキュー化。 */
+  /* 【P33】通常学習(review)はプール制チャンク。苦手モード(weak)は従来どおり全弱点をキュー化。 */
   const queue = (m === "weak") ? buildQueue("weak") : buildChunk();
   if(queue.length===0) return;
   /* block: choice→write。各ブロックで phase: "main"(全語1回目)→"retry"(間違えた語の2回目) */
@@ -5719,10 +5743,18 @@ function nextBlock(){
 /* 全語の定着/未定着を確定し、SRSへ反映 */
 function finalizeSession(){
   const s = session;
+  const t = todayStr();
   for(const item of s.queue){
     const both = item.cPassed && item.wPassed;
     if(s.mode === "review"){
-      finalizeWord(item.id, item.cPassed, item.wPassed);
+      const st = state.words[item.id];
+      /* 【P33是正A】その日初回のチャンクでのみ成績(復習間隔・定着・苦手)を進める。
+         同日の「もう1チャンク」以降の再出題は gradedOn===today なので finalizeWord を呼ばず、純粋な反復練習にする。
+         finalizeWord の判定式そのものは不変（変えるのは「いつ呼ぶか」だけ）。 */
+      if(st && st.gradedOn !== t){
+        finalizeWord(item.id, item.cPassed, item.wPassed);
+        st.gradedOn = t;
+      }
     }
     if(both) s.counts.ok++; else s.counts.ng++;
   }
@@ -6119,8 +6151,8 @@ function renderDone(){
   state.activeSession = null;
   saveState();
   const label = mode==="weak" ? "苦手モード" : "今回の学習";
-  /* 【P33】次チャンクに出せる語（弱点・復習due・新規のいずれか）が残っているか。残数の数字は出さない。 */
-  const more = (allWords().filter(isWeakWord).length + dueReviews().length + (anyStockableWords()?1:0)) > 0;
+  /* 【P33是正D】プールに未消化が残っていれば「もう1チャンク」。苦手モードはプール制の対象外なので出さない。残数の数字は出さない。 */
+  const more = (mode === "review") && chunkRemaining();
   app.innerHTML = `
     <div class="panel done-card">
       <div class="stamp">完了</div>
@@ -6561,6 +6593,8 @@ function renderSettings(){
   <div class="panel"><div class="inner">
     <div class="setting-row"><span>ニックネーム</span>
       <input type="text" id="setNick" maxlength="20" value="${esc(state.settings.nickname||"")}" placeholder="未設定"></div>
+    <div class="setting-row"><span>1日の新しい単語の数</span>
+      <input type="number" id="setDaily" min="0" max="100" value="${state.settings.dailyNew!=null?state.settings.dailyNew:state.settings.newPerDay}"></div>
     <div class="setting-row"><span>1回の出題数</span>
       <input type="number" id="setNew" min="5" max="100" value="${state.settings.newPerDay}"></div>
     <div class="setting-row"><span>難易度</span>
@@ -6609,6 +6643,8 @@ function renderSettings(){
   document.getElementById("saveSet").onclick = async ()=>{
     state.settings.nickname = document.getElementById("setNick").value.trim().slice(0,20);
     state.settings.newPerDay = Math.max(5, Math.min(100, parseInt(document.getElementById("setNew").value)||30));
+    { const dv = document.getElementById("setDaily");
+      if(dv) state.settings.dailyNew = Math.max(0, Math.min(100, parseInt(dv.value)||0)); }
     state.settings.difficulty = Math.max(1, Math.min(5, parseInt(document.getElementById("setDiff").value)||1));
     { const bv = document.getElementById("setBlank").value;
       state.settings.blankCount = (bv === "auto") ? "auto" : Math.max(2, Math.min(5, parseInt(bv)||2)); }
@@ -6708,7 +6744,8 @@ function renderAbout(){
 
     <h2>設定について</h2>
     ${shot("settings","設定")}
-    <p class="note"><strong>1回の出題数</strong>＝「学習」を1回始めたときに出る問題数（1チャンク）。復習を優先して埋め、足りない分だけ新しい単語が加わります。変更は次の1チャンクから反映されます。<br>
+    <p class="note"><strong>1日の新しい単語の数</strong>＝1日に新しく覚え始める単語の数。1日1回だけ投入され、その日の復習と合わせて「今日の学習」になります。<br>
+    <strong>1回の出題数</strong>＝1回で解く問題数。今日の学習（復習＋新しい単語）を、この数ずつに区切って出します。区切りを解き終えるたびに「もう1チャンク」で続きへ進めます。変更は次の区切りから反映されます。<br>
     <strong>難易度</strong>＝出題される単語のレベルの上限（☆が高いほど難しい単語まで）。<br>
     <strong>音声の読み上げ速度</strong>＝発音を聞くときの速さ。<br>
     <strong>品詞モードの1回の問題数</strong>＝品詞モードを1回始めたときの出題数。学習の「1回の出題数」とは別の、品詞モード専用の設定です。</p>
@@ -7201,14 +7238,14 @@ async function doLogout(){
   if(saveTimer){ clearTimeout(saveTimer); saveTimer = null; }
   dirty = false;
   try{ localStorage.removeItem(STORE_KEY); }catch(_){}
-  state = { settings:{ newPerDay:30, rate:0.95, difficulty:1, blankCount:"auto" }, words:{}, log:{}, custom:[], activeSession:null };
+  state = { settings:{ newPerDay:30, rate:0.95, difficulty:1, blankCount:"auto", dailyNew:30 }, words:{}, log:{}, custom:[], activeSession:null };
   clearLastUid();                 /* C-3：ログアウトで記録を消し、再ログイン時に再度確認できるようにする */
   if(sb) await sb.auth.signOut();
 }
 /* ログイン／ログアウト時：未ログイン中の進捗をアカウントへ統合 → 読み直して再描画 */
 async function syncOnAuthChange(){
   const merged = await maybeMigrateOnLogin();
-  state = { settings:{ newPerDay:30, rate:0.95, difficulty:1, blankCount:"auto" }, words:{}, log:{}, custom:[], activeSession:null };
+  state = { settings:{ newPerDay:30, rate:0.95, difficulty:1, blankCount:"auto", dailyNew:30 }, words:{}, log:{}, custom:[], activeSession:null };
   await loadState();
   if(merged){ state = merged; scheduleSave(); }   /* (A-safe) 統合結果を確実に反映し、失敗時も次回saveでクラウドへ */
   migrateReviveOldRecords();   /* 一度きりの旧データ救済（既存レコードのみ・冪等）。ログアウト時は state.words 空で空回り */
