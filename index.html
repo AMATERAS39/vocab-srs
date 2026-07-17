@@ -4386,7 +4386,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.17.09.00";
+const APP_VERSION = "2026.07.17.22.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -5087,18 +5087,46 @@ function renderHome(){
 function renderData(){
   refClose();   /* 【P24】単語一覧を離れたら最下部の帯を戻す */
   session = null;
+  const posOptions = ["自動","他動","名","形","副","句動","熟"];
   app.innerHTML = `
   <header><div><h1>単語データの追加</h1></div>
     <a class="streak" href="#" id="backHome" style="text-decoration:underline">戻る</a></header>
   <div class="panel"><div class="inner">
+    <p class="note">入力欄に単語を1つずつ入れて追加できます。ログイン中なら、承認を経て全員に共有できます。</p>
+    <div class="setting-row"><span>英単語</span>
+      <input type="text" id="fwWord" placeholder="例：achieve" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+    <div class="setting-row"><span>品詞</span>
+      <select id="fwPos">${posOptions.map(p=>`<option value="${p}">${p}</option>`).join("")}</select></div>
+    <div class="setting-row"><span>難易度（1やさしい〜5むずかしい）</span>
+      <select id="fwLevel">${[1,2,3,4,5].map(n=>`<option value="${n}" ${n===3?"selected":""}>${n}</option>`).join("")}</select></div>
+    <div style="margin:4px 0 6px"><span class="note">意味（訳）</span>
+      <div id="fwMeanings">
+        <div class="fw-mrow" style="display:flex;gap:6px;margin-bottom:6px">
+          <input type="text" class="fw-mean" placeholder="例：〜を達成する" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="flex:1 1 auto;min-width:0">
+        </div>
+      </div>
+      <button class="btn-sub" id="fwAddMean" style="margin-top:0">＋意味を追加</button></div>
+    <div style="margin:8px 0 6px"><span class="note">語源・コアイメージ（任意）</span>
+      <textarea id="fwCore" placeholder="例：ad-(〜へ)+... ※任意" style="width:100%;min-height:52px;box-sizing:border-box;font-size:16px;padding:6px 8px;border:1px solid var(--line);border-radius:6px"></textarea></div>
+    <div id="fwPreview" style="margin:10px 0"></div>
+    <button class="btn-primary" id="fwSubmit">この内容で送信</button>
+    <span class="msg" id="fwMsg"></span>
+  </div></div>
+
+  <details class="panel">
+    <summary>上級者向け：JSONで一括追加・バックアップ</summary>
+    <div class="inner">
     <p class="note">以下の形式の JSON 配列を貼り付けると語彙を拡張できます（<code>i</code> は省略可・自動採番、<code>c</code> はコアイメージで省略可）。区分ラベルは <code>自動／他動／名／形／副／句動／熟</code>。訳は文字列、または熟語パターン付きなら <code>[["run out of A","Aを切らす"], "訳"]</code> 形式の配列（パターンは原形で記述）。</p>
     <textarea id="importBox" placeholder='[{"w":"...","l":3,"e":[["他動","..."]]}]'></textarea>
     <button class="btn-sub" id="importBtn">単語を追加</button>
     <button class="btn-sub" id="exportBtn">バックアップを書き出す</button>
     <button class="btn-sub" id="restoreBtn">バックアップから復元</button>
     <span class="msg" id="dataMsg"></span>
-  </div></div>`;
+    </div>
+  </details>`;
   document.getElementById("backHome").onclick = (e)=>{ e.preventDefault(); renderHome(); };
+  /* ==== 初心者向けフォーム（P32-A）==== */
+  bindWordForm();
   document.getElementById("importBtn").onclick = async ()=>{
     const box = document.getElementById("importBox"), msg = document.getElementById("dataMsg");
     try{
@@ -5154,6 +5182,98 @@ function renderData(){
       setTimeout(renderHome, 600);
     }catch(e){ msg.className="msg err"; msg.textContent="復元失敗: "+e.message; }
   };
+}
+
+/* ==== 初心者向け単語追加フォーム（P32-A）==== */
+/* 入力欄から意味（訳）の文字列配列を集める（trim・空除外） */
+function fwCollectMeanings(){
+  return Array.from(document.querySelectorAll("#fwMeanings .fw-mean"))
+    .map(el=>el.value.trim()).filter(Boolean);
+}
+/* プレビューを組み上げて表示（見出し語＋品詞＋訳一覧＋あれば語源） */
+function fwRenderPreview(){
+  const box = document.getElementById("fwPreview");
+  if(!box) return;
+  const w = (document.getElementById("fwWord").value||"").trim();
+  const pos = document.getElementById("fwPos").value;
+  const means = fwCollectMeanings();
+  const core = (document.getElementById("fwCore").value||"").trim();
+  if(!w && means.length===0){ box.innerHTML = ""; return; }
+  box.innerHTML = `<div class="ref-item" style="margin:0">
+    <div class="ref-head"><span class="ref-word">${esc(w||"（英単語）")}</span></div>
+    ${core ? `<div class="ref-core">${esc(core)}</div>` : ""}
+    <div class="ref-ent"><span class="pos-badge">${esc(pos)}</span><span class="meaning">${means.length?esc(means.join("／")):"（意味）"}</span></div>
+  </div>`;
+}
+/* フォームを初期化（次の1語を入れやすく） */
+function fwResetForm(){
+  document.getElementById("fwWord").value = "";
+  document.getElementById("fwPos").selectedIndex = 0;
+  document.getElementById("fwLevel").value = "3";
+  document.getElementById("fwCore").value = "";
+  const wrap = document.getElementById("fwMeanings");
+  wrap.innerHTML = `<div class="fw-mrow" style="display:flex;gap:6px;margin-bottom:6px">
+    <input type="text" class="fw-mean" placeholder="例：〜を達成する" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="flex:1 1 auto;min-width:0"></div>`;
+  wrap.querySelectorAll(".fw-mean").forEach(el=>el.oninput = fwRenderPreview);
+  fwRenderPreview();
+}
+function bindWordForm(){
+  const wordEl = document.getElementById("fwWord");
+  if(!wordEl) return;   // renderData 以外では何もしない
+  wordEl.oninput = fwRenderPreview;
+  document.getElementById("fwPos").onchange = fwRenderPreview;
+  document.getElementById("fwCore").oninput = fwRenderPreview;
+  document.querySelectorAll("#fwMeanings .fw-mean").forEach(el=>el.oninput = fwRenderPreview);
+  /* ＋意味を追加 */
+  document.getElementById("fwAddMean").onclick = ()=>{
+    const wrap = document.getElementById("fwMeanings");
+    const row = document.createElement("div");
+    row.className = "fw-mrow";
+    row.style = "display:flex;gap:6px;margin-bottom:6px";
+    row.innerHTML = `<input type="text" class="fw-mean" placeholder="例：〜を成し遂げる" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="flex:1 1 auto;min-width:0">
+      <button class="btn-sub fw-mdel" style="margin:0;flex:0 0 auto">×</button>`;
+    wrap.appendChild(row);
+    row.querySelector(".fw-mean").oninput = fwRenderPreview;
+    row.querySelector(".fw-mdel").onclick = ()=>{ row.remove(); fwRenderPreview(); };
+    row.querySelector(".fw-mean").focus();
+  };
+  /* 送信 */
+  document.getElementById("fwSubmit").onclick = async ()=>{
+    const msg = document.getElementById("fwMsg");
+    const w = (document.getElementById("fwWord").value||"").trim();
+    const pos = document.getElementById("fwPos").value;
+    const level = Math.max(1, Math.min(5, parseInt(document.getElementById("fwLevel").value)||3));
+    const core = (document.getElementById("fwCore").value||"").trim();
+    const means = fwCollectMeanings();
+    /* 必須検証（送信前に止める） */
+    if(!w){ msg.className="msg err"; msg.textContent="英単語を入力してください"; return; }
+    if(means.length===0){ msg.className="msg err"; msg.textContent="意味を1つ以上入力してください"; return; }
+    if(new Set(allWords().map(x=>x.w.toLowerCase())).has(w.toLowerCase())){
+      msg.className="msg err"; msg.textContent="その単語はすでに登録されています"; return;
+    }
+    /* 組み上げ：entries = [[品詞, [訳1,訳2,...]]]（1品詞） */
+    const entries = [[pos, means]];
+    const maxId = Math.max(...allWords().map(x=>x.i));
+    const entry = { i:maxId+1, w:w, l:level, e:entries };
+    if(core) entry.c = core;
+    state.custom.push(entry);
+    await saveState();
+    /* ログイン中なら word_submissions に insert（既存スキーマに厳密に合わせる） */
+    if(sb && currentUser){
+      try{
+        const row = { word:w, level:level, core:(core||null), entries:entries,
+          submitted_by: currentUser.id, submitter_email: currentUser.email||null,
+          submitter_nickname: (state.settings.nickname||null) };
+        const { error } = await sb.from("word_submissions").insert([row]);
+        if(error){ msg.className="msg err"; msg.textContent="共有申請の送信に失敗しました"; }
+        else{ msg.className="msg"; msg.textContent="送信しました。承認され次第、全員に反映されます"; }
+      }catch(_){ msg.className="msg err"; msg.textContent="共有申請の送信に失敗しました"; }
+    }else{
+      msg.className="msg"; msg.textContent="この単語はあなたの端末に追加しました（ログインすると全員への共有を申請できます）";
+    }
+    fwResetForm();
+  };
+  fwRenderPreview();
 }
 
 
@@ -6612,7 +6732,7 @@ function renderSettings(){
     ${(sb && currentUser) ? `<div class="pw-card">
       <div class="pw-head">🔐 パスワードを設定／変更</div>
       <div class="pw-field">
-        <input type="password" id="setPw" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）">
+        <input type="password" id="setPw" autocomplete="new-password" placeholder="パスワード（8文字以上）">
         <button class="pw-btn" id="setPwBtn">設定</button>
       </div>
       <span class="msg" id="setPwMsg"></span>
@@ -6875,7 +6995,7 @@ function ensureAuthDom(){
               <button class="send" id="signupVerifyBtn">コードを確認する</button>
             </div>
             <div id="signupPwRow" style="display:none">
-              <input type="password" id="signupPwNew" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）">
+              <input type="password" id="signupPwNew" autocomplete="new-password" placeholder="パスワード（8文字以上）">
               <button class="send compact" id="signupPwBtn">パスワードを設定して完了</button>
               <div class="pwlinks">
                 <button class="linkbtn" id="signupPwSkip">あとで設定する</button>
@@ -7199,7 +7319,7 @@ function ensurePwResetDom(){
     <div class="card">
       <h3>新しいパスワードの設定</h3>
       <p class="sub">再設定リンクから開きました。新しいパスワードを入力してください。</p>
-      <input type="password" id="pwResetInput" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）">
+      <input type="password" id="pwResetInput" autocomplete="new-password" placeholder="パスワード（8文字以上）">
       <button class="send" id="pwResetBtn">パスワードを更新する</button>
       <div class="msg" id="pwResetMsg"></div>
     </div>`;
