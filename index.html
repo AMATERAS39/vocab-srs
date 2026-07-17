@@ -4399,7 +4399,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.18.10.00";
+const APP_VERSION = "2026.07.18.11.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4919,7 +4919,7 @@ function stampStreakCurrent(){
 }
 /* 【P34】最長の連続日数：全スタンプ日をソートし、連続する最長ランを求める。 */
 function stampStreakLongest(){
-  const days = Object.keys(state.stamps || {}).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
+  const days = Object.keys(state.log || {}).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort();   /* 【修正】学習 log 基準 */
   if(days.length===0) return 0;
   let best=1, run=1;
   for(let i=1;i<days.length;i++){
@@ -5338,10 +5338,10 @@ function renderCalendar(){
   const first = new Date(vy, vm-1, 1);
   const startDow = first.getDay();                 // 0=日 … 6=土（日曜始まり）
   const daysInMonth = new Date(vy, vm, 0).getDate();
-  const stamps = state.stamps || {};
+  const stamps = state.log || {};   /* 【修正】学習カレンダーはホームと同じ state.log（学習した日）を基準にする */
   const todayS = todayStr(now);
   const pad2 = n => String(n).padStart(2,"0");
-  const cur = stampStreakCurrent();
+  const cur = streak();   /* 【修正】ホーム画面と同じ streak() を使い、連続日数を一致させる */
   const longest = stampStreakLongest();
   const dow = ["日","月","火","水","木","金","土"];
   /* セル配列を組む（先頭の空白＋各日） */
@@ -5370,7 +5370,7 @@ function renderCalendar(){
     </div>
     <div class="cal-grid cal-dow">${dow.map(x=>`<div class="cal-dowcell">${x}</div>`).join("")}</div>
     <div class="cal-grid">${cells}</div>
-    <p class="note" style="margin-top:10px">ログインして開いた日にスタンプが付きます。連続日数はスタンプの並びで数えます。</p>
+    <p class="note" style="margin-top:10px">学習した日にスタンプが付きます。連続日数はホーム画面と同じ数え方です。</p>
   </div></div>`;
   document.getElementById("backHome").onclick = (e)=>{ e.preventDefault(); calViewYM=null; renderHome(); };
   document.getElementById("calPrev").onclick = ()=>{ let y=vy, m=vm-1; if(m<1){m=12;y--;} calViewYM=`${y}-${pad2(m)}`; renderCalendar(); };
