@@ -129,6 +129,21 @@
   .hint{ font-family:var(--sans); font-size:.75rem; color:var(--sub); text-align:center; margin:.2rem 0 .8rem; }
   /* 助動詞・接続クイズの設問文 */
   .jq-q{ font-family:var(--sans); font-size:.95rem; color:var(--ink); text-align:center; margin:.1rem 0 .9rem; }
+  /* P41：助動詞 活用表 */
+  .kt-lead{ font-family:var(--sans); font-size:.82rem; line-height:1.6; color:var(--sub); margin:.1rem 0 1rem; }
+  .kt-group{ margin-bottom:1.4rem; }
+  .kt-gtitle{ font-family:var(--serif); font-size:1rem; color:var(--ink); border-left:4px solid var(--shu); padding-left:.5rem; margin-bottom:.5rem; }
+  .kt-note{ font-family:var(--sans); font-size:.72rem; color:var(--sub); }
+  /* 横スクロール枠。touch-action は指定せず既定（pinch-zoom を殺さない・§4.4）。 */
+  .kt-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid var(--line); border-radius:8px; }
+  .kt-table{ border-collapse:collapse; width:max-content; min-width:100%; background:var(--card); font-family:var(--sans); }
+  .kt-table th, .kt-table td{ border:1px solid var(--line); padding:.4rem .55rem; text-align:center; white-space:nowrap; font-size:.86rem; }
+  .kt-table thead th{ background:var(--shu-soft); color:var(--ink); font-weight:600; position:sticky; top:0; }
+  .kt-table .kt-base{ font-family:var(--serif); font-weight:600; color:var(--ink); background:#fffdf7; }
+  .kt-table .kt-none{ color:var(--sub); }
+  .kt-table .kt-type{ font-size:.78rem; color:var(--sub); }
+  .kt-table .kt-imi{ font-size:.78rem; color:var(--ink); text-align:left; white-space:normal; min-width:9em; }
+  .kt-table .kt-hl{ color:var(--shu); font-weight:600; }   /* 活用語尾の変化部分を朱で強調 */
   /* 格言カード（ホーム上部・学習判定に無関係。タップで別の一枚に更新） */
   .kotoba-card{ margin:.1rem 0 1rem; padding:.85rem .9rem; border:1px solid var(--line); border-radius:10px;
                 background:linear-gradient(180deg,#fffdf7,#fbf6ea); box-shadow:inset 0 0 0 3px #fff, 0 1px 2px rgba(60,40,20,.06);
@@ -616,7 +631,27 @@
       <div class="home-actions">
         <button class="homebtn primary" id="btnJoSetsuzoku" type="button">接続を学ぶ</button>
         <button class="homebtn" id="btnJoImi" type="button">意味を学ぶ</button>
+        <button class="homebtn" id="btnJoKatsuyo" type="button">活用表を見る</button>
       </div>
+    </div>
+    <div class="rod bottom"></div>
+  </div>
+
+  <!-- ===== 助動詞モード：活用表（P41・参照UI。記録なし・SRS非依存） ===== -->
+  <div class="scroll screen" id="jodoshiKatsuyoScreen" hidden>
+    <div class="rod top"></div>
+    <div class="home-header">
+      <button class="icon-btn" id="jkBack" type="button" aria-label="戻る">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="home-title">助動詞 活用表</div>
+      <button class="icon-btn" id="jkHome" type="button" aria-label="ホームへ戻る">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+      </button>
+    </div>
+    <div class="body">
+      <p class="kt-lead">接続のグループごとに、活用のしかたと意味をまとめました。表は横にスクロールできます（○＝その活用形なし、（　）＝補助活用）。</p>
+      <div id="katsuyoBody"></div>
     </div>
     <div class="rod bottom"></div>
   </div>
@@ -1013,7 +1048,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-16d";
+const APP_VERSION = "2026-07-16e";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -5009,6 +5044,49 @@ const KOBUN_JODOSHI = [
   { i: 27, w: "らし", yomi: "らし", setsuzoku: "終止形", imi: ["推定"], c: "目に見える根拠のある推定。和歌に多い古い語。" },
   { i: 28, w: "ごとし", yomi: "ごとし", setsuzoku: "体言", imi: ["比況","例示"], c: "体言に「の」「が」を介して接続。比況（〜のようだ）・例示（〜など）。" }
 ];
+/* ===== P41：助動詞 活用表データ（司令塔確定・標準文法。参照UI専用でSRS/クイズには非接触） =====
+   各語 k=[未然, 連用, 終止, 連体, 已然, 命令]。○＝活用形なし、（）＝補助活用。
+   接続グループごとに小表化。※連用形接続の完了「たり」を含む（一部の表で欠落しやすいので明示）。 */
+const KATSUYO_TABLE = [
+  { group: "未然形接続", rows: [
+    { w:"む",     k:["○","○","む","む","め","○"],                     type:"四段型",       imi:"推量・意志・勧誘・仮定・婉曲" },
+    { w:"むず",   k:["○","○","むず","むずる","むずれ","○"],           type:"サ変型",       imi:"推量・意志・勧誘・仮定・婉曲" },
+    { w:"る",     k:["れ","れ","る","るる","るれ","れよ"],             type:"下二段型",     imi:"受身・尊敬・自発・可能" },
+    { w:"らる",   k:["られ","られ","らる","らるる","らるれ","られよ"], type:"下二段型",     imi:"受身・尊敬・自発・可能" },
+    { w:"す",     k:["せ","せ","す","する","すれ","せよ"],             type:"下二段型",     imi:"使役・尊敬" },
+    { w:"さす",   k:["させ","させ","さす","さする","さすれ","させよ"], type:"下二段型",     imi:"使役・尊敬" },
+    { w:"しむ",   k:["しめ","しめ","しむ","しむる","しむれ","しめよ"], type:"下二段型",     imi:"使役・尊敬" },
+    { w:"ず",     k:["ず(ざら)","ず(ざり)","ず","ぬ(ざる)","ね(ざれ)","ざれ"], type:"特殊型", imi:"打消" },
+    { w:"じ",     k:["○","○","じ","じ","じ","○"],                     type:"無変化",       imi:"打消推量・打消意志" },
+    { w:"まし",   k:["ませ(ましか)","○","まし","まし","ましか","○"], type:"特殊型",       imi:"反実仮想・ためらいの意志・実現不可能な希望" },
+    { w:"まほし", k:["まほしく(まほしから)","まほしく(まほしかり)","まほし","まほしき(まほしかる)","まほしけれ","○"], type:"形容詞シク型", imi:"願望" }
+  ]},
+  { group: "連用形接続", rows: [
+    { w:"き",   k:["(せ)","○","き","し","しか","○"],                 type:"特殊型",   imi:"過去" },
+    { w:"けり", k:["(けら)","○","けり","ける","けれ","○"],           type:"ラ変型",   imi:"過去・詠嘆" },
+    { w:"つ",   k:["て","て","つ","つる","つれ","てよ"],             type:"下二段型", imi:"完了・強意" },
+    { w:"ぬ",   k:["な","に","ぬ","ぬる","ぬれ","ね"],               type:"ナ変型",   imi:"完了・強意" },
+    { w:"たり", k:["たら","たり","たり","たる","たれ","たれ"],       type:"ラ変型",   imi:"完了・存続" },
+    { w:"けむ", k:["○","○","けむ","けむ","けめ","○"],               type:"四段型",   imi:"過去推量・過去の原因推量・伝聞婉曲" },
+    { w:"たし", k:["たく(たから)","たく(たかり)","たし","たき(たかる)","たけれ","○"], type:"形容詞ク型", imi:"願望" }
+  ]},
+  { group: "終止形接続", note:"ラ変型の語には連体形接続", rows: [
+    { w:"べし", k:["べく(べから)","べく(べかり)","べし","べき(べかる)","べけれ","○"], type:"形容詞ク型",  imi:"推量・意志・可能・当然・命令・適当" },
+    { w:"まじ", k:["まじく(まじから)","まじく(まじかり)","まじ","まじき(まじかる)","まじけれ","○"], type:"形容詞シク型", imi:"打消推量・打消意志・不可能・禁止・打消当然" },
+    { w:"らむ", k:["○","○","らむ","らむ","らめ","○"],               type:"四段型",   imi:"現在推量・現在の原因推量・伝聞婉曲" },
+    { w:"めり", k:["○","めり","めり","める","めれ","○"],             type:"ラ変型",   imi:"推定・婉曲" },
+    { w:"なり", k:["○","なり","なり","なる","なれ","○"],             type:"ラ変型",   imi:"伝聞・推定（伝聞推定のなり）" },
+    { w:"らし", k:["○","○","らし","らし","らし","○"],               type:"無変化",   imi:"推定" }
+  ]},
+  { group: "サ変未然形・四段已然形接続", rows: [
+    { w:"り", k:["ら","り","り","る","れ","れ"], type:"ラ変型", imi:"完了・存続" }
+  ]},
+  { group: "体言接続", note:"連体形接続を含む", rows: [
+    { w:"なり",   k:["なら","なり(に)","なり","なる","なれ","なれ"], type:"ナリ活用型", imi:"断定・存在（断定のなり）" },
+    { w:"たり",   k:["たら","たり(と)","たり","たる","たれ","たれ"], type:"タリ活用型", imi:"断定" },
+    { w:"ごとし", k:["ごとく","ごとく","ごとし","ごとき","○","○"],   type:"形容詞ク型", imi:"比況・例示" }
+  ]}
+];
 /* ===== 助動詞・例文（rei）を i で紐付け（第13版 rei スキーマ：s/mark/imi/t/y）
    司令塔③がデータ室の pilot＋rest22 を検証・統合。全28語・全意味に例文あり（総70）。 ===== */
 (function(){ var REI = {"1":[{"s":"去年の春、花を見き。","mark":"き","imi":"過去","t":"去年の春、（私は）花を見た。","y":"こぞのはる、はなをみき。"}],"2":[{"s":"昔、をとこありけり。","mark":"けり","imi":"過去","t":"昔、男がいた。","y":"むかし、をとこありけり。"},{"s":"山里に秋は来にけり。","mark":"けり","imi":"詠嘆","t":"山里にはもう秋が来ていたのだなあ。","y":"やまざとにあきはきにけり。"}],"3":[{"s":"文を書きつ。","mark":"つ","imi":"完了","t":"手紙を書いてしまった（書き終えた）。","y":"ふみをかきつ。"},{"s":"雨は今宵やみてむ。","mark":"て","imi":"強意","t":"雨は今夜、きっと止むだろう。","y":"あめはこよひやみてむ。"}],"4":[{"s":"花散りぬ。","mark":"ぬ","imi":"完了","t":"花が散ってしまった。","y":"はなちりぬ。"},{"s":"この分にては、明日は雨降りぬべし。","mark":"ぬ","imi":"強意","t":"この様子では、明日はきっと雨が降るだろう。","y":"このぶんにては、あすはあめふりぬべし。"}],"5":[{"s":"文を書きたり。","mark":"たり","imi":"完了","t":"手紙を書いてしまった。","y":"ふみをかきたり。"},{"s":"山に雪降りたり。","mark":"たり","imi":"存続","t":"山に雪が降っている（降り積もっている）。","y":"やまにゆきふりたり。"}],"6":[{"s":"文を読めり。","mark":"り","imi":"完了","t":"手紙を読んでしまった。","y":"ふみをよめり。"},{"s":"花咲けり。","mark":"り","imi":"存続","t":"花が咲いている。","y":"はなさけり。"}],"7":[{"s":"明日は雨降らむ。","mark":"む","imi":"推量","t":"明日は雨が降るだろう。","y":"あすはあめふらむ。"},{"s":"われ一人にて行かむ。","mark":"む","imi":"意志","t":"私一人で行こう。","y":"われひとりにてゆかむ。"},{"s":"共に山へ登らむ。","mark":"む","imi":"勧誘","t":"一緒に山へ登りましょう。","y":"ともにやまへのぼらむ。"},{"s":"雨降らむ日は出でじ。","mark":"む","imi":"仮定","t":"もし雨が降るような日は、外出しないつもりだ。","y":"あめふらむひはいでじ。"},{"s":"人の言はむことぞ恐ろしき。","mark":"む","imi":"婉曲","t":"人が言うようなことが恐ろしいのだ。","y":"ひとのいはむことぞおそろしき。"}],"8":[{"s":"空を見るに、雨降るべし。","mark":"べし","imi":"推量","t":"空模様から見て、雨が降るだろう。","y":"そらをみるに、あめふるべし。"},{"s":"われ必ず行くべし。","mark":"べし","imi":"意志","t":"私は必ず行くつもりだ。","y":"われかならずゆくべし。"},{"s":"この川は歩きて渡るべし。","mark":"べし","imi":"可能","t":"この川は歩いて渡ることができる。","y":"このかははあるきてわたるべし。"},{"s":"子は親に従ふべし。","mark":"べし","imi":"当然","t":"子は親に従うべきだ（従うのが当然だ）。","y":"こはおやにしたがふべし。"},{"s":"はやく立ち去るべし。","mark":"べし","imi":"命令","t":"早く立ち去れ。","y":"はやくたちさるべし。"},{"s":"疲れたる時は休むべし。","mark":"べし","imi":"適当","t":"疲れた時は休むのがよい。","y":"つかれたるときはやすむべし。"}],"9":[{"s":"今ごろ、都は花咲くらむ。","mark":"らむ","imi":"現在推量","t":"今ごろ、都では花が咲いているだろう。","y":"いまごろ、みやこははなさくらむ。"},{"s":"など人は泣くらむ。","mark":"らむ","imi":"現在の原因推量","t":"どうして人は泣いているのだろうか。","y":"などひとはなくらむ。"},{"s":"遠く笛の音すらむ、ほのかに聞こえけり。","mark":"らむ","imi":"伝聞・婉曲","t":"遠くで笛の音がするらしいのが、かすかに聞こえてきたのだった。","y":"とほくふえのおとすらむ、ほのかにきこえけり。"}],"10":[{"s":"昨日、雨降りけむ。","mark":"けむ","imi":"過去推量","t":"昨日、雨が降っただろう。","y":"きのふ、あめふりけむ。"},{"s":"など人は泣きけむ。","mark":"けむ","imi":"過去の原因推量","t":"どうして人は泣いたのだろうか。","y":"などひとはなきけむ。"},{"s":"昔、都に美しき姫のありけむ、語り伝ふ。","mark":"けむ","imi":"伝聞・婉曲","t":"昔、都に美しい姫がいたとかいうことを、語り伝えている。","y":"むかし、みやこにうつくしきひめのありけむ、かたりつたふ。"}],"11":[{"s":"犬に手を噛まる。","mark":"る","imi":"受身","t":"犬に手を噛まれる。","y":"いぬにてをかまる。"},{"s":"殿、歌をよまる。","mark":"る","imi":"尊敬","t":"殿が歌をお詠みになる。","y":"との、うたをよまる。"},{"s":"昔のことが思はる。","mark":"る","imi":"自発","t":"昔のことが自然と思い出される。","y":"むかしのことがおもはる。"},{"s":"夜深くて、文字も読まれず。","mark":"れ","imi":"可能","t":"夜が更けて、文字も（自然に）読めない。","y":"よふけくて、もじもよまれず。"}],"12":[{"s":"人に見らる。","mark":"らる","imi":"受身","t":"人に見られる。","y":"ひとにみらる。"},{"s":"殿、簾を上げらる。","mark":"らる","imi":"尊敬","t":"殿が簾をお上げになる。","y":"との、すだれをあげらる。"},{"s":"昔のことが案ぜらる。","mark":"らる","imi":"自発","t":"昔のことが自然と案じられる。","y":"むかしのことがあんぜらる。"},{"s":"早く起きられず。","mark":"られ","imi":"可能","t":"早く起きることができない。","y":"はやくおきられず。"}],"13":[{"s":"子を使ひに行かす。","mark":"す","imi":"使役","t":"子を使いに行かせる。","y":"こをつかひにゆかす。"},{"s":"殿、御座より立たす。","mark":"す","imi":"尊敬","t":"殿が御座からお立ちになる。","y":"との、おましよりたたす。"}],"14":[{"s":"子に文を見さす。","mark":"さす","imi":"使役","t":"子に手紙を見させる。","y":"こにふみをみさす。"},{"s":"殿、はやく起きさす。","mark":"さす","imi":"尊敬","t":"殿が早くお起きになる。","y":"との、はやくおきさす。"}],"15":[{"s":"言葉も出でず。","mark":"ず","imi":"打消","t":"言葉も出ない。","y":"ことばもいでず。"}],"16":[{"s":"明日は雨降らじ。","mark":"じ","imi":"打消推量","t":"明日は雨は降らないだろう。","y":"あすはあめふらじ。"},{"s":"二度と行かじ。","mark":"じ","imi":"打消意志","t":"二度と行くまい。","y":"にどとゆかじ。"}],"17":[{"s":"もし花咲かば、見に行かまし。","mark":"まし","imi":"反実仮想","t":"もし花が咲いていたなら、見に行くだろうに。","y":"もしはなさかば、みにゆかまし。"},{"s":"いかにせまし。","mark":"まし","imi":"ためらいの意志","t":"どうしたものだろうか。","y":"いかにせまし。"},{"s":"命長くて、千年もあらましものを。","mark":"まし","imi":"実現不可能な希望","t":"命が長くて、千年も生きられたらよかったのに。","y":"いのちながくて、ちとせもあらましものを。"}],"18":[{"s":"花を見まほし。","mark":"まほし","imi":"願望","t":"花を見たい。","y":"はなをみまほし。"}],"19":[{"s":"これは花なり。","mark":"なり","imi":"断定","t":"これは花である。","y":"これははななり。"},{"s":"母は都になり。","mark":"なり","imi":"存在","t":"母は都にいる。","y":"はははみやこになり。"}],"20":[{"s":"花咲くめり。","mark":"めり","imi":"推定","t":"花が咲いているようだ。","y":"はなさくめり。"},{"s":"遠く鈴の鳴るめる音、ほのかに聞こゆ。","mark":"める","imi":"婉曲","t":"遠くで鈴が鳴っているらしい音が、かすかに聞こえる。","y":"とほくすずのなるめるおと、ほのかにきこゆ。"}],"21":[{"s":"明日は雪降らむず。","mark":"むず","imi":"推量","t":"明日は雪が降るだろう。","y":"あすはゆきふらむず。"},{"s":"われ行かむず。","mark":"むず","imi":"意志","t":"私が行こう。","y":"われゆかむず。"},{"s":"共に見むず。","mark":"むず","imi":"勧誘","t":"一緒に見ましょう。","y":"ともにみむず。"},{"s":"雨降らむずる日は延べむ。","mark":"むずる","imi":"仮定","t":"もし雨が降るような日は延期しよう。","y":"あめふらむずるひはのべむ。"},{"s":"人の言はむずること恐ろし。","mark":"むずる","imi":"婉曲","t":"人が言うようなことが恐ろしい。","y":"ひとのいはむずることおそろし。"}],"22":[{"s":"弟子に書を読ましむ。","mark":"しむ","imi":"使役","t":"弟子に書物を読ませる。","y":"でしにしょをよましむ。"},{"s":"帝、勅を下さしむ。","mark":"しむ","imi":"尊敬","t":"帝が勅命をお下しになる。","y":"みかど、ちょくをくださしむ。"}],"23":[{"s":"明日は雨降るまじ。","mark":"まじ","imi":"打消推量","t":"明日は雨は降らないだろう。","y":"あすはあめふるまじ。"},{"s":"二度と過ちを犯すまじ。","mark":"まじ","imi":"打消意志","t":"二度と過ちを犯すまい。","y":"にどとあやまちをおかすまじ。"},{"s":"この山は一日にて越ゆまじ。","mark":"まじ","imi":"不可能","t":"この山は一日で越えることはできないだろう。","y":"このやまはいちにちにてこゆまじ。"},{"s":"ここに入るまじ。","mark":"まじ","imi":"禁止","t":"ここに入ってはならない。","y":"ここにいるまじ。"},{"s":"人を欺くまじ。","mark":"まじ","imi":"打消当然","t":"人をだますべきではない。","y":"ひとをあざむくまじ。"}],"24":[{"s":"水を飲みたし。","mark":"たし","imi":"願望","t":"水を飲みたい。","y":"みづをのみたし。"}],"25":[{"s":"使者、明日は雨降るなりと告ぐ。","mark":"なり","imi":"伝聞","t":"使者が、明日は雨が降るそうだと告げる。","y":"ししゃ、あすはあめふるなりとつぐ。"},{"s":"夜深く、鐘の鳴るなり。","mark":"なり","imi":"推定","t":"夜が更けて、鐘が鳴っているようだ。","y":"よふかく、かねのなるなり。"}],"26":[{"s":"かれは敵たり。","mark":"たり","imi":"断定","t":"あれは敵である。","y":"かれはかたきたり。"}],"27":[{"s":"花咲くらし。","mark":"らし","imi":"推定","t":"花が咲いているらしい。","y":"はなさくらし。"}],"28":[{"s":"雪は花のごとし。","mark":"ごとし","imi":"比況","t":"雪は花のようだ。","y":"ゆきははなのごとし。"},{"s":"梅・桜のごとき花は春を彩る。","mark":"ごとき","imi":"例示","t":"梅や桜のような花は春を彩る。","y":"うめ・さくらのごときはなははるをいろどる。"}]};
@@ -6921,7 +6999,7 @@ document.addEventListener("DOMContentLoaded", function () {
   var kaisetuEl = byId("kaisetu"), kaisetuBody = byId("kaisetuBody"), nextBtn = byId("next");
   var endEl = byId("end");
   // 機能5骨格：画面・ホームの部品
-  var homeScreen = byId("homeScreen"), quizScreen = byId("quizScreen"), refScreen = byId("refScreen"), jodoshiMenuScreen = byId("jodoshiMenuScreen"), jodoshiQuizScreen = byId("jodoshiQuizScreen");
+  var homeScreen = byId("homeScreen"), quizScreen = byId("quizScreen"), refScreen = byId("refScreen"), jodoshiMenuScreen = byId("jodoshiMenuScreen"), jodoshiKatsuyoScreen = byId("jodoshiKatsuyoScreen"), jodoshiQuizScreen = byId("jodoshiQuizScreen");
   var toastEl = byId("toast");   // P33：remainEl（残数表示）は撤去済みのため宣言も削除
   var refSearch = byId("refSearch"), refSort = byId("refSort"), refList = byId("refList");
 
@@ -6977,6 +7055,7 @@ document.addEventListener("DOMContentLoaded", function () {
     quizScreen.hidden = (name !== "quiz");
     refScreen.hidden = (name !== "reference");
     jodoshiMenuScreen.hidden = (name !== "jodoshiMenu");
+    jodoshiKatsuyoScreen.hidden = (name !== "jodoshiKatsuyo");   // P41：活用表
     jodoshiQuizScreen.hidden = (name !== "jodoshiQuiz");
     if (name === "home") updateKotoba();   // ホームを表示するたびに1枚更新
     window.scrollTo(0, 0);
@@ -7252,6 +7331,9 @@ document.addEventListener("DOMContentLoaded", function () {
     byId("jmHome").addEventListener("click", function(){ showScreen("home"); refreshHome(); });
     byId("btnJoSetsuzoku").addEventListener("click", startSetsuzoku);
     byId("btnJoImi").addEventListener("click", startImi);   // ★意味クイズ有効化（旧トーストは廃止）
+    byId("btnJoKatsuyo").addEventListener("click", function(){ renderKatsuyo(); showScreen("jodoshiKatsuyo"); });   // P41：活用表
+    byId("jkBack").addEventListener("click", function(){ showScreen("jodoshiMenu"); });   // P41：中間画面へ戻る
+    byId("jkHome").addEventListener("click", function(){ showScreen("home"); refreshHome(); });   // P41：ホームへ
     // クイズ画面のボタン
     byId("jqHome").addEventListener("click", function(){ clearGraded(); showScreen("home"); refreshHome(); });
     byId("jqToHome").addEventListener("click", function(){ clearGraded(); showScreen("home"); refreshHome(); });
@@ -7261,6 +7343,44 @@ document.addEventListener("DOMContentLoaded", function () {
     document.addEventListener("keydown", function(ev){ if(!jqScreen.hidden && jqOnKey) jqOnKey(ev); });
 
     function sessionCount(){ return jodoshiCountOf(state); } // A-2：助動詞1回の出題数（設定値）
+
+    // P41：活用表を描画。接続グループごとに小表（列＝活用形＋意味、行＝各助動詞）。横スクロール可。
+    function renderKatsuyo(){
+      var host = byId("katsuyoBody"); if(!host) return;
+      var COLS = ["基本形","未然形","連用形","終止形","連体形","已然形","命令形","活用型","意味"];
+      var html = "";
+      KATSUYO_TABLE.forEach(function(g){
+        html += '<div class="kt-group">';
+        html += '<div class="kt-gtitle">' + esc(g.group) + (g.note ? '<span class="kt-note">（' + esc(g.note) + '）</span>' : '') + '</div>';
+        html += '<div class="kt-scroll"><table class="kt-table"><thead><tr>';
+        COLS.forEach(function(c){ html += '<th>' + esc(c) + '</th>'; });
+        html += '</tr></thead><tbody>';
+        g.rows.forEach(function(r){
+          html += '<tr>';
+          html += '<td class="kt-base">' + esc(r.w) + '</td>';
+          r.k.forEach(function(cell){
+            if(cell === "○"){ html += '<td class="kt-none">○</td>'; }
+            else { html += '<td class="kt-cell">' + hilite(cell, r.w) + '</td>'; }
+          });
+          html += '<td class="kt-type">' + esc(r.type) + '</td>';
+          html += '<td class="kt-imi">' + esc(r.imi) + '</td>';
+          html += '</tr>';
+        });
+        html += '</tbody></table></div></div>';
+      });
+      host.innerHTML = html;
+    }
+    // 活用語尾の変化部分を朱で強調。基本形と一致する語幹部分は黒のまま、末尾の変化部分だけ朱にする素朴な方式。
+    // （補助活用の（）内も含め、基本形と共通の先頭部分を語幹とみなす。過剰強調を避けるため共通接頭辞のみ黒。）
+    function hilite(cell, base){
+      // （）を含むセルはそのまま（強調しにくいので全体を通常表示）
+      if(cell.indexOf("(") >= 0) return esc(cell);
+      // 基本形と先頭の共通部分を求める
+      var n = Math.min(cell.length, base.length), i = 0;
+      while(i < n && cell[i] === base[i]) i++;
+      if(i === 0 || i >= cell.length) return esc(cell); // 共通なし or 全一致なら通常表示
+      return esc(cell.slice(0, i)) + '<span class="kt-hl">' + esc(cell.slice(i)) + '</span>';
+    }
 
     function startSetsuzoku(){
       jqType = "setsuzoku";
