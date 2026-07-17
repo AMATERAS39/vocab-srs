@@ -4399,7 +4399,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.17.23.40";
+const APP_VERSION = "2026.07.18.10.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4783,7 +4783,7 @@ window.addEventListener("pagehide", ()=>{ if(dirty) flushSave(); });
 document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "hidden" && dirty) flushSave(); });
 function persistBanner(){
   if(persistInfo.backend === "memory" || persistInfo.failed){
-    return `<div class="warn-banner">⚠ この環境では自動保存が使えていません。進捗はこの画面を閉じると消えます。学習後は「単語データの追加・バックアップ」→「バックアップを書き出す」で退避してください。</div>`;
+    return `<div class="warn-banner">⚠ この環境では自動保存が使えていません。進捗はこの画面を閉じると消えます。学習後は「単語を追加」画面の「上級者向け」→「バックアップを書き出す」で退避してください。</div>`;
   }
   return "";
 }
@@ -5054,7 +5054,7 @@ function renderHome(){
     <div class="menu-drop" id="menuDrop">
       <button id="menuSet">設定</button>
       <button id="menuAbout">アプリの説明</button>
-      <button id="menuData">単語データの追加</button>
+      <button id="menuData">単語を追加</button>
       <button id="menuCalendar">学習カレンダー</button>
       ${cloudConfigured() ? `<button id="menuFeedback">ご要望・お問い合わせ<span class="notif-dot" id="dotFeedback"></span></button>` : ``}
       ${isOwner() ? `<button id="menuInbox">受信箱<span class="notif-dot" id="dotInbox"></span></button>` : ``}
@@ -5139,7 +5139,7 @@ function renderData(){
   session = null;
   const posOptions = ["自動","他動","名","形","副","句動","熟"];
   app.innerHTML = `
-  <header><div><h1>単語データの追加</h1></div>
+  <header><div><h1>単語を追加</h1></div>
     <a class="streak" href="#" id="backHome" style="text-decoration:underline">戻る</a></header>
   <div class="panel"><div class="inner">
     <p class="note">入力欄に単語を1つずつ入れて追加できます。ログイン中なら、承認を経て全員に共有できます。</p>
@@ -6894,7 +6894,7 @@ function renderAbout(){
     <h2>ホーム画面</h2>
     ${shot("home_top","ホーム画面（上部）")}
     <p class="note"><strong>左上の本アイコン</strong>＝単語一覧を開きます。<br>
-    <strong>右上の☰</strong>＝メニュー（設定・単語データの追加・アプリの説明）。<br>
+    <strong>右上の☰</strong>＝メニュー（設定・単語を追加・アプリの説明）。<br>
     <strong>日付の下</strong>＝格言や豆知識（毎回変わります）。<br>
     <strong>「学習」</strong>＝1回ぶんの学習（1チャンク）。ストック総数と開始ボタンが並びます。</p>
     ${shot("home_bottom","ホーム画面（下部）")}
@@ -6975,7 +6975,7 @@ function renderAbout(){
     選択式の空欄の数は、その単語の復習が進むほど増えていきます（最初は1つ→最終的にすべての品詞へ）。</p>
 
     <h2>単語追加について</h2>
-    ${shot("data","単語データの追加")}
+    ${shot("data","単語を追加")}
     <p class="note">メニューから開きます。決まった形式の JSON を貼り付けると、自分で単語を追加できます。バックアップの書き出し・復元もここから行えます。</p>
 
   </div>`;
