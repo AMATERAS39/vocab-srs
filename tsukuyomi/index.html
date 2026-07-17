@@ -157,8 +157,8 @@
   .auth-msg{ font-family:var(--sans); font-size:.78rem; color:var(--midori); margin-top:8px; min-height:1em; }
   .pw-card{ margin:14px 0 0; padding:14px; border:1px solid var(--line); border-radius:10px; background:linear-gradient(180deg,#fffdf7,#fbf6ea); }
   .pw-card .pw-head{ display:flex; align-items:center; gap:7px; font-size:.9rem; font-weight:600; color:var(--ink); margin-bottom:4px; }
-  .pw-card .pw-field{ display:flex; gap:8px; align-items:stretch; }
-  .pw-card input[type=password]{ flex:1; min-width:0; font-family:var(--sans); padding:8px 11px; border:1px solid var(--line); border-radius:8px; font-size:1rem; background:#fff; }
+  .pw-card .pw-field{ display:flex; gap:8px; align-items:stretch; flex-wrap:wrap; }  /* P38：狭幅時はボタンが下段へ折り返し、input が全幅を確保して「（8文字以上）」が見切れない */
+  .pw-card input[type=password]{ flex:1 1 12em; min-width:12em; font-family:var(--sans); padding:8px 11px; border:1px solid var(--line); border-radius:8px; font-size:1rem; background:#fff; }  /* P38：min-width で「パスワード（8文字以上）」が収まる幅を確保。狭いと pw-field の flex-wrap でボタンが下段へ折り返る。 */
   .pw-card input[type=password]:focus{ outline:none; border-color:var(--shu); box-shadow:0 0 0 2px var(--shu-soft); }
   .pw-card .pw-btn{ white-space:nowrap; padding:9px 16px; border:none; border-radius:8px; background:var(--shu); color:#fff; font-size:.85rem; font-weight:600; cursor:pointer; }
   .pw-card .pw-btn:active{ opacity:.85; }
@@ -724,7 +724,7 @@
           <div class="pw-head">🔐 パスワードを設定／変更</div>
           <div class="pw-note">Googleでログイン中の方も設定できます。設定すると、次回からメールアドレスとパスワードでのログインもお使いいただけます。</div>
           <div class="pw-field">
-            <input type="password" id="setPw" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）">
+            <input type="password" id="setPw" autocomplete="new-password" placeholder="パスワード（8文字以上）">
             <button class="pw-btn" id="setPwBtn" type="button">設定</button>
           </div>
           <span class="msg" id="setPwMsg"></span>
@@ -882,7 +882,7 @@
             </div>
           </div>
           <div id="pwSignupForm" hidden>
-            <input class="ref-search" id="authPwNew" type="password" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）" aria-label="新しいパスワード">
+            <input class="ref-search" id="authPwNew" type="password" autocomplete="new-password" placeholder="パスワード（8文字以上）" aria-label="新しいパスワード">
             <button class="homebtn primary" id="pwSignupBtn" type="button">登録する（確認メールが届きます）</button>
             <div class="pwlinks">
               <button class="linkbtn" id="pwToLogin" type="button">ログインに戻る</button>
@@ -926,8 +926,19 @@
         <button class="icon-btn" id="fbClose" type="button" aria-label="閉じる"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
       <div class="login-body">
-        <!-- P36：単語追加への導線（意見箱の入力欄より上）。単語追加は設定内からここへ移設。 -->
+        <!-- P37：ハブ化。問い合わせ／単語追加を対等な2入口にする。問い合わせフォーム一式は menuInquiry へ移設（id維持）。 -->
+        <button class="menu-item" id="fbToInquiry" type="button">問い合わせ<span class="dot" id="dotInquiry" hidden></span></button>
         <button class="menu-item" id="fbToSubmit" type="button">単語を追加する</button>
+      </div>
+    </div>
+    <!-- P37：問い合わせフォーム（menuFeedback から移設。id は一切変えない） -->
+    <div id="menuInquiry" class="menu-view" hidden>
+      <div class="menu-head">
+        <button class="icon-btn" id="inqBack" type="button" aria-label="戻る"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <span class="menu-title">問い合わせ</span>
+        <button class="icon-btn" id="inqClose" type="button" aria-label="閉じる"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="login-body">
         <!-- P18：未ログイン案内。匿名投稿（user_id=null）には返信も既読通知も永久に届かないため、
              送信前にログインへ誘導する。ログイン済みなら JS が hidden にする（seoIntro と同じ型）。 -->
         <div class="fb-guard" id="fbGuard" hidden>
@@ -1002,7 +1013,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-16c";
+const APP_VERSION = "2026-07-16d";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -1029,6 +1040,8 @@ function renderDots(){
   /* WP15：☰ = (オーナー && 受信箱の未読) || 利用者の未読返信 ／ 意見箱 = 利用者の未読返信 */
   var df = document.getElementById("dotFeedback");
   if(df) df.hidden = !unreadReply;
+  var di2 = document.getElementById("dotInquiry");   // P37：ハブの問い合わせボタンにも同じ未読返信ドットを点ける
+  if(di2) di2.hidden = !unreadReply;
   if(dm && unreadReply) dm.hidden = false;                  // 片方を消しても、もう片方が未読なら ☰ は点いたまま
 }
 
@@ -7780,7 +7793,7 @@ document.addEventListener("DOMContentLoaded", function () {
   function openMenu() { menuBackdrop.hidden = false; menuPanel.hidden = false; showMenuList(); }
   function closeMenu() { menuBackdrop.hidden = true; menuPanel.hidden = true; }
   function setMenuView(id) {
-    ["menuList","menuSettings","menuAbout","menuCalendar","menuLogin","menuSubmit","menuFeedback","menuReview","menuInbox"].forEach(function (v) {
+    ["menuList","menuSettings","menuAbout","menuCalendar","menuLogin","menuSubmit","menuFeedback","menuInquiry","menuReview","menuInbox"].forEach(function (v) {
       var el = byId(v); if (el) el.hidden = (v !== id);
     });
   }
@@ -7862,9 +7875,15 @@ document.addEventListener("DOMContentLoaded", function () {
   // §9：意見箱
   byId("miFeedback").addEventListener("click", function () {
     if(!cloudConfigured()){ toast("準備中（クラウド未設定）"); return; }
-    byId("fbNote").hidden = true; setMenuView("menuFeedback");
+    setMenuView("menuFeedback");   // P37：ハブ表示のみ（開いただけでは既読化しない。履歴読み込みは問い合わせを開いたとき）
+  });
+  // P37：問い合わせ入口。ここで初めて履歴読み込み＋既読化する。
+  byId("fbToInquiry").addEventListener("click", function () {
+    byId("fbNote").hidden = true; setMenuView("menuInquiry");
     openFeedbackHistory();   // WP15：送信履歴＋返信を描画し、既読RPCで赤ドットを消す
   });
+  byId("inqBack").addEventListener("click", function(){ setMenuView("menuFeedback"); });   // P37：問い合わせ→ハブへ戻る
+  byId("inqClose").addEventListener("click", closeMenu);
   byId("fbBack").addEventListener("click", showMenuList);
   byId("fbClose").addEventListener("click", closeMenu);
   byId("fbSubmit").addEventListener("click", submitFeedback);
@@ -8649,7 +8668,7 @@ document.addEventListener("DOMContentLoaded", function () {
     modal.id = "pwresetmodal";
     modal.innerHTML = '<div class="card"><h3>新しいパスワードの設定</h3>'
       + '<p class="sub">再設定リンクから開きました。新しいパスワードを入力してください。</p>'
-      + '<input type="password" id="pwResetInput" autocomplete="new-password" placeholder="新しいパスワード（8文字以上）">'
+      + '<input type="password" id="pwResetInput" autocomplete="new-password" placeholder="パスワード（8文字以上）">'
       + '<button class="send" id="pwResetBtn" type="button">パスワードを更新する</button>'
       + '<div class="msg" id="pwResetMsg"></div></div>';
     document.body.appendChild(modal);
