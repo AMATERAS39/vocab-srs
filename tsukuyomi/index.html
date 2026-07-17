@@ -290,6 +290,21 @@
   .menu-head{ display:flex; align-items:center; gap:.3rem; padding:.6rem .7rem .4rem; border-bottom:1px solid var(--line); }
   .menu-title{ flex:1; text-align:center; font-family:var(--serif); font-size:1rem; letter-spacing:.15em; color:var(--ink); }
   .menu-items{ display:flex; flex-direction:column; padding:.4rem .5rem; }
+  /* P34：学習カレンダー */
+  .cal-wrap{ padding:.6rem .8rem 1rem; }
+  .cal-nav{ display:flex; align-items:center; justify-content:center; gap:.6rem; margin-bottom:.6rem; }
+  .cal-title{ font-family:var(--serif); font-size:1rem; color:var(--ink); min-width:7rem; text-align:center; }
+  .cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+  .cal-dow{ font-family:var(--sans); font-size:.72rem; color:var(--sub); text-align:center; padding:.2rem 0; }
+  .cal-cell{ aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;
+             font-family:var(--sans); font-size:.82rem; color:var(--ink);
+             border:1px solid var(--line); border-radius:6px; background:#fffdf7; }
+  .cal-empty{ border:none; background:transparent; }
+  .cal-on{ background:var(--shu); color:#fff; border-color:var(--shu); font-weight:600; }   /* スタンプ済み */
+  .cal-today{ outline:2px solid var(--midori); outline-offset:-2px; }                        /* 今日 */
+  .cal-streaks{ margin-top:.9rem; text-align:center; font-family:var(--sans); font-size:.9rem; color:var(--sub); }
+  .cal-streaks b{ color:var(--shu); font-size:1.1rem; }
+  .cal-guest{ padding:1.5rem 1rem; text-align:center; font-family:var(--sans); font-size:.88rem; line-height:1.7; color:var(--sub); }
   .menu-item{ width:100%; text-align:left; font-family:var(--serif); font-size:1.05rem; color:var(--ink);
               background:transparent; border:none; border-radius:6px; padding:.75rem .8rem; cursor:pointer; }
   .menu-item:hover{ background:#fffdf7; }
@@ -362,6 +377,21 @@
   .sense-row{ display:flex; gap:.5rem; margin-bottom:.4rem; }
   .sense-row .ref-search{ flex:1; }
   textarea.ref-search{ resize:vertical; font-family:var(--serif); }
+  /* P32：投稿プレビュー（確認画面） */
+  .sub-preview{ border:1px solid var(--line); border-radius:8px; padding:.8rem .9rem; background:#fffdf7; }
+  .sub-preview .prev-dup{ font-family:var(--sans); font-size:.8rem; color:var(--shu); line-height:1.6; margin-bottom:.6rem; }
+  .sub-preview .prev-head{ font-family:var(--serif); font-size:1.25rem; color:var(--ink); }
+  .sub-preview .prev-yomi{ font-size:.85rem; color:var(--sub); }
+  .sub-preview .prev-meta{ font-family:var(--sans); font-size:.8rem; color:var(--sub); margin:.2rem 0 .5rem; }
+  .sub-preview .prev-senses{ display:flex; flex-direction:column; gap:.35rem; }
+  .sub-preview .prev-sense{ font-family:var(--serif); font-size:1rem; color:var(--ink); }
+  .sub-preview .prev-pol{ display:inline-block; font-family:var(--sans); font-size:.72rem; border:1px solid currentColor;
+                          border-radius:4px; padding:0 .4rem; margin-right:.5rem; }
+  .sub-preview .prev-pos{ color:var(--shu); }      /* 良 */
+  .sub-preview .prev-neg{ color:var(--pol-neg); }  /* 悪 */
+  .sub-preview .prev-neu{ color:var(--ink); }      /* 中 */
+  .sub-preview .prev-actions{ display:flex; gap:.5rem; margin-top:.9rem; }
+  .sub-preview .prev-actions .homebtn{ flex:1; padding:.6rem 0; }
   .review-card{ border:1px solid var(--line); border-radius:8px; padding:.6rem .7rem; margin-bottom:.5rem; background:#fffdf7; }
   .review-card .r-actions{ display:flex; gap:.5rem; margin-top:.5rem; align-items:center; }
   .review-card .r-actions .homebtn{ flex:1; padding:.5rem 0; font-size:.95rem; }
@@ -645,6 +675,7 @@
       <div class="menu-items">
         <button class="menu-item" id="miSettings" type="button">設定</button>
         <button class="menu-item" id="miAbout" type="button">アプリの説明</button>
+        <button class="menu-item" id="miCalendar" type="button">学習カレンダー</button>
         <button class="menu-item" id="miFeedback" type="button">意見箱<span class="dot" id="dotFeedback" hidden></span></button>
         <button class="menu-item" id="miReview" type="button" hidden>単語の審査</button>
         <button class="menu-item" id="miInbox" type="button" hidden>届いた意見<span class="dot" id="dotInbox" hidden></span></button>
@@ -797,6 +828,22 @@
   <p>進捗はこの端末に自動保存されます（ログインしなくても使えます）。メニューからログインすると、進捗がアカウントに同期され、別の端末でも続けられます。初回ログイン時に、ログイン前の進捗を引き継ぐか確認します。</p>
       </div>
     </div>
+    <!-- P34：学習カレンダー（サブビュー） -->
+    <div id="menuCalendar" class="menu-view" hidden>
+      <div class="menu-head">
+        <button class="icon-btn" id="calBack" type="button" aria-label="戻る"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <span class="menu-title">学習カレンダー</span>
+        <button class="icon-btn" id="calClose" type="button" aria-label="閉じる"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="cal-wrap">
+        <div class="cal-nav">
+          <button class="icon-btn" id="calPrev" type="button" aria-label="前の月"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <span class="cal-title" id="calTitle"></span>
+          <button class="icon-btn" id="calNext" type="button" aria-label="次の月"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+        </div>
+        <div id="calBody"></div>
+      </div>
+    </div>
     <!-- ログインビュー（§8。一覧→サブビューの共通作法） -->
     <div id="menuLogin" class="menu-view" hidden>
       <div class="menu-head">
@@ -856,15 +903,20 @@
       </div>
       <div class="login-body">
         <div class="login-note" style="text-align:left;margin:0 0 .2rem">追加した語は、オーナーの承認後にすべての利用者へ反映されます（送信してすぐには反映されません）。</div>
-        <input class="ref-search" id="subW" type="text" placeholder="見出し（例：をかし）">
-        <input class="ref-search" id="subYomi" type="text" placeholder="よみ（例：をかし）">
-        <div style="display:flex;gap:.5rem;">
-          <select class="ref-sort" id="subLevel" style="flex:1"><option value="1">レベル1</option><option value="2">レベル2</option><option value="3">レベル3</option><option value="4">レベル4</option><option value="5">レベル5</option></select>
-          <select class="ref-sort" id="subPos" style="flex:1"><option>名詞</option><option>動詞</option><option>形容詞</option><option>形容動詞</option><option>副詞</option><option>連体詞</option><option>感動詞</option></select>
+        <!-- P32：入力フォーム。確認（プレビュー）中は隠す -->
+        <div id="subForm">
+          <input class="ref-search" id="subW" type="text" placeholder="見出し（例：あはれ）">
+          <input class="ref-search" id="subYomi" type="text" placeholder="よみ（例：あわれ）">
+          <div style="display:flex;gap:.5rem;">
+            <select class="ref-sort" id="subLevel" style="flex:1"><option value="1">レベル1</option><option value="2">レベル2</option><option value="3">レベル3</option><option value="4">レベル4</option><option value="5">レベル5</option></select>
+            <select class="ref-sort" id="subPos" style="flex:1"><option>名詞</option><option>動詞</option><option>形容詞</option><option>形容動詞</option><option>副詞</option><option>連体詞</option><option>感動詞</option></select>
+          </div>
+          <div id="subSenses"></div>
+          <button class="homebtn" id="subAddSense" type="button">＋ 語義を追加</button>
+          <button class="homebtn primary" id="subSubmit" type="button">確認する</button>
         </div>
-        <div id="subSenses"></div>
-        <button class="homebtn" id="subAddSense" type="button">＋ 語義を追加</button>
-        <button class="homebtn primary" id="subSubmit" type="button">投稿する</button>
+        <!-- P32：プレビュー（確認）領域。ここから「投稿する／修正する」 -->
+        <div id="subPreview" class="sub-preview" hidden></div>
         <div class="login-note" id="subNote" hidden></div>
       </div>
     </div>
@@ -950,7 +1002,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-16a";
+const APP_VERSION = "2026-07-16b";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -6276,7 +6328,7 @@ function createInitialState(words) {
   const prog = {};
   for (const w of src) prog[w.i] = emptyProgress();
   return { prog, todayDate: null, todayCount: 0, todayQuota: null, settings: Object.assign({}, DEFAULT_SETTINGS),
-           newAssign: { date: null, ids: [] }, normDoneDate: null, carryOver: false };
+           newAssign: { date: null, ids: [] }, normDoneDate: null, carryOver: false, stamps: [] };  // P34：学習カレンダーのスタンプ
 }
 
 /* 無ければ器を作って返す（追加単語などの保険）。 */
@@ -6331,6 +6383,7 @@ function ensureAssignFields(state){
   state.newAssign = normalizeAssign(state.newAssign);
   state.normDoneDate = (typeof state.normDoneDate === "string") ? state.normDoneDate : null;
   state.carryOver = (state.carryOver === true);
+  if (!Array.isArray(state.stamps)) state.stamps = [];   // P34：学習カレンダー。無い旧セーブでも落ちない
   return state;
 }
 
@@ -6356,6 +6409,31 @@ const OWNER_EMAIL_HASH  = "875fbc00129419cb8c24817638ec6a9a90be4b67415991f2115ac
 const CLOUD_TABLE       = "kobun_user_data";       // 古文専用の進捗テーブル（固定）
 function cloudConfigured(){
   return !SUPABASE_URL.includes("YOUR-PROJECT") && !SUPABASE_ANON_KEY.includes("YOUR-PUBLIC");
+}
+
+/* ===== P34：ログインスタンプ（学習カレンダー）用ヘルパー（純粋関数） =====
+   stamps は "年-月-日" 文字列の配列。unionDays は重複を除いた和集合を昇順で返す
+   （applyState / mergeStates で使い、複数端末・再ログインでも当日分を消さない）。 */
+function unionDays(a, b){
+  var s = {};
+  (a || []).concat(b || []).forEach(function(d){ if(typeof d === "string") s[d] = 1; });
+  return Object.keys(s).sort();
+}
+/* 連続日数（現在／最長）。current は端末ローカルの今日から遡って連続する日数。
+   todayStr は "-" 区切り（nextDueDate が split("-") 前提）に合わせる。 */
+function computeStreaks(days){
+  var set = {}; (days || []).forEach(function(d){ set[d] = 1; });
+  var cur = 0, d = new Date();
+  while(set[todayStr(d)]){ cur++; d.setDate(d.getDate() - 1); }
+  var arr = Object.keys(set).sort(), longest = 0, run = 0, prev = null;
+  arr.forEach(function(ds){
+    var cd = new Date(ds + "T00:00:00");
+    if(prev){ var diff = Math.round((cd - prev) / 86400000); run = (diff === 1) ? run + 1 : 1; }
+    else run = 1;
+    if(run > longest) longest = run;
+    prev = cd;
+  });
+  return { current: cur, longest: longest };
 }
 
 /* ゲスト↔アカウントの進捗統合。単語ごと cSeen 多い方（同数は cCorrect 多い方）。
@@ -6409,6 +6487,7 @@ function mergeStates(primary, secondary){
   else                            out.todayQuota = pq;
   // 達成の取りこぼし防止：マージ結果が達成条件を満たしていれば、達成日を補う
   if (out.todayQuota && out.todayCount >= out.todayQuota) out.normDoneDate = out.todayDate;
+  out.stamps = unionDays(primary.stamps, secondary.stamps);   // P34：複数端末・再ログインのログイン日を統合（消さない）
   return out;
 }
 
@@ -6477,7 +6556,8 @@ function loadState() {
           settings: normalizeSettings(obj.settings), // 無い旧セーブは既定値で補完（後方互換）
           newAssign: normalizeAssign(obj.newAssign), // WP5：割り当て中の新規バッチ
           normDoneDate: (typeof obj.normDoneDate === "string") ? obj.normDoneDate : null,
-          carryOver: (obj.carryOver === true)
+          carryOver: (obj.carryOver === true),
+          stamps: Array.isArray(obj.stamps) ? obj.stamps : []   // P34：学習カレンダー（無い旧セーブは空配列）
         };
       }
     }
@@ -6500,7 +6580,7 @@ function flush(state) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       prog: state.prog, todayDate: state.todayDate, todayCount: state.todayCount, todayQuota: state.todayQuota || null, custom: state.custom || [], session: state.session || null,
       settings: state.settings || Object.assign({}, DEFAULT_SETTINGS),  // 設定はローカルのみ保存
-      newAssign: state.newAssign || { date: null, ids: [] }, normDoneDate: state.normDoneDate || null, carryOver: state.carryOver === true // WP5：新規投入タイミング
+      newAssign: state.newAssign || { date: null, ids: [] }, normDoneDate: state.normDoneDate || null, carryOver: state.carryOver === true, stamps: state.stamps || [] // WP5＋P34：新規投入タイミング＋学習カレンダー
     }));
     _dirty = false;
   } catch (e) {
@@ -7700,7 +7780,7 @@ document.addEventListener("DOMContentLoaded", function () {
   function openMenu() { menuBackdrop.hidden = false; menuPanel.hidden = false; showMenuList(); }
   function closeMenu() { menuBackdrop.hidden = true; menuPanel.hidden = true; }
   function setMenuView(id) {
-    ["menuList","menuSettings","menuAbout","menuLogin","menuSubmit","menuFeedback","menuReview","menuInbox"].forEach(function (v) {
+    ["menuList","menuSettings","menuAbout","menuCalendar","menuLogin","menuSubmit","menuFeedback","menuReview","menuInbox"].forEach(function (v) {
       var el = byId(v); if (el) el.hidden = (v !== id);
     });
   }
@@ -7712,6 +7792,12 @@ document.addEventListener("DOMContentLoaded", function () {
   menuBackdrop.addEventListener("click", closeMenu);          // 暗幕タップで閉じる
   byId("aboutBack").addEventListener("click", function(){ setMenuView("menuList"); }); // ←で一覧へ戻る
   byId("miAbout").addEventListener("click", function(){ setMenuView("menuAbout"); }); // 一覧→アプリの説明（設定の直下に配置）
+  // P34：学習カレンダー（一覧→カレンダー。開くたびに当月を再描画）
+  byId("miCalendar").addEventListener("click", function(){ _calYM = null; renderCalendar(); setMenuView("menuCalendar"); });
+  byId("calBack").addEventListener("click", function(){ setMenuView("menuList"); });
+  byId("calClose").addEventListener("click", closeMenu);
+  byId("calPrev").addEventListener("click", function(){ calShiftMonth(-1); });
+  byId("calNext").addEventListener("click", function(){ calShiftMonth(1); });
   byId("settingsBack").addEventListener("click", showMenuList);
   byId("settingsClose").addEventListener("click", closeMenu);
   // A：設定サブビュー（現在値を反映してから開く）
@@ -7720,7 +7806,9 @@ document.addEventListener("DOMContentLoaded", function () {
   byId("miAddWord").addEventListener("click", function () {
     if(!cloudConfigured()){ toast("準備中（クラウド未設定）"); return; }
     if(!currentUser){ toast("追加にはログインが必要です"); showMenuLogin(); return; }
-    renderSenseRows(1); byId("subNote").hidden = true; setMenuView("menuSubmit");
+    renderSenseRows(1); byId("subNote").hidden = true;
+    byId("subPreview").hidden = true; byId("subForm").hidden = false; _pendingSubmit = null;   // P32：プレビュー状態をリセット
+    setMenuView("menuSubmit");
   });
   byId("submitBack").addEventListener("click", function(){ setMenuView("menuSettings"); }); // 単語追加は設定内なので設定へ戻る
 
@@ -7769,7 +7857,7 @@ document.addEventListener("DOMContentLoaded", function () {
   });
   byId("submitClose").addEventListener("click", closeMenu);
   byId("subAddSense").addEventListener("click", addSenseRow);
-  byId("subSubmit").addEventListener("click", submitWord);
+  byId("subSubmit").addEventListener("click", prepareSubmit);   // P32：まず確認（プレビュー）へ
   // §9：意見箱
   byId("miFeedback").addEventListener("click", function () {
     if(!cloudConfigured()){ toast("準備中（クラウド未設定）"); return; }
@@ -7967,6 +8055,61 @@ document.addEventListener("DOMContentLoaded", function () {
       else { unreadReply = false; renderDots(); }
     }
   }
+  /* ===== P34：起動時スタンプ（冪等・ゲスト対象外） =====
+     ログイン状態のときだけ当日を1回押す。onAuthStateChange の再描画で何度通っても冪等ガードで1日1回。 */
+  function stampToday(state){
+    if(!currentUser) return;                    // ゲストは押さない
+    if(!Array.isArray(state.stamps)) state.stamps = [];
+    var t = todayStr();
+    if(state.stamps.indexOf(t) >= 0) return;    // 今日すでに押した＝冪等
+    state.stamps.push(t); state.stamps.sort();
+    markDirty(); flush(state); saveCloud();
+  }
+  /* ===== P34：学習カレンダーの描画 =====
+     ゲスト時は案内のみ。ログイン時は当月の月グリッド（スタンプ日をマーク）＋連続日数（現在／最長）。 */
+  var _calYM = null;   // 表示中の年月 {y, m}（m は 0-11）。null なら当月。
+  function renderCalendar(){
+    var host = byId("calBody"); if(!host) return;
+    if(!currentUser){
+      host.innerHTML = '<div class="cal-guest">ログインすると、学習した日がここに記録されます。</div>';
+      var t = byId("calTitle"); if(t) t.textContent = "";
+      return;
+    }
+    var stamps = Array.isArray(state.stamps) ? state.stamps : [];
+    var set = {}; stamps.forEach(function(d){ set[d] = 1; });
+    var now = new Date();
+    var y = (_calYM ? _calYM.y : now.getFullYear());
+    var m = (_calYM ? _calYM.m : now.getMonth());   // 0-11
+    var first = new Date(y, m, 1);
+    var startDow = first.getDay();                  // 0=日
+    var daysInMonth = new Date(y, m + 1, 0).getDate();
+    var todayS = todayStr();
+    var st = computeStreaks(stamps);
+    var title = byId("calTitle"); if(title) title.textContent = y + "年 " + (m + 1) + "月";
+    var html = '<div class="cal-grid">';
+    ["日","月","火","水","木","金","土"].forEach(function(w){ html += '<div class="cal-dow">' + w + '</div>'; });
+    for(var i = 0; i < startDow; i++) html += '<div class="cal-cell cal-empty"></div>';
+    for(var day = 1; day <= daysInMonth; day++){
+      var ds = y + "-" + String(m + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+      var cls = "cal-cell";
+      if(set[ds]) cls += " cal-on";
+      if(ds === todayS) cls += " cal-today";
+      html += '<div class="' + cls + '">' + day + '</div>';
+    }
+    html += '</div>';
+    html += '<div class="cal-streaks">現在の連続 <b>' + st.current + '</b>日 ／ 最長 <b>' + st.longest + '</b>日</div>';
+    host.innerHTML = html;
+  }
+  function calShiftMonth(delta){
+    var now = new Date();
+    var y = (_calYM ? _calYM.y : now.getFullYear());
+    var m = (_calYM ? _calYM.m : now.getMonth()) + delta;
+    while(m < 0){ m += 12; y -= 1; }
+    while(m > 11){ m -= 12; y += 1; }
+    _calYM = { y: y, m: m };
+    renderCalendar();
+  }
+
   function applyState(ns){
     if(!ns) return;
     if(ns.prog) state.prog = ns.prog;
@@ -7980,8 +8123,10 @@ document.addEventListener("DOMContentLoaded", function () {
     if (ns.todayQuota !== undefined) state.todayQuota = (typeof ns.todayQuota === "number" && ns.todayQuota > 0) ? ns.todayQuota : null; // 案A
     if (ns.normDoneDate !== undefined) state.normDoneDate = (typeof ns.normDoneDate === "string") ? ns.normDoneDate : null;
     if (ns.carryOver !== undefined) state.carryOver = (ns.carryOver === true);
+    if (ns.stamps !== undefined) state.stamps = unionDays(state.stamps, ns.stamps);   // P34：和集合＝ローカルの当日分を消さない
     ensureProgress(state); ensureToday(state); ensureSettings(state); ensureAssignFields(state);
     markDirty(); flush(state); refreshHome();
+    stampToday(state);   // P34：ログイン状態なら当日をスタンプ（冪等・ゲストは押さない）
   }
   /* ===== 機能7・§9：共有語・投稿・審査・意見箱 ===== */
   async function loadSharedWords(){
@@ -8008,20 +8153,60 @@ document.addEventListener("DOMContentLoaded", function () {
     });
     return items.length ? [[pos, items]] : null;
   }
-  async function submitWord(){
+  /* P32：既存語との重複注意（ブロックはしない・注意のみ）。見出しかよみが一致する語を返す。 */
+  function findDup(w, yomi){
+    return allWords().filter(function(x){ return x.w === w || (yomi && x.yomi === yomi); });
+  }
+  /* P32：送信を2段階化。①「確認する」→ prepareSubmit（検証＋重複注意＋プレビュー表示。insert しない）。
+     ②プレビュー内「投稿する」→ doSubmitWord（既存の insert 処理をそのまま流用）。 */
+  var _pendingSubmit = null;   // プレビュー確定用に検証済みの入力を一時保持
+  function prepareSubmit(){
     if(!cloudConfigured()){ toast("準備中（クラウド未設定）"); return; }
     if(!currentUser){ toast("投稿にはログインが必要です"); showMenuLogin(); return; }
     var w = byId("subW").value.trim();
     if(!w){ toast("見出しを入力してください"); return; }
     var e = collectSenses();
     if(!e){ toast("語義を1つ以上入力してください"); return; }
+    var yomi = byId("subYomi").value.trim() || w;
+    var l = parseInt(byId("subLevel").value,10) || 1;
+    var pos = byId("subPos").value;
+    _pendingSubmit = { w: w, yomi: yomi, l: l, pos: pos, e: e };
+    // プレビュー整形（見出し・読み・レベル・品詞・語義＋極性）
+    var polLabel = { pos: "良", neg: "悪", neu: "中" };
+    var sensesHtml = (e[0][1] || []).map(function(it){
+      var ja = Array.isArray(it) ? it[0] : it, pol = Array.isArray(it) ? it[1] : "neu";
+      return '<span class="prev-sense"><span class="prev-pol prev-' + esc(pol) + '">' + esc(polLabel[pol] || "中") + '</span>' + esc(ja) + '</span>';
+    }).join("");
+    var dupHtml = "";
+    var dups = findDup(w, yomi);
+    if(dups.length){
+      dupHtml = '<div class="prev-dup">「' + esc(w) + '」は既に登録されている可能性があります（それでも投稿できます）。</div>';
+    }
+    var host = byId("subPreview");
+    host.innerHTML = dupHtml
+      + '<div class="prev-head">' + esc(w) + '<span class="prev-yomi">（' + esc(yomi) + '）</span></div>'
+      + '<div class="prev-meta">レベル' + esc(String(l)) + '・' + esc(pos) + '</div>'
+      + '<div class="prev-senses">' + sensesHtml + '</div>'
+      + '<div class="prev-actions"><button class="homebtn primary" id="subDoSubmit" type="button">投稿する</button>'
+      + '<button class="homebtn" id="subEdit" type="button">修正する</button></div>';
+    host.hidden = false;
+    byId("subForm").hidden = true;   // 入力フォームを隠してプレビューに集中させる
+    byId("subDoSubmit").addEventListener("click", doSubmitWord);
+    byId("subEdit").addEventListener("click", function(){ host.hidden = true; byId("subForm").hidden = false; });
+  }
+  async function doSubmitWord(){
+    if(!_pendingSubmit){ return; }
+    if(!(cloudConfigured() && currentUser)){ toast("投稿にはログインが必要です"); return; }
+    var p = _pendingSubmit;
     try{
       var r = await sb.from("kobun_word_submissions").insert({
-        user_id: currentUser.id, w: w, yomi: byId("subYomi").value.trim() || w,
-        l: parseInt(byId("subLevel").value,10) || 1, pos: byId("subPos").value, data: e, status: "pending" });
+        user_id: currentUser.id, w: p.w, yomi: p.yomi,
+        l: p.l, pos: p.pos, data: p.e, status: "pending" });
       if(r && r.error) throw r.error;
+      byId("subPreview").hidden = true; byId("subForm").hidden = false;
       var n = byId("subNote"); n.hidden = false; n.textContent = "投稿しました。オーナーの承認をお待ちください。";
       byId("subW").value = ""; byId("subYomi").value = ""; renderSenseRows(1);
+      _pendingSubmit = null;
     }catch(e2){ toast("投稿に失敗しました"); }
   }
   async function loadPending(){
@@ -8332,7 +8517,7 @@ document.addEventListener("DOMContentLoaded", function () {
     try{
       await sb.from(CLOUD_TABLE).upsert({ user_id: currentUser.id, updated_at: new Date().toISOString(),
         data: JSON.stringify({ prog: state.prog, todayDate: state.todayDate, todayCount: state.todayCount, todayQuota: state.todayQuota || null, custom: state.custom || [], session: state.session || null,
-          newAssign: state.newAssign || { date: null, ids: [] }, normDoneDate: state.normDoneDate || null, carryOver: state.carryOver === true }) });
+          newAssign: state.newAssign || { date: null, ids: [] }, normDoneDate: state.normDoneDate || null, carryOver: state.carryOver === true, stamps: state.stamps || [] }) });
     }catch(e){ console.warn("[TSUKUYOMI クラウド] 即時保存失敗（ローカルには保存済み）", e); }
   }
 
@@ -8354,7 +8539,7 @@ document.addEventListener("DOMContentLoaded", function () {
       try{
         await sb.from(CLOUD_TABLE).upsert({ user_id: currentUser.id, updated_at: new Date().toISOString(),
           data: JSON.stringify({ prog: state.prog, todayDate: state.todayDate, todayCount: state.todayCount, todayQuota: state.todayQuota || null, custom: state.custom || [], session: state.session || null,
-            newAssign: state.newAssign || { date: null, ids: [] }, normDoneDate: state.normDoneDate || null, carryOver: state.carryOver === true }) });
+            newAssign: state.newAssign || { date: null, ids: [] }, normDoneDate: state.normDoneDate || null, carryOver: state.carryOver === true, stamps: state.stamps || [] }) });
       }catch(e){ console.warn("[TSUKUYOMI クラウド] 保存失敗", e); }
     }, 400);
   }
@@ -8617,7 +8802,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     body.textContent = isIOS
       ? "画面下の共有ボタン（□に↑）から「ホーム画面に追加」を選ぶと、アイコンから直接ひらけます。アドレスバーが消えるぶん、画面を広く使え、画面下に余白（帯）が出る現象もなくなります。"
-      : "ブラウザのメニューから「ホーム画面に追加」（または「アプリをインストール」）を選ぶと、アイコンから直接ひらけます。アドレスバーが消えるぶん、画面を広く使え、画面下に余白（帯）が出る現象もなくなります。";
+      : "ブラウザのメニューから「ホーム画面に追加」（または「アプリをインストール」）を選ぶと、アイコンから直接ひらけます。アドレスバーが消えるぶん、画面を広く使えます。";  // PWA：非iOSでは帯の症状が起きないため、その一文は入れない
     card.hidden = false;
   }
   initPwaNote();
