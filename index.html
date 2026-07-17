@@ -150,6 +150,19 @@ details.panel .inner{padding:0 18px 18px}
 .setting-row select{flex:0 1 auto;max-width:62%}
 textarea{width:100%;min-height:130px;border:1px solid var(--line);border-radius:6px;padding:8px;font-size:16px;font-family:ui-monospace,monospace;background:#fff;color:var(--ink)}
 .btn-sub{padding:8px 14px;border:1px solid var(--ink);border-radius:6px;font-size:.82rem;font-weight:500;margin:8px 8px 0 0;background:#fff}
+.cal-streaks{display:flex;gap:10px;margin-bottom:14px}
+.cal-streak-box{flex:1;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px;text-align:center}
+.cal-streak-box .num{font-family:var(--serif);font-size:1.5rem;font-weight:700;color:var(--shu)}
+.cal-streak-box .lbl{font-size:.72rem;color:var(--sub);margin-top:2px}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cal-month{font-family:var(--serif);font-weight:700;font-size:1rem}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-dow{margin-bottom:4px}
+.cal-dowcell{text-align:center;font-size:.72rem;color:var(--sub);padding:2px 0}
+.cal-cell{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:.82rem;color:var(--ink);background:var(--card);border:1px solid var(--line)}
+.cal-cell.cal-empty{background:transparent;border:none}
+.cal-cell.cal-stamp{background:var(--midori);color:#fff;font-weight:700;border-color:var(--midori)}
+.cal-cell.cal-today{outline:2px solid var(--shu);outline-offset:-2px;font-weight:700}
 .msg{font-size:.78rem;margin-top:8px;color:var(--midori)}
 .msg.err{color:var(--shu)}
 .warn-banner{background:var(--shu-soft);border:1px solid var(--shu);color:var(--shu);border-radius:8px;padding:10px 12px;font-size:.78rem;margin-bottom:14px;line-height:1.6}
@@ -4386,7 +4399,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.17.22.00";
+const APP_VERSION = "2026.07.17.23.40";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4443,6 +4456,7 @@ let state = {
                  //        cSeen,cCorrect,wSeen,wCorrect}  ※c=選択式 w=記述式
   log:{},        // "YYYY-MM-DD" -> {news,reviews,stocked}
   custom:[],     // 追加単語（BUILTIN と同形式）
+  stamps:{},     // 【P34】ログインして開いた日のスタンプ "YYYY-MM-DD" -> 1（学習カレンダー用）
   activeSession:null // 中断復帰用のセッション途中状態
 };
 
@@ -4556,6 +4570,7 @@ async function loadState(){
       const s = JSON.parse(v);
       state = Object.assign(state, s);
       if(!Array.isArray(state.custom)) state.custom = [];
+      if(!state.stamps || typeof state.stamps!=="object") state.stamps = {};   /* 【P34】旧stateガード：stamps 欠落を空オブジェクトで補完 */
       state.settings = Object.assign({newPerDay:30,rate:0.95,difficulty:1,blankCount:"auto"}, s.settings||{});
       if(state.settings.dailyNew == null) state.settings.dailyNew = state.settings.newPerDay;  /* 【P33是正B】旧stateは newPerDay を dailyNew の既定に（新規ペース不変） */
       delete state.settings.modes; // 旧設定の掃除
@@ -4713,6 +4728,7 @@ function mergeStates(primary, secondary){
   }
   out.custom = cust;
   out.log = Object.assign({}, secondary.log||{}, out.log||{});
+  out.stamps = Object.assign({}, secondary.stamps||{}, out.stamps||{});   /* 【P34】スタンプ日を和集合で統合（値は常に1・キーの和集合。複数端末で消えない） */
   out.settings = Object.assign({}, secondary.settings||{}, out.settings||{});
   /* 進行中セッションはクラウド優先。クラウドに無ければローカルの続きを引き継ぐ。 */
   out.activeSession = out.activeSession || secondary.activeSession || null;
@@ -4883,6 +4899,38 @@ function streak(){
   while(state.log[todayStr(d)]){ n++; d.setDate(d.getDate()-1); }
   return n;
 }
+/* 【P34】その日初回のみスタンプ（ゲスト対象外・冪等）。ログインして開いた日を記録する。 */
+function ensureTodayStamp(){
+  if(!(sb && currentUser)) return;          // ゲスト（未ログイン）は対象外
+  if(!state.stamps || typeof state.stamps!=="object") state.stamps = {};
+  const t = todayStr();
+  if(state.stamps[t]) return;               // その日2回目以降は何もしない（冪等）
+  state.stamps[t] = 1;
+  scheduleSave();
+}
+/* 【P34】現在の連続日数：今日から1日ずつ遡り、stamps に在る限りカウント。
+   既存 streak() と同じく、今日が未スタンプでも昨日まで連続なら継続扱い。 */
+function stampStreakCurrent(){
+  const st = state.stamps || {};
+  let n=0; const d=new Date();
+  if(!st[todayStr(d)]) d.setDate(d.getDate()-1);
+  while(st[todayStr(d)]){ n++; d.setDate(d.getDate()-1); }
+  return n;
+}
+/* 【P34】最長の連続日数：全スタンプ日をソートし、連続する最長ランを求める。 */
+function stampStreakLongest(){
+  const days = Object.keys(state.stamps || {}).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
+  if(days.length===0) return 0;
+  let best=1, run=1;
+  for(let i=1;i<days.length;i++){
+    const prev = new Date(days[i-1]+"T00:00:00");
+    const cur  = new Date(days[i]+"T00:00:00");
+    const diff = Math.round((cur - prev) / 86400000);   // 日数差（ローカル日付基準の00:00同士）
+    if(diff===1){ run++; if(run>best) best=run; }
+    else{ run=1; }
+  }
+  return best;
+}
 
 /* ---- 音声 (Web Speech API) ---- */
 let enVoice = null;
@@ -5007,6 +5055,7 @@ function renderHome(){
       <button id="menuSet">設定</button>
       <button id="menuAbout">アプリの説明</button>
       <button id="menuData">単語データの追加</button>
+      <button id="menuCalendar">学習カレンダー</button>
       ${cloudConfigured() ? `<button id="menuFeedback">ご要望・お問い合わせ<span class="notif-dot" id="dotFeedback"></span></button>` : ``}
       ${isOwner() ? `<button id="menuInbox">受信箱<span class="notif-dot" id="dotInbox"></span></button>` : ``}
       ${cloudConfigured() ? (currentUser
@@ -5058,6 +5107,7 @@ function renderHome(){
   const mTsuku = document.getElementById("menuTsukuyomi"); if(mTsuku) mTsuku.onclick = ()=>{ location.href = "https://amaterasu-vocab.com/tsukuyomi/"; };
   document.getElementById("menuSet").onclick = ()=>renderSettings();
   document.getElementById("menuData").onclick = ()=>renderData();
+  document.getElementById("menuCalendar").onclick = ()=>renderCalendar();
   document.getElementById("menuAbout").onclick = ()=>renderAbout();
   const mFb = document.getElementById("menuFeedback"); if(mFb) mFb.onclick = ()=>renderFeedback();
   const mInbox = document.getElementById("menuInbox"); if(mInbox) mInbox.onclick = ()=>renderInbox();
@@ -5276,6 +5326,56 @@ function bindWordForm(){
   fwRenderPreview();
 }
 
+
+/* ==== 学習カレンダー（P34：ログインスタンプ＋連続日数）==== */
+let calViewYM = null;   // 表示中の月 "YYYY-MM"（null＝今月）
+function renderCalendar(){
+  refClose();
+  session = null;
+  const now = new Date();
+  if(!calViewYM) calViewYM = todayStr(now).slice(0,7);   // 初回は今月
+  const [vy, vm] = calViewYM.split("-").map(n=>parseInt(n));   // vm: 1〜12
+  const first = new Date(vy, vm-1, 1);
+  const startDow = first.getDay();                 // 0=日 … 6=土（日曜始まり）
+  const daysInMonth = new Date(vy, vm, 0).getDate();
+  const stamps = state.stamps || {};
+  const todayS = todayStr(now);
+  const pad2 = n => String(n).padStart(2,"0");
+  const cur = stampStreakCurrent();
+  const longest = stampStreakLongest();
+  const dow = ["日","月","火","水","木","金","土"];
+  /* セル配列を組む（先頭の空白＋各日） */
+  let cells = "";
+  for(let i=0;i<startDow;i++) cells += `<div class="cal-cell cal-empty"></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const key = `${vy}-${pad2(vm)}-${pad2(d)}`;
+    const isStamp = !!stamps[key];
+    const isToday = (key === todayS);
+    const cls = "cal-cell" + (isStamp ? " cal-stamp" : "") + (isToday ? " cal-today" : "");
+    cells += `<div class="${cls}">${d}</div>`;
+  }
+  const monthLabel = `${vy}年${vm}月`;
+  app.innerHTML = `
+  <header><div><h1>学習カレンダー</h1></div>
+    <a class="streak" href="#" id="backHome" style="text-decoration:underline">戻る</a></header>
+  <div class="panel"><div class="inner">
+    <div class="cal-streaks">
+      <div class="cal-streak-box"><div class="num">${cur}</div><div class="lbl">現在の連続</div></div>
+      <div class="cal-streak-box"><div class="num">${longest}</div><div class="lbl">最長の連続</div></div>
+    </div>
+    <div class="cal-nav">
+      <button class="btn-sub" id="calPrev" style="margin:0">◀ 前の月</button>
+      <span class="cal-month">${monthLabel}</span>
+      <button class="btn-sub" id="calNext" style="margin:0">次の月 ▶</button>
+    </div>
+    <div class="cal-grid cal-dow">${dow.map(x=>`<div class="cal-dowcell">${x}</div>`).join("")}</div>
+    <div class="cal-grid">${cells}</div>
+    <p class="note" style="margin-top:10px">ログインして開いた日にスタンプが付きます。連続日数はスタンプの並びで数えます。</p>
+  </div></div>`;
+  document.getElementById("backHome").onclick = (e)=>{ e.preventDefault(); calViewYM=null; renderHome(); };
+  document.getElementById("calPrev").onclick = ()=>{ let y=vy, m=vm-1; if(m<1){m=12;y--;} calViewYM=`${y}-${pad2(m)}`; renderCalendar(); };
+  document.getElementById("calNext").onclick = ()=>{ let y=vy, m=vm+1; if(m>12){m=1;y++;} calViewYM=`${y}-${pad2(m)}`; renderCalendar(); };
+}
 
 /* ==== ご要望・お問い合わせ（誰でも送信可・オーナーにのみ届く） ==== */
 function renderFeedback(){
@@ -7358,17 +7458,18 @@ async function doLogout(){
   if(saveTimer){ clearTimeout(saveTimer); saveTimer = null; }
   dirty = false;
   try{ localStorage.removeItem(STORE_KEY); }catch(_){}
-  state = { settings:{ newPerDay:30, rate:0.95, difficulty:1, blankCount:"auto", dailyNew:30 }, words:{}, log:{}, custom:[], activeSession:null };
+  state = { settings:{ newPerDay:30, rate:0.95, difficulty:1, blankCount:"auto", dailyNew:30 }, words:{}, log:{}, custom:[], stamps:{}, activeSession:null };
   clearLastUid();                 /* C-3：ログアウトで記録を消し、再ログイン時に再度確認できるようにする */
   if(sb) await sb.auth.signOut();
 }
 /* ログイン／ログアウト時：未ログイン中の進捗をアカウントへ統合 → 読み直して再描画 */
 async function syncOnAuthChange(){
   const merged = await maybeMigrateOnLogin();
-  state = { settings:{ newPerDay:30, rate:0.95, difficulty:1, blankCount:"auto", dailyNew:30 }, words:{}, log:{}, custom:[], activeSession:null };
+  state = { settings:{ newPerDay:30, rate:0.95, difficulty:1, blankCount:"auto", dailyNew:30 }, words:{}, log:{}, custom:[], stamps:{}, activeSession:null };
   await loadState();
   if(merged){ state = merged; scheduleSave(); }   /* (A-safe) 統合結果を確実に反映し、失敗時も次回saveでクラウドへ */
   migrateReviveOldRecords();   /* 一度きりの旧データ救済（既存レコードのみ・冪等）。ログアウト時は state.words 空で空回り */
+  ensureTodayStamp();          /* 【P34】ログイン成立日をスタンプ（冪等・ゲスト対象外） */
   if(!currentUser) skipLanding = false;   /* 【P19】ログアウトしたら入口画面に戻す */
   renderEntry();                          /* 【P19】ログイン成立ならホーム、ログアウトなら入口画面 */
   maybePromptSignupPassword();   /* 案件1：再描画の後に提示する（コード入力経由をカバー） */
@@ -7389,6 +7490,7 @@ async function syncOnAuthChange(){
   await loadState();
   if(merged){ state = merged; scheduleSave(); }  /* (A-safe) 統合結果を確実に反映し、失敗時も次回saveでクラウドへ */
   migrateReviveOldRecords();   /* 一度きりの旧データ救済（既存レコードのみ・冪等・強制保存はしない） */
+  ensureTodayStamp();          /* 【P34】起動時にログイン済みならスタンプ（冪等・ゲスト対象外） */
   renderEntry();   /* 【P19】未ログインなら入口画面（アプリ説明を常設）。ログイン済みならホーム */
   startUpdateWatcher();           // 新バージョン公開の監視を開始
   { const vt = document.getElementById("versionTag"); if(vt) vt.textContent = "v." + APP_VERSION.replace(/-/g,"."); }  /* E-2：バージョン表示（値は不変・表示のみ） */
