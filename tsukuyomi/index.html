@@ -124,6 +124,8 @@
   .meta b{ color:var(--ink); font-weight:600; }
 
   .head{ text-align:center; font-size:clamp(2rem, 9vw, 3rem); line-height:1.3; padding:1.1rem 0 1rem; }
+  /* T-2：同表記の助動詞（たり／なり）を見分けるための副題。見出しが巨大なため独立クラスで小さく出す */
+  .jq-sub{ display:block; font-size:clamp(.85rem, 3.6vw, 1.05rem); color:var(--sub); line-height:1.3; margin-bottom:.1rem; }
   .head ruby rt{ font-size:.38em; color:var(--sub); font-weight:normal; }
 
   .hint{ font-family:var(--sans); font-size:.75rem; color:var(--sub); text-align:center; margin:.2rem 0 .8rem; }
@@ -1082,7 +1084,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-18c";
+const APP_VERSION = "2026-07-18d";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -6361,6 +6363,31 @@ function buildQuestionsForWord(w) {
   return q ? [q] : [];
 }
 
+/* =========================================================
+   T-2：同表記の助動詞を見出しで一意に定める
+   「たり」(i:5 完了・存続／i:26 断定)、「なり」(i:19 断定・存在／i:25 伝聞・推定) は
+   表記と読みしか見せないと、学習者がどちらを問われているか判別できない。
+   ＝出題として成立していない状態（統合指示書 v1.16 条3）。
+   誤答肢は除外しない。見出しが一意に定まれば、同表記の相手の正解はむしろ良質な誤答肢になる
+   （§4.4 の否定接頭辞の例外と同じ構図）。
+   副題を出すのは同表記ペアのある語だけ。他の語の表示は完全に不変。
+========================================================= */
+const JODOSHI_DUP_W = (function(){
+  const n = {}, dup = {};
+  for (const x of KOBUN_JODOSHI) n[x.w] = (n[x.w] || 0) + 1;
+  for (const w in n) if (n[w] > 1) dup[w] = true;
+  return dup;
+})();
+
+/* 意味クイズ用の副題＝接続（問うのは意味なので答えは漏れない） */
+function jodoshiSubForImi(j) {
+  return JODOSHI_DUP_W[j.w] ? (j.setsuzoku + "接続の") : "";
+}
+/* 接続クイズ用の副題＝意味（接続を添えたら答えそのものになるため） */
+function jodoshiSubForSetsuzoku(j) {
+  return JODOSHI_DUP_W[j.w] ? ((j.imi || []).join("・") + "の") : "";
+}
+
 function isSetsuzokuQuizable(j) {
   return SETSUZOKU_CHOICES.includes(j.setsuzoku);
 }
@@ -6375,7 +6402,7 @@ function buildSetsuzokuQuestion(j) {
     dummies.push(cand);
   }
   const options = shuffle([correct, ...dummies]);
-  return { type: "jodoshi-setsuzoku", i: j.i, w: j.w, yomi: j.yomi, answer: correct, options };
+  return { type: "jodoshi-setsuzoku", i: j.i, w: j.w, yomi: j.yomi, answer: correct, options, sub: jodoshiSubForSetsuzoku(j) };
 }
 
 function buildSetsuzokuSession(list) {
@@ -6400,7 +6427,7 @@ function buildImiQuestion(j) {
     dummies.push(cand);
   }
   const options = shuffle([...answers, ...dummies]);
-  return { type: "jodoshi-imi", i: j.i, w: j.w, yomi: j.yomi, answers, options };
+  return { type: "jodoshi-imi", i: j.i, w: j.w, yomi: j.yomi, answers, options, sub: jodoshiSubForImi(j) };
 }
 
 function buildImiSession(list, n) {
@@ -7479,7 +7506,7 @@ document.addEventListener("DOMContentLoaded", function () {
       jqLocked = false; jqOnKey = null;
       var q = jqList[jqIdx];
       jqProgressEl.textContent = "全" + jqTotal + "問中 " + (jqIdx + 1) + "問目";
-      jqHeadEl.innerHTML = rubyHtml({ w: q.w, yomi: q.yomi }); // 見出し（必要ならruby）
+      jqHeadEl.innerHTML = (q.sub ? '<span class="jq-sub">' + esc(q.sub) + '</span>' : "") + rubyHtml({ w: q.w, yomi: q.yomi }); // 見出し（必要ならruby。T-2：同表記語は副題で一意に）
       jqAreaEl.innerHTML = "";
       jqKaisetuEl.hidden = true; clearGraded();
       if(jqType === "imi") renderImi(q); else renderSetsuzoku(q);
@@ -7517,7 +7544,7 @@ document.addEventListener("DOMContentLoaded", function () {
       btns[sel].classList.add(correct ? "correct-bg" : "wrong-bg");
       setGraded(correct);
       var jj = KOBUN_JODOSHI.find(function(x){ return x.i === q.i; });
-      var html = '<div class="k-word">' + rubyHtml({ w: q.w, yomi: q.yomi }) + '</div>';
+      var html = '<div class="k-word">' + (q.sub ? '<span class="jq-sub">' + esc(q.sub) + '</span>' : "") + rubyHtml({ w: q.w, yomi: q.yomi }) + '</div>';
       html += '<div class="k-row">' + (correct ? "正解！" : "残念…") + '　正しい接続：<b>' + esc(q.answer) + '</b></div>';
       if(jj && jj.rei && jj.rei[0]) html += reiBlock(jj.rei[0]); // 代表例文1つ
       if(jj && jj.c) html += '<div class="k-note">〔メモ〕' + esc(jj.c) + '</div>';
@@ -7568,7 +7595,7 @@ document.addEventListener("DOMContentLoaded", function () {
       setGraded(pickedAll);
       // 解説：見出し／全意味それぞれに例文（imiバッジ＋rei.s(mark)＋訳t）
       var jj = KOBUN_JODOSHI.find(function(x){ return x.i === q.i; });
-      var html = '<div class="k-word">' + rubyHtml({ w: q.w, yomi: q.yomi }) + '</div>';
+      var html = '<div class="k-word">' + (q.sub ? '<span class="jq-sub">' + esc(q.sub) + '</span>' : "") + rubyHtml({ w: q.w, yomi: q.yomi }) + '</div>';
       html += '<div class="k-row">' + (pickedAll ? "正解！" : "残念…") + '</div>';
       (q.answers || []).forEach(function(imi){
         html += '<div class="imi-line"><span class="imi-badge">' + esc(imi) + '</span></div>';
