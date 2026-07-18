@@ -4412,7 +4412,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.18.22.00";
+const APP_VERSION = "2026.07.18.23.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -7065,6 +7065,7 @@ async function resetAllProgress(){
   state.words = {};
   state.log = {};
   state.activeSession = null;
+  state.posSession = null;   /* 品詞モードの中断状態。消さないとリセット後も「続きから」が残り、記録の消えた続きを開くことになる */
   /* settings（newPerDay等）と custom（追加単語＝資産）は保持する */
   try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(_){}  /* ローカル明示初期化：backendSetはクラウド成功時にlocalStorageを書かないため、端末間での復活を防ぐ */
   dirty = true;
@@ -7117,7 +7118,7 @@ function renderSettings(){
     ${pwaNoteHtml()}
     <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
       <button id="resetAll" style="background:var(--shu);color:#fff;border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:14px">すべての進捗をリセット</button>
-      <p class="note" style="margin:6px 0 0;color:var(--sub);font-size:12px">学習進捗（回答履歴・ノルマ・中断中のセッション）をすべて消去します。設定と追加した単語は残ります。元に戻せません。</p>
+      <p class="note" style="margin:6px 0 0;color:var(--sub);font-size:12px">学習進捗（回答履歴・ノルマ・中断中のセッション・学習カレンダーの記録と連続日数）をすべて消去します。設定と追加した単語は残ります。元に戻せません。</p>
     </div>
   </div></div>`;
   document.getElementById("backHome").onclick = (e)=>{ e.preventDefault(); renderHome(); };
@@ -7176,7 +7177,7 @@ function renderAbout(){
 
     <h2>モードの種類</h2>
     <p class="note"><strong>学習</strong>＝1回ぶん（1チャンク）の学習。選択式と記述式で定着を判定します。復習を優先し、足りない分だけ新しい単語が加わります。<br>
-    <strong>苦手モード</strong>＝正答率60%未満の単語を集中的に演習（復習期日とは無関係）。<br>
+    <strong>苦手モード</strong>＝正答率50%以下の単語を集中的に演習（復習期日とは無関係）。<br>
     <strong>品詞モード</strong>＝品詞をすべて選ぶモード。記録なし。<br>
     <strong>単語一覧</strong>＝全単語を閲覧。</p>
 
@@ -7218,7 +7219,7 @@ function renderAbout(){
 
     <h2>苦手モード</h2>
     ${shot("weak","苦手モード（選択式）")}
-    <p class="note">正答率60%未満の単語を集中的に演習するモードです。復習期日とは無関係にいつでも挑戦できます。ホーム画面の「苦手モード」ボタンから始められます。カード右上の<strong>赤い「苦手」タグ</strong>で、通常の学習と区別されます。</p>
+    <p class="note">正答率50%以下の単語を集中的に演習するモードです。復習期日とは無関係にいつでも挑戦できます。ホーム画面の「苦手モード」ボタンから始められます。カード右上の<strong>赤い「苦手」タグ</strong>で、通常の学習と区別されます。</p>
 
     <h2>品詞モード</h2>
     ${shot("pos","品詞モード")}
