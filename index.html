@@ -163,6 +163,13 @@ textarea{width:100%;min-height:130px;border:1px solid var(--line);border-radius:
 .cal-cell.cal-empty{background:transparent;border:none}
 .cal-cell.cal-stamp{background:var(--midori);color:#fff;font-weight:700;border-color:var(--midori)}
 .cal-cell.cal-today{outline:2px solid var(--shu);outline-offset:-2px;font-weight:700}
+.sub-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.sub-row:last-child{border-bottom:none}
+.sub-word{font-weight:600;color:var(--ink);word-break:break-word}
+.sub-badge{flex:none;font-size:.72rem;font-weight:700;border-radius:4px;padding:2px 8px;line-height:1.5}
+.sub-badge.sub-wait{color:var(--sub);border:1.5px solid var(--sub)}
+.sub-badge.sub-ok{color:#fff;background:var(--midori);border:1.5px solid var(--midori)}
+.sub-badge.sub-ng{color:#fff;background:var(--shu);border:1.5px solid var(--shu)}
 .msg{font-size:.78rem;margin-top:8px;color:var(--midori)}
 .msg.err{color:var(--shu)}
 .warn-banner{background:var(--shu-soft);border:1px solid var(--shu);color:var(--shu);border-radius:8px;padding:10px 12px;font-size:.78rem;margin-bottom:14px;line-height:1.6}
@@ -4399,7 +4406,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.18.11.00";
+const APP_VERSION = "2026.07.18.14.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4626,13 +4633,14 @@ function stripCacheBuster(){
    通信失敗は握りつぶす＝点灯しないだけ（画面は壊さない）。未ログイン時はクエリを投げない。 */
 let notifInbox = false;     /* 管理者：未読の投稿がある */
 let notifFeedback = false;  /* 利用者：未読の返信/既読がある */
+let notifSubmission = false; /* 【P32-C】利用者：自分の投稿に未読の審査結果がある */
 function tmax(a, b){        /* null考慮の max（ISO文字列は辞書順比較で時刻順になる） */
   if(!a) return b || null;
   if(!b) return a;
   return (a > b) ? a : b;
 }
 async function refreshNotifDots(){
-  if(!sb || !currentUser){ notifInbox = false; notifFeedback = false; reflectNotifDots(); return; }
+  if(!sb || !currentUser){ notifInbox = false; notifFeedback = false; notifSubmission = false; reflectNotifDots(); return; }
   /* B：利用者側。自分の投稿のうち max(replied_at, admin_read_at) > user_read_at なら未読 */
   try{
     const { data } = await sb.from("feedback")
@@ -4645,6 +4653,17 @@ async function refreshNotifDots(){
       return latest > r.user_read_at;           /* 既読後に再返信されたら再点灯 */
     });
   }catch(_){ notifFeedback = false; }
+  /* 【P32-C】利用者側：自分の投稿のうち reviewed_at があり user_read_at より新しい（未読）なら点灯 */
+  try{
+    const { data } = await sb.from("word_submissions")
+      .select("id, reviewed_at, user_read_at")
+      .eq("submitted_by", currentUser.id);
+    notifSubmission = (data || []).some(r=>{
+      if(!r.reviewed_at) return false;              /* まだ審査されていない */
+      if(!r.user_read_at) return true;              /* 未読（一度も一覧を開いていない） */
+      return r.reviewed_at > r.user_read_at;        /* 既読後に再審査されたら再点灯 */
+    });
+  }catch(_){ notifSubmission = false; }
   /* A：管理者側。オーナーのみ実行。created_at > admin_read_at（nullなら未読）が1件でもあれば点灯 */
   if(isOwner()){
     try{
@@ -4660,7 +4679,8 @@ function reflectNotifDots(){
   const set = (id, on)=>{ const el = document.getElementById(id); if(el) el.style.display = on ? "block" : "none"; };
   set("dotInbox", notifInbox);
   set("dotFeedback", notifFeedback);
-  set("dotMenu", notifInbox || notifFeedback);   /* ☰へ伝播（メニューを開かなくても気づける） */
+  set("dotSubmission", notifSubmission);   /* 【P32-C】「単語を追加」項目の赤ドット */
+  set("dotMenu", notifInbox || notifFeedback || notifSubmission);   /* ☰へ伝播（メニューを開かなくても気づける） */
 }
 /* 追加2：フローティング更新ボタンを body 直下に常設する（app.innerHTML の書き換えの影響を受けない） */
 function ensureUpdateFloat(){
@@ -5054,7 +5074,7 @@ function renderHome(){
     <div class="menu-drop" id="menuDrop">
       <button id="menuSet">設定</button>
       <button id="menuAbout">アプリの説明</button>
-      <button id="menuData">単語を追加</button>
+      <button id="menuData">単語を追加<span class="notif-dot" id="dotSubmission"></span></button>
       <button id="menuCalendar">学習カレンダー</button>
       ${cloudConfigured() ? `<button id="menuFeedback">ご要望・お問い合わせ<span class="notif-dot" id="dotFeedback"></span></button>` : ``}
       ${isOwner() ? `<button id="menuInbox">受信箱<span class="notif-dot" id="dotInbox"></span></button>` : ``}
@@ -5163,6 +5183,11 @@ function renderData(){
     <span class="msg" id="fwMsg"></span>
   </div></div>
 
+  <div class="panel" id="mySubsPanel" style="display:none"><div class="inner">
+    <h2 style="margin-top:0">あなたが追加した単語の審査状況</h2>
+    <div id="mySubsBody"><p class="note">読み込み中…</p></div>
+  </div></div>
+
   <details class="panel">
     <summary>上級者向け：JSONで一括追加・バックアップ</summary>
     <div class="inner">
@@ -5177,6 +5202,9 @@ function renderData(){
   document.getElementById("backHome").onclick = (e)=>{ e.preventDefault(); renderHome(); };
   /* ==== 初心者向けフォーム（P32-A）==== */
   bindWordForm();
+  /* ==== 自分の投稿の審査状況（P32-C）==== */
+  loadMySubmissions();
+  markMySubmissionsRead();   /* 開いた瞬間に全件既読（お問い合わせと同じ「開いたら消える」） */
   document.getElementById("importBtn").onclick = async ()=>{
     const box = document.getElementById("importBox"), msg = document.getElementById("dataMsg");
     try{
@@ -5326,6 +5354,38 @@ function bindWordForm(){
   fwRenderPreview();
 }
 
+/* ==== 自分の投稿の審査状況（P32-C）==== */
+/* status → 表示ラベルとクラス */
+function subStatusBadge(status){
+  if(status === "approved") return `<span class="sub-badge sub-ok">承認済み</span>`;
+  if(status === "rejected") return `<span class="sub-badge sub-ng">却下</span>`;
+  return `<span class="sub-badge sub-wait">審査待ち</span>`;   /* pending もしくは未知 */
+}
+async function loadMySubmissions(){
+  const panel = document.getElementById("mySubsPanel");
+  const body = document.getElementById("mySubsBody");
+  if(!panel || !body) return;
+  /* 未ログインなら節を出さない（案内は初心者フォーム側の説明で足りるため非表示） */
+  if(!(sb && currentUser)){ panel.style.display = "none"; return; }
+  panel.style.display = "";
+  try{
+    const { data, error } = await sb.from("word_submissions")
+      .select("id, word, status, created_at, reviewed_at")
+      .eq("submitted_by", currentUser.id)
+      .order("created_at", { ascending:false });
+    if(error) throw error;
+    const rows = data || [];
+    if(!rows.length){ body.innerHTML = `<p class="note">まだ投稿はありません。上の欄から単語を追加すると、ここに審査の状況が表示されます。</p>`; return; }
+    body.innerHTML = rows.map(r=>`
+      <div class="sub-row">
+        <span class="sub-word">${esc(r.word||"")}</span>
+        ${subStatusBadge(r.status)}
+      </div>`).join("");
+  }catch(_){
+    body.innerHTML = `<p class="note">審査状況を読み込めませんでした。時間をおいて開き直してください。</p>`;
+  }
+}
+
 
 /* ==== 学習カレンダー（P34：ログインスタンプ＋連続日数）==== */
 let calViewYM = null;   // 表示中の月 "YYYY-MM"（null＝今月）
@@ -5455,6 +5515,16 @@ async function markMyFeedbackRead(){
     reflectNotifDots();
   }catch(_){ /* 失敗しても画面は壊さない（次回開いた時に再試行される） */ }
 }
+/* 【P32-C】自分の投稿の審査結果を全件既読化（「単語を追加」を開いた瞬間・引数なしRPC）。
+   markMyFeedbackRead と同型。テーブルへの直接updateは書かない（RPCが唯一の正しい経路）。 */
+async function markMySubmissionsRead(){
+  if(!sb || !currentUser) return;
+  try{
+    await sb.rpc("mark_my_submissions_read");
+    notifSubmission = false;
+    reflectNotifDots();
+  }catch(_){ /* 失敗しても画面は壊さない（次回開いた時に再試行される） */ }
+}
 async function refreshOwnFeedbackHistory(){
   const box = document.getElementById("fbHistory");
   if(!box) return;
@@ -5526,7 +5596,7 @@ async function refreshInbox(){
   if(!body) return;
   if(!sb){ body.innerHTML = `<p class="msg err">クラウド未接続</p>`; return; }
   let subs = [], fbs = [];
-  try{ const r1 = await sb.from("word_submissions").select("*").order("created_at",{ascending:true}); subs = r1.data || []; }catch(_){}
+  try{ const r1 = await sb.from("word_submissions").select("*").eq("status","pending").order("created_at",{ascending:true}); subs = r1.data || []; }catch(_){}
   try{ const r2 = await sb.from("feedback").select("*").order("created_at",{ascending:false}); fbs = r2.data || []; }catch(_){}
   let html = `<h2 style="margin-top:0">単語の承認待ち（${subs.length}）</h2>`;
   if(!subs.length){ html += `<p class="note">承認待ちの単語はありません。</p>`; }
@@ -5592,7 +5662,7 @@ async function approveSubmission(id){
     if(data){
       const ins = await sb.from("shared_words").insert({ word:data.word, level:data.level, core:data.core, entries:data.entries });
       if(ins.error){ alert("承認に失敗: "+ins.error.message); return; }
-      await sb.from("word_submissions").delete().eq("id", id);
+      await sb.from("word_submissions").update({ status:"approved", reviewed_at:new Date().toISOString() }).eq("id", id);   /* P32-C：DELETEせず承認済みとして残す（利用者に審査状況を見せる） */
       await loadSharedWords();
     }
   }catch(e){ alert("承認に失敗: "+e.message); }
@@ -5600,7 +5670,7 @@ async function approveSubmission(id){
 }
 async function rejectSubmission(id){
   if(!sb) return;
-  try{ await sb.from("word_submissions").delete().eq("id", id); }catch(_){}
+  try{ await sb.from("word_submissions").update({ status:"rejected", reviewed_at:new Date().toISOString() }).eq("id", id); }catch(_){}   /* P32-C：DELETEせず却下として残す */
   await refreshInbox();
 }
 async function markFeedbackRead(id){
