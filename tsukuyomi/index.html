@@ -710,10 +710,12 @@
       <div class="menu-items">
         <button class="menu-item" id="miSettings" type="button">設定</button>
         <button class="menu-item" id="miAbout" type="button">アプリの説明</button>
+        <button class="menu-item" id="miNotice" type="button">お知らせ<span class="dot" id="dotNotice" hidden></span></button>
         <button class="menu-item" id="miCalendar" type="button">学習カレンダー</button>
         <button class="menu-item" id="miFeedback" type="button">意見箱・単語追加<span class="dot" id="dotFeedback" hidden></span></button>
         <button class="menu-item" id="miReview" type="button" hidden>単語の審査<span class="dot" id="dotReview" hidden></span></button>
         <button class="menu-item" id="miInbox" type="button" hidden>届いた意見<span class="dot" id="dotInbox" hidden></span></button>
+        <button class="menu-item" id="miNoticeAdmin" type="button" hidden>お知らせを作成</button>
         <div class="menu-divider"></div>
         <div class="menu-account" id="accountRow" hidden></div>
         <button class="menu-item" id="miLogin" type="button">ログイン</button>
@@ -1010,6 +1012,38 @@
       </div>
       <div class="login-body" id="inboxList"></div>
     </div>
+    <!-- P43：お知らせ一覧（全利用者・ゲストも閲覧可） -->
+    <div id="menuNotice" class="menu-view" hidden>
+      <div class="menu-head">
+        <button class="icon-btn" id="noticeBack" type="button" aria-label="戻る"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <span class="menu-title">お知らせ</span>
+        <button class="icon-btn" id="noticeClose" type="button" aria-label="閉じる"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="login-body" id="noticeList"></div>
+    </div>
+    <!-- P43：お知らせを作成（オーナー専用。UI出し分けのみ・安全境界はRLS） -->
+    <div id="menuNoticeAdmin" class="menu-view" hidden>
+      <div class="menu-head">
+        <button class="icon-btn" id="naBack" type="button" aria-label="戻る"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <span class="menu-title">お知らせを作成</span>
+        <button class="icon-btn" id="naClose" type="button" aria-label="閉じる"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="login-body">
+        <input class="ref-search" id="naTitle" type="text" placeholder="題名">
+        <textarea class="ref-search" id="naBody" rows="5" placeholder="本文"></textarea>
+        <div style="display:flex;gap:.5rem;">
+          <select class="ref-sort" id="naKind" style="flex:1"><option value="notice">お知らせ</option><option value="update">アップデート情報</option></select>
+          <select class="ref-sort" id="naTarget" style="flex:1"><option value="tsukuyomi">TSUKUYOMI</option><option value="both">両方</option><option value="amateras">AMATERAS</option></select>
+        </div>
+        <select class="ref-sort" id="naPublished"><option value="true">公開する</option><option value="false">下書きとして保存</option></select>
+        <button class="homebtn primary" id="naSubmit" type="button">保存する</button>
+        <div class="login-note" id="naNote" hidden></div>
+        <div class="fb-hist">
+          <div class="fb-hist-title">投稿済み（下書きを含む・全ターゲット）</div>
+          <div id="naList"></div>
+        </div>
+      </div>
+    </div>
     <div class="rod bottom"></div>
   </div>
 
@@ -1048,7 +1082,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-18b";
+const APP_VERSION = "2026-07-18c";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -1067,6 +1101,28 @@ var unreadInbox = false;       // 管理者の未読あり（☰ と「届いた
      この変数を併せて見ないと「受信箱を開いた瞬間に投稿由来のドットが消える」。 */
 var pendingSubs = false;
 var unreadReply = false;       // WP15：利用者の未読あり（☰ と「意見箱」の赤ドット。ログイン利用者のみ）
+/* P43：お知らせの未読あり（☰ と「お知らせ」の赤ドット。オーナー限定ではなく全利用者）。
+   ★unreadInbox / pendingSubs には合流させない（P44是正で塞いだ「開いた先に未処理が無い」罠の再発防止）。 */
+var unreadNotice = false;
+/* P43：既読お知らせIDは state ではなく独立した localStorage キーで持つ。
+   state に入れると保存4経路（flush/saveCloud×2/mergeStates）の追従漏れや、
+   ログアウト時のローカル初期化（P29）で消える罠を踏むため（総司令裁定＝別キー方式）。
+   学習進捗ではなく機微も無いので、ログアウトしても消さない。壊れていても落ちない。 */
+var READ_NOTICE_KEY = "tsukuyomi_read_notices";
+function loadReadNotices(){
+  try{
+    var raw = localStorage.getItem(READ_NOTICE_KEY);
+    if(!raw) return [];
+    var arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.map(String) : [];
+  }catch(e){ return []; }   // 壊れていても落とさない（初期状態として扱う）
+}
+function saveReadNotices(ids){
+  try{
+    var uniq = {}; (ids || []).forEach(function(x){ if(x !== null && x !== undefined) uniq[String(x)] = 1; });
+    localStorage.setItem(READ_NOTICE_KEY, JSON.stringify(Object.keys(uniq)));
+  }catch(e){ /* 容量超過等でも落とさない */ }
+}
 var dotsUserId  = null;        // WP15：未読問い合わせを1回だけにするためのログイン主体のミラー
 var dotsIsOwner = false;       // renderDots が参照するオーナー判定のミラー（クロージャ内 isOwner から同期）
 function renderDots(){
@@ -1081,7 +1137,10 @@ function renderDots(){
   var showReview = (dotsIsOwner && pendingSubs);             // 単語の審査（オーナーのみ）
   if(di) di.hidden = !showInbox;
   if(dr) dr.hidden = !showReview;
-  if(dm) dm.hidden = !(showInbox || showReview);             // ☰ は「メニューの中に用事がある」の集約表示
+  /* P43：お知らせは全利用者が対象（dotsIsOwner ゲートを通さない）。☰ は「メニューの中に用事がある」の集約表示。 */
+  var dn = document.getElementById("dotNotice");
+  if(dn) dn.hidden = !unreadNotice;
+  if(dm) dm.hidden = !(showInbox || showReview || unreadNotice);
   /* WP15：☰ = (オーナー && 受信箱/審査の未処理) || 利用者の未読返信 ／ 意見箱 = 利用者の未読返信 */
   var df = document.getElementById("dotFeedback");
   if(df) df.hidden = !unreadReply;
@@ -7925,7 +7984,7 @@ document.addEventListener("DOMContentLoaded", function () {
   function openMenu() { menuBackdrop.hidden = false; menuPanel.hidden = false; showMenuList(); }
   function closeMenu() { menuBackdrop.hidden = true; menuPanel.hidden = true; }
   function setMenuView(id) {
-    ["menuList","menuSettings","menuAbout","menuCalendar","menuLogin","menuSubmit","menuFeedback","menuInquiry","menuReview","menuInbox"].forEach(function (v) {
+    ["menuList","menuSettings","menuAbout","menuCalendar","menuLogin","menuSubmit","menuFeedback","menuInquiry","menuReview","menuInbox","menuNotice","menuNoticeAdmin"].forEach(function (v) {
       var el = byId(v); if (el) el.hidden = (v !== id);
     });
   }
@@ -8026,6 +8085,15 @@ document.addEventListener("DOMContentLoaded", function () {
   byId("miInbox").addEventListener("click", function () { setMenuView("menuInbox"); loadInbox(); });
   byId("inboxBack").addEventListener("click", showMenuList);
   byId("inboxClose").addEventListener("click", closeMenu);
+  // P43：お知らせ（全利用者・ゲストも閲覧可。開いたときだけ既読化＝P37の前例）
+  byId("miNotice").addEventListener("click", function () { setMenuView("menuNotice"); openNotices(); });
+  byId("noticeBack").addEventListener("click", showMenuList);
+  byId("noticeClose").addEventListener("click", closeMenu);
+  // P43：お知らせを作成（オーナー専用・独立画面。受信箱への相乗りはしない）
+  byId("miNoticeAdmin").addEventListener("click", function () { setMenuView("menuNoticeAdmin"); loadNoticeAdmin(); });
+  byId("naBack").addEventListener("click", showMenuList);
+  byId("naClose").addEventListener("click", closeMenu);
+  byId("naSubmit").addEventListener("click", submitNotice);
   byId("fbGuardLogin").addEventListener("click", function () {   // P18：既存のログイン画面をそのまま開く
     if(!cloudConfigured()){ toast("クラウド未設定です（オーナーがSupabase値を設定すると使えます）"); return; }
     endSignupPrompt();
@@ -8187,6 +8255,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var rev = byId("miReview"), inb = byId("miInbox"); // §9：オーナー専用（UI出し分けのみ。安全境界はRLS）
     if(rev) rev.hidden = !isOwner;
     if(inb) inb.hidden = !isOwner;
+    var nad = byId("miNoticeAdmin"); if(nad) nad.hidden = !isOwner;   // P43：お知らせを作成（オーナー専用・同じ型）
     var pwc = byId("pwSetCard"); if(pwc) pwc.hidden = !currentUser; // ログイン時のみPW設定カードを表示
     // ★赤ドットは onAuthStateChange による再描画のたびに「変数の状態」から必ず再評価する（DOMに状態を持たせない）
     var wasOwner = dotsIsOwner;
@@ -8280,6 +8349,124 @@ document.addEventListener("DOMContentLoaded", function () {
     markDirty(); flush(state); refreshHome();
   }
   /* ===== 機能7・§9：共有語・投稿・審査・意見箱 ===== */
+  /* ===== P43：お知らせ（notices） =====
+     DB契約：published=true は anon+authenticated が SELECT 可（ゲストも読める）。
+     ★クライアント側の絞り込み責任：一覧は必ず published=true かつ target ∈ (tsukuyomi, both) で絞る
+       （AMATERAS単独配信が本アプリに出ると事故）。オーナー作成画面のみ下書き・全ターゲットを扱う。 */
+  var noticeRows = [];   // 直近に取得した「利用者向け」お知らせ（絞り込み済み）
+  async function fetchNotices(){
+    if(!sb) return [];
+    try{
+      var res = await sb.from("notices").select("*")
+        .eq("published", true)
+        .in("target", ["tsukuyomi","both"])
+        .order("created_at", { ascending: false });
+      return (res && res.data) ? res.data : [];
+    }catch(e){ return []; }   // 失敗は静かに握る（loadSharedWords と同じ方針）
+  }
+  /* 未読チェック：取得した利用者向けお知らせのうち、既読キーに無いIDがあれば点灯。
+     ★unreadInbox / pendingSubs には合流させない（P44是正の様式）。 */
+  async function checkNoticeUnread(){
+    if(!sb){ unreadNotice = false; renderDots(); return; }
+    try{
+      var rows = await fetchNotices();
+      noticeRows = rows;
+      var read = loadReadNotices();
+      unreadNotice = rows.some(function(r){ return read.indexOf(String(r.id)) < 0; });
+    }catch(e){ /* 失敗しても点灯状態は変えない */ }
+    renderDots();
+  }
+  /* 一覧描画。kind でセクション分け（お知らせ＝notice／アップデート情報＝update）。
+     ★開いた時点で、表示した分のIDを既読として書き込む（P37の前例＝実際に開いたときだけ）。
+     ★題名・本文は必ず esc() でエスケープ（innerHTML に生値を入れない）。 */
+  async function openNotices(){
+    var box = byId("noticeList");
+    box.innerHTML = '<div class="login-note">読み込み中…</div>';
+    var rows = await fetchNotices();
+    noticeRows = rows;
+    if(rows.length === 0){
+      box.innerHTML = '<div class="login-note" style="text-align:center">お知らせはありません</div>';
+    }else{
+      var sections = [ { key:"notice", label:"お知らせ" }, { key:"update", label:"アップデート情報" } ];
+      var html = "";
+      sections.forEach(function(sec){
+        var list = rows.filter(function(r){ return (r.kind || "notice") === sec.key; });
+        if(list.length === 0) return;
+        html += '<div class="fb-hist-title">' + esc(sec.label) + '</div>';
+        list.forEach(function(r){
+          html += '<div class="review-card">'
+            + '<div style="font-family:var(--serif);font-size:1.02rem">' + esc(r.title || "") + '</div>'
+            + '<div style="font-size:.75rem;color:var(--sub);margin:.15rem 0 .4rem">' + esc(fmtNoticeDate(r.created_at)) + '</div>'
+            + '<div style="font-size:.88rem;line-height:1.7;white-space:pre-wrap">' + esc(r.body || "") + '</div>'
+            + '</div>';
+        });
+      });
+      box.innerHTML = html || '<div class="login-note" style="text-align:center">お知らせはありません</div>';
+    }
+    // 表示した分を既読にする（既存の既読と合算して保存）
+    var read = loadReadNotices();
+    rows.forEach(function(r){ read.push(String(r.id)); });
+    saveReadNotices(read);
+    unreadNotice = false; renderDots();
+  }
+  function fmtNoticeDate(s){
+    try{ var d = new Date(s); return d.getFullYear() + "年" + (d.getMonth()+1) + "月" + d.getDate() + "日"; }
+    catch(e){ return ""; }
+  }
+  /* ===== P43：管理者用（お知らせを作成／取り下げ）。RLSでオーナー以外は書けない。 ===== */
+  async function loadNoticeAdmin(){
+    var box = byId("naList");
+    if(!box) return;
+    if(!sb){ box.innerHTML = '<div class="login-note">準備中（クラウド未設定）</div>'; return; }
+    box.innerHTML = '<div class="login-note">読み込み中…</div>';
+    try{
+      // 管理者画面は下書き・全ターゲットを表示する（RLSでオーナーのみ下書きが見える）
+      var res = await sb.from("notices").select("*").order("created_at", { ascending: false });
+      var rows = (res && res.data) ? res.data : [];
+      if(rows.length === 0){ box.innerHTML = '<div class="login-note" style="text-align:center">まだありません</div>'; return; }
+      box.innerHTML = "";
+      rows.forEach(function(r){
+        var card = document.createElement("div"); card.className = "review-card";
+        var meta = (r.kind === "update" ? "アップデート" : "お知らせ") + "／" + (r.target || "") + "／" + (r.published ? "公開中" : "下書き");
+        card.innerHTML = '<div style="font-family:var(--serif)">' + esc(r.title || "") + '</div>'
+          + '<div style="font-size:.75rem;color:var(--sub)">' + esc(meta) + '　' + esc(fmtNoticeDate(r.created_at)) + '</div>';
+        if(r.published){
+          var btn = document.createElement("button");
+          btn.className = "homebtn"; btn.type = "button"; btn.textContent = "公開を取り下げる";
+          btn.addEventListener("click", function(){ unpublishNotice(r, card); });
+          card.appendChild(btn);
+        }
+        box.appendChild(card);
+      });
+    }catch(e){ box.innerHTML = '<div class="login-note">読み込みに失敗しました（RLS/権限をご確認ください）</div>'; }
+  }
+  async function unpublishNotice(r, card){
+    try{
+      var res = await sb.from("notices").update({ published: false }).eq("id", r.id);
+      if(res && res.error) throw res.error;
+      toast("公開を取り下げました"); loadNoticeAdmin(); checkNoticeUnread();
+    }catch(e){ toast("取り下げに失敗しました"); }
+  }
+  async function submitNotice(){
+    if(!(sb && currentUser && isOwner)){ toast("権限がありません"); return; }
+    var title = byId("naTitle").value.trim();
+    var body  = byId("naBody").value.trim();
+    if(!title){ toast("題名を入力してください"); return; }
+    if(!body){ toast("本文を入力してください"); return; }
+    try{
+      var res = await sb.from("notices").insert({
+        title: title, body: body,
+        kind: byId("naKind").value,
+        target: byId("naTarget").value,
+        published: (byId("naPublished").value === "true")
+      });
+      if(res && res.error) throw res.error;
+      byId("naTitle").value = ""; byId("naBody").value = "";
+      var n = byId("naNote"); n.hidden = false; n.textContent = "保存しました。";
+      loadNoticeAdmin(); checkNoticeUnread();
+    }catch(e){ toast("保存に失敗しました"); }
+  }
+
   async function loadSharedWords(){
     if(!sb) return;
     try{
@@ -8894,6 +9081,7 @@ document.addEventListener("DOMContentLoaded", function () {
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: "tsukuyomi-auth" }
       });
       await loadSharedWords(); // §9：承認済み共有語をプールへ（ゲストも閲覧可）
+      checkNoticeUnread();     // P43：お知らせの未読を確認（ゲストも対象。published=true かつ target絞り込み済み）
 
       sb.auth.onAuthStateChange(async function(event, sess){
         if(event === "PASSWORD_RECOVERY"){ openPwResetModal(); return; } // P-4：新PW入力UIを出し、通常同期/統合確認は抑止して抜ける
