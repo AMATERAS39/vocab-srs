@@ -712,7 +712,7 @@
         <button class="menu-item" id="miAbout" type="button">アプリの説明</button>
         <button class="menu-item" id="miCalendar" type="button">学習カレンダー</button>
         <button class="menu-item" id="miFeedback" type="button">意見箱・単語追加<span class="dot" id="dotFeedback" hidden></span></button>
-        <button class="menu-item" id="miReview" type="button" hidden>単語の審査</button>
+        <button class="menu-item" id="miReview" type="button" hidden>単語の審査<span class="dot" id="dotReview" hidden></span></button>
         <button class="menu-item" id="miInbox" type="button" hidden>届いた意見<span class="dot" id="dotInbox" hidden></span></button>
         <div class="menu-divider"></div>
         <div class="menu-account" id="accountRow" hidden></div>
@@ -1048,7 +1048,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-18a";
+const APP_VERSION = "2026-07-18b";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -1073,11 +1073,16 @@ function renderDots(){
   var du = document.getElementById("dotUpdate");
   var dm = document.getElementById("dotMenu");
   var di = document.getElementById("dotInbox");
+  var dr = document.getElementById("dotReview");   // P44是正：単語の審査（投稿の未処理）
   if(du) du.hidden = !updateAvailable;                       // 更新ドットはログイン状態と無関係
-  var showInbox = (dotsIsOwner && unreadInbox);              // 受信箱ドットはオーナーのみ（非オーナーには一切出さない）
-  if(dm) dm.hidden = !showInbox;                             // ☰ は受信箱の未読専用（更新では点けない）
+  /* P44是正：赤ドットは「追って開いた先に実際の未処理がある項目」に出す。
+     届いた意見＝feedbackの未処理のみ／単語の審査＝投稿(pending)の未処理のみ／☰＝その合算。 */
+  var showInbox  = (dotsIsOwner && unreadInbox);             // 届いた意見（オーナーのみ）
+  var showReview = (dotsIsOwner && pendingSubs);             // 単語の審査（オーナーのみ）
   if(di) di.hidden = !showInbox;
-  /* WP15：☰ = (オーナー && 受信箱の未読) || 利用者の未読返信 ／ 意見箱 = 利用者の未読返信 */
+  if(dr) dr.hidden = !showReview;
+  if(dm) dm.hidden = !(showInbox || showReview);             // ☰ は「メニューの中に用事がある」の集約表示
+  /* WP15：☰ = (オーナー && 受信箱/審査の未処理) || 利用者の未読返信 ／ 意見箱 = 利用者の未読返信 */
   var df = document.getElementById("dotFeedback");
   if(df) df.hidden = !unreadReply;
   var di2 = document.getElementById("dotInquiry");   // P37：ハブの問い合わせボタンにも同じ未読返信ドットを点ける
@@ -8186,7 +8191,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // ★赤ドットは onAuthStateChange による再描画のたびに「変数の状態」から必ず再評価する（DOMに状態を持たせない）
     var wasOwner = dotsIsOwner;
     dotsIsOwner = isOwner;
-    if(!isOwner) unreadInbox = false;          // 非オーナー（ログアウト含む）は必ず消灯
+    if(!isOwner) { unreadInbox = false; pendingSubs = false; }   // 非オーナー（ログアウト含む）は必ず消灯（P44是正：投稿側も）
     renderDots();
     /* 案件B-2：アプリ説明（SEO本文）は未ログイン時だけ表示する。
        ★時間では消さない。onAuthStateChange の再描画のたびにここを通るので、状態は必ず変数から再評価される。 */
@@ -8440,7 +8445,7 @@ document.addEventListener("DOMContentLoaded", function () {
       var prows = (ps && ps.data) ? ps.data : [];
       pendingSubs = (prows.length > 0);
     }catch(e2){ /* 失敗しても点灯状態は変えない */ }
-    unreadInbox = (fbUnread || pendingSubs);
+    unreadInbox = fbUnread;   // P44是正：unreadInbox は feedback の未処理のみ（投稿は pendingSubs が持つ）
     dotsIsOwner = isOwner; renderDots();
   }
 
@@ -8463,7 +8468,7 @@ document.addEventListener("DOMContentLoaded", function () {
     /* P44：feedback（inboxRows）だけで上書きすると、受信箱を開いた瞬間に投稿由来のドットが消える。
        未処理リストとして機能させるため、単語投稿の未処理（pendingSubs）も併せて見る。 */
     var fbUnread = (sb && isOwner) ? inboxRows.some(inboxRowUnread) : false;
-    unreadInbox = (sb && isOwner) ? (fbUnread || pendingSubs) : false;
+    unreadInbox = (sb && isOwner) ? fbUnread : false;   // P44是正：feedback のみ（投稿は pendingSubs が保持し、開いても消えない）
     dotsIsOwner = isOwner;
     renderDots();
   }
