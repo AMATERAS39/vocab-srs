@@ -4412,7 +4412,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.18.20.00";
+const APP_VERSION = "2026.07.18.21.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4748,6 +4748,7 @@ function ensureUpdateFloat(){
   document.body.appendChild(b);
   reflectUpdateUi();
 }
+let lastUpdateCheck = 0; // 【P42】未宣言のままではReferenceErrorで更新チェックが無言で死ぬ
 async function checkForUpdate(){
   if(!navigator.onLine) return;
   const now = Date.now();
@@ -5033,7 +5034,7 @@ function speak(text){
 const app = document.getElementById("app");
 let session = null; // {queue:[{id,isNew,mode}], idx, revealed, counts:{}}
 
-function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 
 /* 【P19】アプリ説明の本文。入口画面と「アプリの説明」画面で共有する（同じ文面を2箇所に書かない） */
 const APP_DESC_HTML = `
@@ -5814,7 +5815,15 @@ async function refreshInbox(){
     for(const f of fbs){
       const when = String(f.created_at||"").replace("T"," ").slice(0,16);
       const who = f.submitter_nickname ? esc(String(f.submitter_nickname)) : (f.submitter_email?esc(String(f.submitter_email)):"（匿名）");
-      const att = f.attachment_data ? `<div><a href="${f.attachment_data}" download="${esc(String(f.attachment_name||"attachment"))}">添付を開く（${esc(String(f.attachment_name||""))}）</a></div>` : "";
+      /* 添付は「許可した形式に一致したときだけ」hrefに出す（ホワイトリスト方式）。
+         利用者が投稿した文字列はREST APIから直接insertできるため、画面側の入力制限は防御にならない。 */
+      const attRaw = String(f.attachment_data || "");
+      const attOk = /^data:(image\/(png|jpe?g|gif|webp)|application\/pdf);base64,[A-Za-z0-9+\/=]+$/.test(attRaw);
+      const attName = esc(String(f.attachment_name || ""));
+      const att = !f.attachment_data ? ""
+        : (attOk
+            ? `<div><a href="${esc(attRaw)}" download="${esc(String(f.attachment_name||"attachment"))}">添付を開く（${attName}）</a></div>`
+            : `<div class="note">添付を開けません（形式が不正です）：${attName}</div>`);
       const existingReply = f.reply ? `<div class="note">返信済み（${String(f.replied_at||"").replace("T"," ").slice(0,16)}）：${esc(String(f.reply))}</div>` : "";
       const canReply = !!f.submitted_by; // 匿名投稿には返信を届けられない
       html += `<div class="inbox-item ${f.is_read?"read":""}">
