@@ -1048,7 +1048,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-16e";
+const APP_VERSION = "2026-07-18a";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -1061,6 +1061,11 @@ var AMATERAS_URL = "https://amaterasu-vocab.com/";
    updateAuthUI() の末尾でも renderDots() を呼ぶため、再描画後も変数どおりに正しく再評価される。 */
 var updateAvailable = false;   // 新版あり（更新ボタンの赤ドット）
 var unreadInbox = false;       // 管理者の未読あり（☰ と「届いた意見」の赤ドット。オーナー限定）
+/* P44：単語投稿（kobun_word_submissions の status="pending"）の未処理あり。
+   赤ドットを「未処理リスト」として機能させるため、feedback の未処理とは別の変数で保持する。
+   ★recalcInboxDots が inboxRows（feedbackの行）だけで unreadInbox を上書きするため、
+     この変数を併せて見ないと「受信箱を開いた瞬間に投稿由来のドットが消える」。 */
+var pendingSubs = false;
 var unreadReply = false;       // WP15：利用者の未読あり（☰ と「意見箱」の赤ドット。ログイン利用者のみ）
 var dotsUserId  = null;        // WP15：未読問い合わせを1回だけにするためのログイン主体のミラー
 var dotsIsOwner = false;       // renderDots が参照するオーナー判定のミラー（クロージャ内 isOwner から同期）
@@ -7193,6 +7198,7 @@ document.addEventListener("DOMContentLoaded", function () {
     recordAnswer(state, s.w.i, correct, { mode: quizMode });   // 1回（今日=norm／追加・苦手=extra）
     if (quizMode === "norm" && state.session) state.session.idx = idx + 1; // 今日の学習のみ再開位置を更新
     markDirty(); flush(state);             // §7：解答確定のたびに即保存
+    stampToday(state);   // P34：学習日基準。1問でも回答した日をスタンプ（冪等・ゲストは押さない。norm/extra 両方）
     updateMeta(s.w);
     btns.forEach(function (b) {
       b.disabled = true;
@@ -7249,6 +7255,7 @@ document.addEventListener("DOMContentLoaded", function () {
     recordAnswer(state, s.w.i, bothOK, { mode: quizMode });   // 1画面＝1回（両方正解のみ cCorrect+1）
     if (quizMode === "norm" && state.session) state.session.idx = idx + 1; // 今日の学習のみ再開位置を更新
     markDirty(); flush(state);            // §7：解答確定のたびに即保存
+    stampToday(state);   // P34：学習日基準。1問でも回答した日をスタンプ（冪等・ゲストは押さない。norm/extra 両方）
     updateMeta(s.w);
     confirmBtn.disabled = true;
 
@@ -8266,7 +8273,6 @@ document.addEventListener("DOMContentLoaded", function () {
     if (ns.stamps !== undefined) state.stamps = unionDays(state.stamps, ns.stamps);   // P34：和集合＝ローカルの当日分を消さない
     ensureProgress(state); ensureToday(state); ensureSettings(state); ensureAssignFields(state);
     markDirty(); flush(state); refreshHome();
-    stampToday(state);   // P34：ログイン状態なら当日をスタンプ（冪等・ゲストは押さない）
   }
   /* ===== 機能7・§9：共有語・投稿・審査・意見箱 ===== */
   async function loadSharedWords(){
@@ -8354,6 +8360,7 @@ document.addEventListener("DOMContentLoaded", function () {
     try{
       var res = await sb.from("kobun_word_submissions").select("*").eq("status","pending").order("created_at",{ascending:true});
       var rows = (res && res.data) ? res.data : [];
+      pendingSubs = (rows.length > 0); recalcInboxDots();   // P44：審査画面の実データで未処理状態を同期（0件なら消灯）
       if(rows.length === 0){ box.innerHTML = '<div class="login-note" style="text-align:center">保留中の投稿はありません</div>'; return; }
       box.innerHTML = "";
       rows.forEach(function(sub){
@@ -8370,16 +8377,29 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     }catch(e){ box.innerHTML = '<div class="login-note">読み込みに失敗しました（RLS/権限をご確認ください）</div>'; }
   }
+  /* P44：単語投稿の未処理（pending）をDBに再照会して赤ドットへ反映する。
+     承認・却下の直後に呼び、最後の1件を処理したら消灯させる。失敗時は状態を変えない（落とさない）。 */
+  async function refreshPendingDots(){
+    if(!(sb && currentUser && isOwner)) return;
+    try{
+      var ps = await sb.from("kobun_word_submissions").select("id").eq("status","pending").limit(1);
+      var prows = (ps && ps.data) ? ps.data : [];
+      pendingSubs = (prows.length > 0);
+      recalcInboxDots();
+    }catch(e){ /* 失敗しても点灯状態は変えない */ }
+  }
   async function approveSubmission(sub, card){
     try{
       var ins = await sb.from("kobun_shared_words").insert({ w: sub.w, yomi: sub.yomi, l: sub.l, pos: sub.pos, data: sub.data });
       if(ins && ins.error) throw ins.error;
       await sb.from("kobun_word_submissions").update({ status: "approved" }).eq("id", sub.id);
       card.remove(); toast("承認しました"); loadSharedWords();
+      refreshPendingDots();   // P44：最後の1件を承認したら消灯
     }catch(e){ toast("承認に失敗しました"); }
   }
   async function rejectSubmission(sub, card){
-    try{ await sb.from("kobun_word_submissions").update({ status: "rejected" }).eq("id", sub.id); card.remove(); toast("却下しました"); }
+    try{ await sb.from("kobun_word_submissions").update({ status: "rejected" }).eq("id", sub.id); card.remove(); toast("却下しました");
+         refreshPendingDots(); }   // P44：最後の1件を却下したら消灯
     catch(e){ toast("却下に失敗しました"); }
   }
   async function submitFeedback(){
@@ -8404,15 +8424,23 @@ document.addEventListener("DOMContentLoaded", function () {
      点灯条件＝admin_read_at が null、または created_at より古い行が1件以上（利用者の最終送信 > admin_read_at）。
      オーナーのみ実行・オーナーのみ表示（非オーナーには一切出さない）。失敗してもアプリは落とさない。 */
   async function checkInboxUnread(){
-    if(!(sb && currentUser && isOwner)){ unreadInbox = false; dotsIsOwner = isOwner; renderDots(); return; }
+    if(!(sb && currentUser && isOwner)){ unreadInbox = false; pendingSubs = false; dotsIsOwner = isOwner; renderDots(); return; }
+    var fbUnread = false;   // P44：既存のfeedback判定の結果をいったん受ける（判定式そのものは不変）
     try{
       var res = await sb.from("kobun_feedback").select("id, created_at, admin_read_at");
       var rows = (res && res.data) ? res.data : [];
-      unreadInbox = rows.some(function(r){
+      fbUnread = rows.some(function(r){
         if(!r.admin_read_at) return true;                                   // 未読（null）
         return new Date(r.admin_read_at) < new Date(r.created_at);          // 既読より後に届いている
       });
-    }catch(e){ /* RLS等で失敗しても点灯状態は変えない（アプリは落とさない） */ }
+    }catch(e){ /* RLS等で失敗しても点灯状態は変えない（アプリは落とさない） */ fbUnread = unreadInbox; }
+    /* P44：単語投稿の未処理（pending）も未処理リストに含める。失敗時は既存の pendingSubs を維持（落とさない）。 */
+    try{
+      var ps = await sb.from("kobun_word_submissions").select("id").eq("status","pending").limit(1);
+      var prows = (ps && ps.data) ? ps.data : [];
+      pendingSubs = (prows.length > 0);
+    }catch(e2){ /* 失敗しても点灯状態は変えない */ }
+    unreadInbox = (fbUnread || pendingSubs);
     dotsIsOwner = isOwner; renderDots();
   }
 
@@ -8432,7 +8460,10 @@ document.addEventListener("DOMContentLoaded", function () {
   }
   // 赤ドットの再計算（書き込みは一切しない）。再描画で hidden が上書きされても変数から復元される。
   function recalcInboxDots(){
-    unreadInbox = (sb && isOwner) ? inboxRows.some(inboxRowUnread) : false;
+    /* P44：feedback（inboxRows）だけで上書きすると、受信箱を開いた瞬間に投稿由来のドットが消える。
+       未処理リストとして機能させるため、単語投稿の未処理（pendingSubs）も併せて見る。 */
+    var fbUnread = (sb && isOwner) ? inboxRows.some(inboxRowUnread) : false;
+    unreadInbox = (sb && isOwner) ? (fbUnread || pendingSubs) : false;
     dotsIsOwner = isOwner;
     renderDots();
   }
