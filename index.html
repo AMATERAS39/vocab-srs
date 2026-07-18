@@ -170,6 +170,12 @@ textarea{width:100%;min-height:130px;border:1px solid var(--line);border-radius:
 .sub-badge.sub-wait{color:var(--sub);border:1.5px solid var(--sub)}
 .sub-badge.sub-ok{color:#fff;background:var(--midori);border:1.5px solid var(--midori)}
 .sub-badge.sub-ng{color:#fff;background:var(--shu);border:1.5px solid var(--shu)}
+.notice-item{padding:10px 0;border-bottom:1px solid var(--line)}
+.notice-item:last-child{border-bottom:none}
+.notice-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.notice-title{font-weight:700;color:var(--ink);word-break:break-word}
+.notice-date{flex:none;font-size:.72rem;color:var(--sub)}
+.notice-body{margin-top:4px;font-size:.86rem;line-height:1.7;color:var(--ink);word-break:break-word}
 .msg{font-size:.78rem;margin-top:8px;color:var(--midori)}
 .msg.err{color:var(--shu)}
 .warn-banner{background:var(--shu-soft);border:1px solid var(--shu);color:var(--shu);border-radius:8px;padding:10px 12px;font-size:.78rem;margin-bottom:14px;line-height:1.6}
@@ -4406,7 +4412,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.18.16.00";
+const APP_VERSION = "2026.07.18.20.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4634,12 +4640,52 @@ function stripCacheBuster(){
 let notifInbox = false;     /* 管理者：未読の投稿がある */
 let notifFeedback = false;  /* 利用者：未読の返信/既読がある */
 let notifSubmission = false; /* 【P32-C】利用者：自分の投稿に未読の審査結果がある */
+let notifNotice = false;     /* 【P43】未読のお知らせがある（ゲストにも点灯・独立変数） */
+/* 【P43】お知らせの既読は state に入れず独立の localStorage キーで持つ（総司令 裁定1）。
+   PENDING_SIGNUP_KEY と同じ流儀（定数＋try/catchラッパー）。
+   state / mergeStates / 保存4経路 / doLogout には一切関与しないため、ログアウトしても既読は消えない
+   （学習進捗でも機微情報でもないので P29 の消去対象外）。 */
+const READ_NOTICES_KEY = "amateras_read_notices";
+function getReadNotices(){
+  try{
+    const v = JSON.parse(localStorage.getItem(READ_NOTICES_KEY) || "[]");
+    return Array.isArray(v) ? v.map(String) : [];
+  }catch(_){ return []; }
+}
+function addReadNotices(ids){
+  try{
+    const cur = getReadNotices();
+    const set = new Set(cur);
+    (ids || []).forEach(id=> set.add(String(id)));
+    localStorage.setItem(READ_NOTICES_KEY, JSON.stringify(Array.from(set)));
+  }catch(_){}
+}
+/* 【P43】一覧取得の絞り込みは仕様（単独配信が相手アプリに漏れないことはクライアント側にも依存する）。 */
+async function fetchVisibleNotices(){
+  if(!sb) return [];
+  const { data, error } = await sb.from("notices")
+    .select("id, created_at, title, body, kind, target, published")
+    .eq("published", true)
+    .in("target", ["amateras","both"])
+    .order("created_at", { ascending:false });
+  if(error) throw error;
+  return data || [];
+}
 function tmax(a, b){        /* null考慮の max（ISO文字列は辞書順比較で時刻順になる） */
   if(!a) return b || null;
   if(!b) return a;
   return (a > b) ? a : b;
 }
 async function refreshNotifDots(){
+  /* 【P43】お知らせはゲスト（未ログイン）にも見せるため、下の「未ログインなら全ドットfalseで即return」より
+     【前】に判定する。notices は anon SELECT 可なので currentUser は不要（sb があれば取得できる）。 */
+  try{
+    if(sb){
+      const rows = await fetchVisibleNotices();
+      const read = getReadNotices();
+      notifNotice = rows.some(r=> !read.includes(String(r.id)));
+    }else{ notifNotice = false; }
+  }catch(_){ notifNotice = false; }
   if(!sb || !currentUser){ notifInbox = false; notifFeedback = false; notifSubmission = false; reflectNotifDots(); return; }
   /* B：利用者側。自分の投稿のうち max(replied_at, admin_read_at) > user_read_at なら未読 */
   try{
@@ -4688,7 +4734,8 @@ function reflectNotifDots(){
   set("dotInbox", notifInbox);
   set("dotFeedback", notifFeedback);
   set("dotSubmission", notifSubmission);   /* 【P32-C】「単語を追加」項目の赤ドット */
-  set("dotMenu", notifInbox || notifFeedback || notifSubmission);   /* ☰へ伝播（メニューを開かなくても気づける） */
+  set("dotNotice", notifNotice);           /* 【P43】「お知らせ」項目の赤ドット（ゲストにも点く） */
+  set("dotMenu", notifInbox || notifFeedback || notifSubmission || notifNotice);   /* ☰へ伝播（メニューを開かなくても気づける） */
 }
 /* 追加2：フローティング更新ボタンを body 直下に常設する（app.innerHTML の書き換えの影響を受けない） */
 function ensureUpdateFloat(){
@@ -5082,10 +5129,12 @@ function renderHome(){
     <div class="menu-drop" id="menuDrop">
       <button id="menuSet">設定</button>
       <button id="menuAbout">アプリの説明</button>
-      <button id="menuData">単語を追加<span class="notif-dot" id="dotSubmission"></span></button>
+      <button id="menuNotice">お知らせ<span class="notif-dot" id="dotNotice"></span></button>
       <button id="menuCalendar">学習カレンダー</button>
       ${cloudConfigured() ? `<button id="menuFeedback">ご要望・お問い合わせ<span class="notif-dot" id="dotFeedback"></span></button>` : ``}
       ${isOwner() ? `<button id="menuInbox">受信箱<span class="notif-dot" id="dotInbox"></span></button>` : ``}
+      ${isOwner() ? `<button id="menuNoticeAdmin">お知らせを作成</button>` : ``}
+      <button id="menuData">単語を追加<span class="notif-dot" id="dotSubmission"></span></button>
       ${cloudConfigured() ? (currentUser
         ? `<button id="menuLogout">ログアウト${currentUser.email ? "（"+esc(currentUser.email)+"）" : ""}</button>`
         : `<button id="menuLogin">ログイン</button>`) : ``}
@@ -5136,6 +5185,8 @@ function renderHome(){
   document.getElementById("menuSet").onclick = ()=>renderSettings();
   document.getElementById("menuData").onclick = ()=>renderData();
   document.getElementById("menuCalendar").onclick = ()=>renderCalendar();
+  document.getElementById("menuNotice").onclick = ()=>renderNotices();          /* 【P43】お知らせ一覧（ゲストも可） */
+  const mNoticeAdmin = document.getElementById("menuNoticeAdmin"); if(mNoticeAdmin) mNoticeAdmin.onclick = ()=>renderNoticeAdmin();  /* 【P43】管理者専用 */
   document.getElementById("menuAbout").onclick = ()=>renderAbout();
   const mFb = document.getElementById("menuFeedback"); if(mFb) mFb.onclick = ()=>renderFeedback();
   const mInbox = document.getElementById("menuInbox"); if(mInbox) mInbox.onclick = ()=>renderInbox();
@@ -5443,6 +5494,142 @@ function renderCalendar(){
   document.getElementById("backHome").onclick = (e)=>{ e.preventDefault(); calViewYM=null; renderHome(); };
   document.getElementById("calPrev").onclick = ()=>{ let y=vy, m=vm-1; if(m<1){m=12;y--;} calViewYM=`${y}-${pad2(m)}`; renderCalendar(); };
   document.getElementById("calNext").onclick = ()=>{ let y=vy, m=vm+1; if(m>12){m=1;y++;} calViewYM=`${y}-${pad2(m)}`; renderCalendar(); };
+}
+
+/* ==== お知らせ（P43）==== */
+/* 日時を「YYYY-MM-DD」で表示（既存の todayStr と同じローカル日付基準） */
+function noticeDate(iso){
+  try{ return todayStr(new Date(iso)); }catch(_){ return ""; }
+}
+/* 本文は改行を活かして表示（HTMLはエスケープ） */
+function noticeBodyHtml(body){
+  return esc(body || "").replace(/\n/g, "<br>");
+}
+async function renderNotices(){
+  refClose();
+  session = null;
+  app.innerHTML = `
+  <header><div><h1>お知らせ</h1></div>
+    <a class="streak" href="#" id="backHome" style="text-decoration:underline">戻る</a></header>
+  <div class="panel"><div class="inner" id="noticeBody"><p class="note">読み込み中…</p></div></div>`;
+  document.getElementById("backHome").onclick = (e)=>{ e.preventDefault(); renderHome(); };
+  const box = document.getElementById("noticeBody");
+  if(!sb){ box.innerHTML = `<p class="note">クラウド未接続のため、お知らせを読み込めません。</p>`; return; }
+  let rows = [];
+  try{ rows = await fetchVisibleNotices(); }
+  catch(_){ box.innerHTML = `<p class="note">お知らせを読み込めませんでした。時間をおいて開き直してください。</p>`; return; }
+  if(!rows.length){ box.innerHTML = `<p class="note">まだお知らせはありません。</p>`; }
+  else{
+    const section = (label, list)=>{
+      if(!list.length) return "";
+      return `<h2 style="margin-top:0">${label}</h2>` + list.map(r=>`
+        <div class="notice-item">
+          <div class="notice-head"><span class="notice-title">${esc(r.title||"")}</span><span class="notice-date">${noticeDate(r.created_at)}</span></div>
+          <div class="notice-body">${noticeBodyHtml(r.body)}</div>
+        </div>`).join("");
+    };
+    const notices = rows.filter(r=> r.kind !== "update");   /* 既定 'notice'。未知値もお知らせ側へ */
+    const updates = rows.filter(r=> r.kind === "update");
+    let html = section("お知らせ", notices);
+    if(updates.length) html += `<div style="margin-top:16px">${section("アップデート情報", updates)}</div>`;
+    box.innerHTML = html;
+  }
+  /* 【P43】一覧を実際に開いたときだけ、その時点で表示された分を既読にする（P37の前例）。 */
+  addReadNotices(rows.map(r=>r.id));
+  notifNotice = false;
+  reflectNotifDots();
+}
+/* ---- 管理者専用：お知らせを作成（受信箱には相乗りしない／総司令 裁定3）---- */
+async function renderNoticeAdmin(){
+  refClose();
+  session = null;
+  if(!isOwner()){ renderHome(); return; }
+  app.innerHTML = `
+  <header><div><h1>お知らせを作成</h1></div>
+    <a class="streak" href="#" id="backHome" style="text-decoration:underline">戻る</a></header>
+  <div class="panel"><div class="inner">
+    <div class="setting-row"><span>題名</span>
+      <input type="text" id="ntTitle" placeholder="例：新しい機能を追加しました"></div>
+    <div style="margin:4px 0 6px"><span class="note">本文</span>
+      <textarea id="ntBody" placeholder="本文（改行はそのまま表示されます）" style="width:100%;min-height:96px;box-sizing:border-box;font-size:16px;padding:6px 8px;border:1px solid var(--line);border-radius:6px"></textarea></div>
+    <div class="setting-row"><span>種類</span>
+      <select id="ntKind">
+        <option value="notice">お知らせ</option>
+        <option value="update">アップデート情報</option>
+      </select></div>
+    <div class="setting-row"><span>配信先</span>
+      <select id="ntTarget">
+        <option value="both">両方（AMATERAS・TSUKUYOMI）</option>
+        <option value="amateras">AMATERASのみ</option>
+        <option value="tsukuyomi">TSUKUYOMIのみ</option>
+      </select></div>
+    <div class="setting-row"><span>公開状態</span>
+      <select id="ntPublished">
+        <option value="draft">下書き（公開しない）</option>
+        <option value="publish">公開する</option>
+      </select></div>
+    <button class="btn-primary" id="ntSubmit">この内容で保存</button>
+    <span class="msg" id="ntMsg"></span>
+  </div></div>
+  <div class="panel"><div class="inner">
+    <h2 style="margin-top:0">これまでのお知らせ</h2>
+    <div id="ntListBody"><p class="note">読み込み中…</p></div>
+  </div></div>`;
+  document.getElementById("backHome").onclick = (e)=>{ e.preventDefault(); renderHome(); };
+  document.getElementById("ntSubmit").onclick = async ()=>{
+    const msg = document.getElementById("ntMsg");
+    const title = (document.getElementById("ntTitle").value||"").trim();
+    const body = (document.getElementById("ntBody").value||"").trim();
+    const kind = document.getElementById("ntKind").value;
+    const target = document.getElementById("ntTarget").value;
+    const published = (document.getElementById("ntPublished").value === "publish");
+    if(!title){ msg.className="msg err"; msg.textContent="題名を入力してください"; return; }
+    if(!body){ msg.className="msg err"; msg.textContent="本文を入力してください"; return; }
+    if(!sb){ msg.className="msg err"; msg.textContent="クラウド未接続です"; return; }
+    try{
+      const { error } = await sb.from("notices").insert([{ title, body, kind, target, published }]);
+      if(error){ msg.className="msg err"; msg.textContent="保存に失敗しました"; return; }
+      msg.className="msg"; msg.textContent = published ? "公開しました" : "下書きとして保存しました";
+      document.getElementById("ntTitle").value = "";
+      document.getElementById("ntBody").value = "";
+      await refreshNoticeAdminList();
+      await refreshNotifDots();
+    }catch(_){ msg.className="msg err"; msg.textContent="保存に失敗しました"; }
+  };
+  await refreshNoticeAdminList();
+}
+async function refreshNoticeAdminList(){
+  const box = document.getElementById("ntListBody");
+  if(!box || !sb) return;
+  try{
+    /* オーナーは notices_read_owner で下書きも読める（絞り込みなしで全件） */
+    const { data, error } = await sb.from("notices")
+      .select("id, created_at, title, kind, target, published")
+      .order("created_at", { ascending:false });
+    if(error) throw error;
+    const rows = data || [];
+    if(!rows.length){ box.innerHTML = `<p class="note">まだお知らせはありません。</p>`; return; }
+    const kindLabel = k => (k === "update" ? "アップデート" : "お知らせ");
+    const targetLabel = t => (t === "amateras" ? "AMATERASのみ" : (t === "tsukuyomi" ? "TSUKUYOMIのみ" : "両方"));
+    box.innerHTML = rows.map(r=>`
+      <div class="notice-item">
+        <div class="notice-head"><span class="notice-title">${esc(r.title||"")}</span><span class="notice-date">${noticeDate(r.created_at)}</span></div>
+        <div class="note" style="margin:2px 0 6px">${kindLabel(r.kind)}／${targetLabel(r.target)}／${r.published ? "公開中" : "下書き"}</div>
+        ${r.published ? `<button class="btn-sub nt-unpub" data-id="${esc(r.id)}" style="margin:0">公開を取り下げる</button>` : ``}
+      </div>`).join("");
+    box.querySelectorAll(".nt-unpub").forEach(btn=>{
+      btn.onclick = async ()=>{
+        if(!confirm("このお知らせの公開を取り下げますか？")) return;
+        try{
+          await sb.from("notices").update({ published:false }).eq("id", btn.getAttribute("data-id"));
+          await refreshNoticeAdminList();
+          await refreshNotifDots();
+        }catch(_){ /* 失敗しても画面は壊さない */ }
+      };
+    });
+  }catch(_){
+    box.innerHTML = `<p class="note">お知らせを読み込めませんでした。</p>`;
+  }
 }
 
 /* ==== ご要望・お問い合わせ（誰でも送信可・オーナーにのみ届く） ==== */
