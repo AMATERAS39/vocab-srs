@@ -4406,7 +4406,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.18.14.00";
+const APP_VERSION = "2026.07.18.16.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4664,12 +4664,20 @@ async function refreshNotifDots(){
       return r.reviewed_at > r.user_read_at;        /* 既読後に再審査されたら再点灯 */
     });
   }catch(_){ notifSubmission = false; }
-  /* A：管理者側。オーナーのみ実行。created_at > admin_read_at（nullなら未読）が1件でもあれば点灯 */
+  /* A：管理者側。オーナーのみ実行。未読feedback（created_at > admin_read_at・nullなら未読）または
+     未処理の単語投稿（status='pending'）が1件でもあれば点灯（【P44】投稿分をORで合成）。
+     2つのクエリはそれぞれ try/catch し、失敗側は false 扱い＝通信失敗では点灯しないだけ（画面は壊さない）。 */
   if(isOwner()){
+    let hasUnreadFb = false, hasPending = false;
     try{
       const { data } = await sb.from("feedback").select("id, created_at, admin_read_at");
-      notifInbox = (data || []).some(r=> !r.admin_read_at || r.created_at > r.admin_read_at);
-    }catch(_){ notifInbox = false; }
+      hasUnreadFb = (data || []).some(r=> !r.admin_read_at || r.created_at > r.admin_read_at);
+    }catch(_){ hasUnreadFb = false; }
+    try{
+      const { data } = await sb.from("word_submissions").select("id").eq("status","pending").limit(1);
+      hasPending = (data || []).length > 0;
+    }catch(_){ hasPending = false; }
+    notifInbox = hasUnreadFb || hasPending;
   }else{
     notifInbox = false;
   }
