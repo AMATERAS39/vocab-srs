@@ -1084,7 +1084,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-18d";
+const APP_VERSION = "2026-07-18e";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -8134,19 +8134,61 @@ document.addEventListener("DOMContentLoaded", function () {
   byId("miLogout").addEventListener("click", function () { signOutCloud(); });
   byId("loginBack").addEventListener("click", showMenuList);
   byId("loginClose").addEventListener("click", closeMenu);
-  // B2：すべての進捗をリセット（この端末のローカル進捗のみ。破壊的。クラウドは削除せず、サインアウトもしない）
+  /* B2 → T-1：すべての進捗をリセット（破壊的）。
+     【旧仕様の欠陥】ローカルだけ消してクラウドに触らないため、ログイン状態が続く限り、その後どれかの
+       保存経路（クイズ・stampToday・pagehide・visibilitychange 等）が発火した瞬間に旧/空stateが
+       upsertされ、結果が「利用者が次に何をするか」で変わる不定な挙動になっていた。
+     【T-1の方針（総司令裁定・A案）】経路を1つずつ塞ぐのではなく、リセット後のstateを正しくする。
+       クラウドにも初期化内容を書けば、どの経路が発火しても「正しいものが上がるだけ」になる。
+     【実行順序】確認 → クラウド初期化 → 成功を確認 → localStorage削除＋メモリ初期化。
+       逆順（ローカル先行）は禁止。失敗時に不整合が残り、旧仕様と同じ不定な挙動へ戻るため。
+     【消す】学習の進捗（prog/todayDate/todayCount/session）／stamps／settings
+     【残す】custom（追加単語）＝利用者の資産で復元手段がないため。settingsは設定画面で戻せるので初期化。 */
   byId("btnResetAll").addEventListener("click", async function () {
-    var sub = currentUser ? "※アカウントに同期済みの進捗は消えません。次回の同期でアカウント側の記録が戻る場合があります。" : "";
-    var ok = await askConfirm({
-      msg: "これまでの学習の進捗（定着度・正答率・履歴）がすべて消え、最初からになります。元に戻せません。よろしいですか？",
-      sub: sub,
-      okLabel: "リセットする", cancelLabel: "やめる",
-      cancelFirst: true, defaultCancel: true   // ［やめる］が上・既定フォーカス
+    var isLoggedIn = !!currentUser;
+    // 項目9-①：範囲の説明（何が消え、何が残るか）。［やめる］が上・既定フォーカス。
+    var ok1 = await askConfirm({
+      msg: "すべての進捗をリセットします。消えるもの：学習の進捗（定着度・正答率・履歴）／学習カレンダーのスタンプ／設定（1回の出題数など）。自分で追加した単語は残ります。",
+      sub: isLoggedIn ? "アカウント側の記録も同時に消えます。他の端末からも戻せません。" : "",
+      okLabel: isLoggedIn ? "次へ" : "リセットする", cancelLabel: "やめる",
+      cancelFirst: true, defaultCancel: true
     });
-    if (!ok) return;
+    if (!ok1) return;
+    // 項目9-②：最終確認（ログイン中のみ。ゲストは破壊範囲がこの端末に閉じるため1回）
+    if (isLoggedIn) {
+      var ok2 = await askConfirm({
+        msg: "本当にリセットしますか。元に戻す方法はありません。",
+        okLabel: "リセットする", cancelLabel: "やめる",
+        cancelFirst: true, defaultCancel: true
+      });
+      if (!ok2) return;
+    }
+    /* 項目8：初期状態を作る。custom（追加単語）だけは現在の内容を引き継ぐ。
+       ★stamps は [] のまま渡す。applyState は和集合（unionDays）なので、あとで明示的に空へ戻す（項目7）。 */
+    var fresh = createInitialState();
+    fresh.custom = Array.isArray(state.custom) ? state.custom.slice() : [];   // ★T-1：追加単語は残す（仕様変更）
+    fresh.session = null;
+    fresh.stamps = [];
+    if (isLoggedIn) {
+      /* 条件2：クラウド応答待ちの間、リセット以外の経路からクラウドへ書かせない。
+         await で処理が中断する隙に pagehide / visibilitychange が発火すると、メモリ上の【旧state】が
+         400ms後に書き戻されて初期化を打ち消すため。ロックは中央1箇所（resetLock）。 */
+      resetLock = true;
+      var wrote = await resetCloudNow(fresh);
+      if (!wrote) {
+        /* 条件3：中止時はローカルもメモリも一切触っていない＝利用者から見て何も起きていない。
+           （メモリを先に初期化しない設計にしたので「元に戻す」処理自体が不要） */
+        resetLock = false;
+        toast("リセットできませんでした。通信を確認してもう一度お試しください");
+        return;
+      }
+    }
+    // ここから先はクラウド側が初期化済み（ゲストはクラウド書き込み0回）
     try { localStorage.removeItem(STORAGE_KEY); } catch(_){}   // STORAGE_KEY === "tsukuyomi_state"
-    var fresh = createInitialState(); fresh.custom = []; fresh.session = null; // 初期状態（session破棄）
-    applyState(fresh);   // prog/today/custom/session を初期化＋ローカル保存＋refreshHome（saveCloud は呼ばない＝クラウド不変）
+    applyState(fresh);        // prog/today/custom/session/settings を初期化＋ローカル保存＋refreshHome（saveCloud は呼ばない）
+    state.stamps = [];        // ★項目7：applyState は stamps を和集合で残すため、リセット経路だけ迂回して空にする
+    markDirty(); flush(state);// 空にした stamps をローカルへ確定（unionDays 自体は無改変＝P34の通常同期は不変）
+    resetLock = false;
     closeMenu(); showScreen("home"); refreshHome();
   });
   byId("btnGoogle").addEventListener("click", signInGoogle);
@@ -8270,6 +8312,10 @@ document.addEventListener("DOMContentLoaded", function () {
   // §7：途中退室・タブ切替でも保険flush
   /* ===== 機能6・§8：認証・同期（Supabase）。未設定ならゲストのまま何もしない ===== */
   var sb = null, currentUser = null, isOwner = false, cloudSaveTimer = null;
+  /* T-1：全リセットの実行中だけ true。リセット以外のクラウド書き込みを中央1箇所で止める。
+     経路ごとに塞ぐ設計は採らない（将来の8経路目で静かに壊れるため）。ガードは
+     saveCloudNow の冒頭／saveCloud の冒頭／saveCloud のデバウンス・コールバック内の3点のみ。 */
+  var resetLock = false;
   async function sha256hex(str){
     var enc = new TextEncoder().encode(String(str).trim().toLowerCase());
     var buf = await crypto.subtle.digest("SHA-256", enc);
@@ -8902,6 +8948,7 @@ document.addEventListener("DOMContentLoaded", function () {
   /* リロード直前用：saveCloud のデバウンス（400ms）を飛ばし、即時に upsert して完了を待つ。
      既存の saveCloud は変更しない（呼び出し順・戻り値も不変）。未ログイン/未設定なら何もしない。 */
   async function saveCloudNow(){
+    if(resetLock) return;                                  // T-1：全リセット中は旧stateを書かせない
     if(!(sb && currentUser)) return;                       // ゲストはローカル保存のみで十分
     if(cloudSaveTimer){ clearTimeout(cloudSaveTimer); cloudSaveTimer = null; } // 保留中のデバウンスを取り消す
     try{
@@ -8909,6 +8956,23 @@ document.addEventListener("DOMContentLoaded", function () {
         data: JSON.stringify({ prog: state.prog, todayDate: state.todayDate, todayCount: state.todayCount, todayQuota: state.todayQuota || null, custom: state.custom || [], session: state.session || null,
           newAssign: state.newAssign || { date: null, ids: [] }, normDoneDate: state.normDoneDate || null, carryOver: state.carryOver === true, stamps: state.stamps || [] }) });
     }catch(e){ console.warn("[TSUKUYOMI クラウド] 即時保存失敗（ローカルには保存済み）", e); }
+  }
+
+  /* T-1：全リセット専用のクラウド書き込み。★グローバル state を一切読まず、引数 st の値だけで payload を作る。
+     saveCloudNow は「呼んだ時点の state」を書くため、ローカル初期化より前に呼ぶと旧stateが上がる（条件1）。
+     この関数は順序に依存しないので、その事故が構造的に起きない。
+     成否は例外だけでなく res.error も見る（Supabaseは通信失敗以外を例外ではなく error で返すため）。
+     戻り値：true=書けた／false=書けなかった。 */
+  async function resetCloudNow(st){
+    if(!(sb && currentUser)) return false;
+    if(cloudSaveTimer){ clearTimeout(cloudSaveTimer); cloudSaveTimer = null; } // 保留中のデバウンス（旧state）を破棄
+    try{
+      var res = await sb.from(CLOUD_TABLE).upsert({ user_id: currentUser.id, updated_at: new Date().toISOString(),
+        data: JSON.stringify({ prog: st.prog, todayDate: st.todayDate, todayCount: st.todayCount, todayQuota: st.todayQuota || null, custom: st.custom || [], session: st.session || null,
+          newAssign: st.newAssign || { date: null, ids: [] }, normDoneDate: st.normDoneDate || null, carryOver: st.carryOver === true, stamps: st.stamps || [] }) });
+      if(res && res.error) throw res.error;
+      return true;
+    }catch(e){ console.warn("[TSUKUYOMI クラウド] リセットの同期に失敗（ローカルは変更していません）", e); return false; }
   }
 
   async function loadCloud(){
@@ -8923,9 +8987,11 @@ document.addEventListener("DOMContentLoaded", function () {
     }catch(e){ console.warn("[TSUKUYOMI クラウド] 読込失敗", e); }
   }
   function saveCloud(){
+    if(resetLock) return;            // T-1：全リセット中は旧stateを書かせない（入口側）
     if(!(sb && currentUser)) return; // 未ログイン/未設定なら何もしない
     if(cloudSaveTimer) clearTimeout(cloudSaveTimer);
     cloudSaveTimer = setTimeout(async function(){
+      if(resetLock) return;          // T-1：ロック前に予約されたデバウンスが400ms後に旧stateを書くのを止める
       try{
         await sb.from(CLOUD_TABLE).upsert({ user_id: currentUser.id, updated_at: new Date().toISOString(),
           data: JSON.stringify({ prog: state.prog, todayDate: state.todayDate, todayCount: state.todayCount, todayQuota: state.todayQuota || null, custom: state.custom || [], session: state.session || null,
