@@ -4412,7 +4412,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.19.01.00";
+const APP_VERSION = "2026.07.19.02.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4509,6 +4509,50 @@ function allWords(){
   return out;
 }
 function byId(id){ return allWords().find(w=>w.i===id); }
+/* 【第4バッチ】カスタム語のID空間を分離する。
+   BUILTIN=1〜3941 ／ 共有語=SHARED_ID_OFFSET(10000000)+DBid ／ カスタム語=CUSTOM_ID_OFFSET(20000000)+n
+   採番に allWords() を使わないため、単語が何件承認されても既存・新規のカスタム語の i は変わらない。
+   ※この分離が破れるのは共有語のDB idが10000000に達したときだけ（現実的な規模では起きない）。 */
+const CUSTOM_ID_OFFSET = 20000000;
+function nextCustomId(){
+  const c = Array.isArray(state.custom) ? state.custom : [];
+  let mx = CUSTOM_ID_OFFSET;
+  for(const w of c){ const n = Number(w && w.i); if(n >= CUSTOM_ID_OFFSET && n > mx) mx = n; }
+  return mx + 1;
+}
+/* 【第4バッチ】旧採番（max+1）のカスタム語を新レンジへ移し、進捗レコードのキーも付け替える。
+   ・冪等：CUSTOM_ID_OFFSET 以上の語は skip するため、2回目以降は1件も変化しない。
+   ・新IDは旧IDから決定的に決める（再適用しても同じ場所に着地するので進捗が迷子にならない）。
+   ・state.custom の既存要素だけを回す。allWords() は回さない（全収録語にレコードを作る事故の防止）。 */
+function migrateCustomIds(){
+  const c = Array.isArray(state.custom) ? state.custom : [];
+  if(!c.length) return false;
+  const used = new Set();
+  for(const w of c){ const n = Number(w && w.i); if(n >= CUSTOM_ID_OFFSET) used.add(n); }
+  let changed = false;
+  for(const w of c){
+    if(!w || typeof w !== "object") continue;
+    const oldId = Number(w.i);
+    if(!isFinite(oldId) || oldId >= CUSTOM_ID_OFFSET) continue;   /* 移行済み＝何もしない（冪等の要） */
+    let newId = CUSTOM_ID_OFFSET + (oldId % 10000000);
+    while(used.has(newId)) newId++;
+    used.add(newId); w.i = newId; changed = true;
+    const rec = state.words && state.words[oldId];
+    if(rec && !state.words[newId]){
+      state.words[newId] = rec;
+      /* 旧キーを消してよいのは【その id で引ける語が現在ひとつも存在しないとき】だけ。
+         ・旧採番は max(allWords())+1 だったため、200語時代のカスタム語の i は 201 前後になりえた。
+           現在の BUILTIN は i=1〜3941（3,932語）なので、state.words[201] は【実在する収録語】の
+           記録である可能性が高い。無条件に消すとその収録語の学習記録を失う。
+         ・共有レンジ（10000000以上）の旧IDも、いま共有語が居るか将来の承認で居るようになるため残す。
+         ・どちらのものか判別できない以上、「失うより重複するほうがまし」を両レンジに適用する。
+         ・この時点で w.i は新IDへ書き換え済みなので、byId(oldId) にカスタム語自身はヒットしない。 */
+      if(oldId < SHARED_ID_OFFSET && !byId(oldId)) delete state.words[oldId];
+    }
+  }
+  if(changed) scheduleSave();
+  return changed;
+}
 
 /* 保存の三段フォールバック: window.storage(アーティファクト) → localStorage(通常ブラウザ) → メモリのみ */
 let saveTimer = null, dirty = false;
@@ -5324,14 +5368,14 @@ function renderData(){
     try{
       const arr = JSON.parse(box.value);
       if(!Array.isArray(arr)) throw new Error("配列ではありません");
-      let maxId = Math.max(...allWords().map(w=>w.i));
+      let nextId = nextCustomId();   /* 【第4バッチ】allWords() ではなくカスタム専用レンジから採番する */
       let added = 0;
       const toSubmit = [];
       const existing = new Set(allWords().map(w=>w.w.toLowerCase()));
       for(const o of arr){
         if(typeof o.w!=="string" || !Array.isArray(o.e)) throw new Error("形式エラー: "+JSON.stringify(o).slice(0,40));
         if(existing.has(o.w.toLowerCase())) continue;
-        const entry = { i:++maxId, w:o.w, l:Math.max(1,Math.min(5,o.l||3)), e:o.e };
+        const entry = { i:nextId++, w:o.w, l:Math.max(1,Math.min(5,o.l||3)), e:o.e };
         if(o.c) entry.c = o.c;
         state.custom.push(entry);
         toSubmit.push({ word:o.w, level:entry.l, core:(o.c||null), entries:o.e });
@@ -5369,6 +5413,7 @@ function renderData(){
         state.settings.difficulty = ({easy:1,mid:2,hard:3})[state.settings.difficulty] || 1;
       }
       delete state.settings.modes;
+      migrateCustomIds();   /* 【第4バッチ】復元はリロードを伴わないため、ここでも旧IDを移行しておく */
       await saveState();
       msg.className="msg"; msg.textContent="復元しました";
       setTimeout(renderHome, 600);
@@ -5445,8 +5490,7 @@ function bindWordForm(){
     }
     /* 組み上げ：entries = [[品詞, [訳1,訳2,...]]]（1品詞） */
     const entries = [[pos, means]];
-    const maxId = Math.max(...allWords().map(x=>x.i));
-    const entry = { i:maxId+1, w:w, l:level, e:entries };
+    const entry = { i:nextCustomId(), w:w, l:level, e:entries };   /* 【第4バッチ】カスタム専用レンジから採番 */
     if(core) entry.c = core;
     state.custom.push(entry);
     await saveState();
@@ -6170,6 +6214,7 @@ function makePosQuiz(w){
 /* セッションのキュー要素を1つ作る（choice→write の初期状態）。buildQueue と buildChunk で共用。 */
 function makeQueueItem(id){
   const w = byId(id);
+  if(!w) return null;   /* 【第4バッチ】解決できないid（承認で同じ綴りの共有語が現れ、カスタム語が一覧から落ちた等）。呼び出し側で除去する */
   return {
     id,
     quiz: makePosQuiz(w),
@@ -6246,7 +6291,7 @@ function anyChunkableToday(){
 function startSession(mode){
   const m = mode || "review";
   /* 【P33】通常学習(review)はプール制チャンク。苦手モード(weak)は従来どおり全弱点をキュー化。 */
-  const queue = (m === "weak") ? buildQueue("weak") : buildChunk();
+  const queue = ((m === "weak") ? buildQueue("weak") : buildChunk()).filter(it => it);   /* 【第4バッチ】解決できないidを除去（buildChunk は当日プールの id を使うため、承認直後は未解決が混じりうる） */
   if(queue.length===0) return;
   /* block: choice→write。各ブロックで phase: "main"(全語1回目)→"retry"(間違えた語の2回目) */
   /* 【P23-B】出題順を完全シャッフルする（オーナー裁定＝案2）。 */
@@ -6319,9 +6364,32 @@ function saveSession(){
 function resumeSession(){
   const a = state.activeSession;
   if(!a) return false;
-  session = { queue:a.queue, block:a.block||"choice", phase:a.phase||"main",
-              order:a.order||a.queue.map((_,i)=>i), pos:a.pos||0, retry:a.retry||[],
+  /* 【第4バッチ】解決できないidを除去して復元する。order は queue の添字配列、pos は order の添字なので、
+     単純な filter では位置がずれる。旧添字→新添字の対応表を作って張り替える。進捗(state.words)は触らない。 */
+  const q = Array.isArray(a.queue) ? a.queue : [];
+  const map = {}; const queue = [];
+  for(let i=0;i<q.length;i++){
+    const it = q[i];
+    if(it && byId(it.id)){ map[i] = queue.length; queue.push(it); }
+  }
+  const dropped = (queue.length !== q.length);
+  const oldOrder = (Array.isArray(a.order) && a.order.length) ? a.order : q.map((_,i)=>i);
+  const order = oldOrder.filter(i=>map[i]!==undefined).map(i=>map[i]);
+  const retry = (Array.isArray(a.retry) ? a.retry : []).filter(i=>map[i]!==undefined).map(i=>map[i]);
+  let pos = 0;
+  const oldPos = Math.min(a.pos||0, oldOrder.length);
+  for(let k=0;k<oldPos;k++){ if(map[oldOrder[k]] !== undefined) pos++; }
+  if(!queue.length || !order.length || pos >= order.length){
+    /* 出せる語が残っていない → 黙って固まらせず、中断を終了扱いにしてホームへ戻す（記録は消さない）。 */
+    state.activeSession = null; session = null; saveState();
+    if(dropped) alert("前回の続きに入っていた単語が表示できなくなったため、中断を終了しました。学習の記録は残っています。");
+    renderHome();
+    return false;
+  }
+  session = { queue, block:a.block||"choice", phase:a.phase||"main",
+              order, pos, retry,
               mode:a.mode||"review", counts:a.counts||{ok:0,ng:0} };
+  if(dropped) saveSession();   /* 落としたぶんを保存にも反映する */
   renderCard();
   return true;
 }
@@ -6338,6 +6406,7 @@ function renderCard(){
     else item.stage = "quiz";
   }
   const w = byId(item.id);
+  if(!w){ session = null; renderHome(); return; }   /* 【第4バッチ】最後の保険。activeSession は残すので、次の「続きから」で resumeSession が未解決idを除去する */
   const retryTag = s.phase==="retry" ? "（2回目）" : "";
   const blockLabel = (s.block==="choice" ? "① 選択式" : "② 記述式") + retryTag;
   const pct = Math.round(s.pos / Math.max(1,s.order.length) * 100);
@@ -6619,6 +6688,7 @@ function handleAct(act, el){
   const item = curItem();
   if(!item) return;
   const w = byId(item.id);
+  if(!w){ session = null; renderHome(); return; }   /* 【第4バッチ】最後の保険 */
   if(act==="speak"){ speak(w.w); return; }
   if(act==="exit"){ saveSession(); flushSave(); renderHome(); return; }
 
@@ -7037,6 +7107,18 @@ function startPosSession(fresh){
     const ids = shuffle(posEligibleWords().slice()).slice(0,n).map(w=>w.i);
     state.posSession = { ids, pos:0, sel:[], checked:false, ok:null, confirming:false };
   }
+  /* 【第4バッチ】復元した ids のうち解決できないものを除き、pos を詰める（空になれば renderPosCard が完了画面へ回す） */
+  {
+    const ps = state.posSession;
+    if(ps && Array.isArray(ps.ids)){
+      const oldIds = ps.ids, oldPos = ps.pos||0, keep = [];
+      let np = 0;
+      for(let i=0;i<oldIds.length;i++){
+        if(byId(oldIds[i])){ if(i < oldPos) np++; keep.push(oldIds[i]); }
+      }
+      if(keep.length !== oldIds.length){ ps.ids = keep; ps.pos = Math.min(np, keep.length); }
+    }
+  }
   scheduleSave();
   renderPosCard();
 }
@@ -7045,6 +7127,7 @@ function renderPosCard(){
   const ps = state.posSession;
   if(!ps || ps.pos >= ps.ids.length){ return renderPosDone(); }
   const w = byId(ps.ids[ps.pos]);
+  if(!w) return renderPosDone();   /* 【第4バッチ】最後の保険（renderPosDone が posSession を片付ける） */
   const correct = correctPosSet(w);
   let body="";
   if(ps.confirming){
@@ -7084,6 +7167,7 @@ function posHandle(act, el){
   const ps = state.posSession;
   if(!ps) return;
   const w = byId(ps.ids[ps.pos]);
+  if(!w) return renderPosDone();   /* 【第4バッチ】最後の保険 */
   if(act==="exit"){ flushSave(); renderHome(); return; }
   if(act==="tog"){
     if(ps.checked) return;
@@ -7799,6 +7883,7 @@ async function syncOnAuthChange(){
   await loadState();
   if(merged && cloudReadOk){ state = merged; scheduleSave(); }   /* (A-safe) 統合結果を確実に反映し、失敗時も次回saveでクラウドへ／【第3バッチ】クラウドを読めていないときは適用も保存もしない */
   migrateReviveOldRecords();   /* 一度きりの旧データ救済（既存レコードのみ・冪等）。ログアウト時は state.words 空で空回り */
+  migrateCustomIds();          /* 【第4バッチ】カスタム語のIDを専用レンジへ（冪等） */
   ensureTodayStamp();          /* 【P34】ログイン成立日をスタンプ（冪等・ゲスト対象外） */
   if(!currentUser) skipLanding = false;   /* 【P19】ログアウトしたら入口画面に戻す */
   renderEntry();                          /* 【P19】ログイン成立ならホーム、ログアウトなら入口画面 */
@@ -7820,6 +7905,7 @@ async function syncOnAuthChange(){
   await loadState();
   if(merged && cloudReadOk){ state = merged; scheduleSave(); }  /* (A-safe) 統合結果を確実に反映し、失敗時も次回saveでクラウドへ／【第3バッチ】クラウドを読めていないときは適用も保存もしない */
   migrateReviveOldRecords();   /* 一度きりの旧データ救済（既存レコードのみ・冪等・強制保存はしない） */
+  migrateCustomIds();          /* 【第4バッチ】カスタム語のIDを専用レンジへ（冪等・state.custom が空なら空回り） */
   ensureTodayStamp();          /* 【P34】起動時にログイン済みならスタンプ（冪等・ゲスト対象外） */
   renderEntry();   /* 【P19】未ログインなら入口画面（アプリ説明を常設）。ログイン済みならホーム */
   startUpdateWatcher();           // 新バージョン公開の監視を開始
