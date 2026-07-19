@@ -1084,7 +1084,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-18e";
+const APP_VERSION = "2026-07-18f";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -8316,6 +8316,24 @@ document.addEventListener("DOMContentLoaded", function () {
      経路ごとに塞ぐ設計は採らない（将来の8経路目で静かに壊れるため）。ガードは
      saveCloudNow の冒頭／saveCloud の冒頭／saveCloud のデバウンス・コールバック内の3点のみ。 */
   var resetLock = false;
+  /* ③：クラウド【読取】に失敗したセッションでは、クラウドへの全量書き込みを止める番人。
+     本件の本質は「読み取りの失敗」と「データが無い」を同一視しないこと（地雷#19の実行時版）。
+     Supabaseは失敗を例外ではなく res.error で返すことがあるため、try/catch だけでは区別できない。
+     ゲートは書き込み口4本のうち3本（saveCloudNow／saveCloud 入口／saveCloud デバウンス内）＋
+     migrateGuestProgress の統合 upsert に置く。★resetCloudNow だけは例外＝全リセットは利用者の
+     明示操作で、クラウドの内容を読む必要がなく、読取の成否とは独立に成立するため（塞ぐとリセット不能になる）。
+     復旧：読取が1回でも成功すればゲートは解除される（loadCloud／migrate の読取口の両方）。 */
+  var cloudReadFailed = false;
+  function noteCloudReadFailed(msg){
+    var first = !cloudReadFailed;
+    cloudReadFailed = true;
+    console.warn("[TSUKUYOMI クラウド] 読取に失敗＝このセッションのクラウド保存を停止（ローカルへの保存は継続）");
+    if(msg) toast(msg);
+    else if(first) toast("クラウドと通信できませんでした。この端末には保存していますが、アカウントへの同期は一時停止します");
+  }
+  function noteCloudReadOk(){
+    if(cloudReadFailed){ cloudReadFailed = false; toast("アカウントとの同期を再開しました"); }
+  }
   async function sha256hex(str){
     var enc = new TextEncoder().encode(String(str).trim().toLowerCase());
     var buf = await crypto.subtle.digest("SHA-256", enc);
@@ -8949,6 +8967,7 @@ document.addEventListener("DOMContentLoaded", function () {
      既存の saveCloud は変更しない（呼び出し順・戻り値も不変）。未ログイン/未設定なら何もしない。 */
   async function saveCloudNow(){
     if(resetLock) return;                                  // T-1：全リセット中は旧stateを書かせない
+    if(cloudReadFailed) return;                            // ③：読取に失敗したセッションでは全量書き込みしない
     if(!(sb && currentUser)) return;                       // ゲストはローカル保存のみで十分
     if(cloudSaveTimer){ clearTimeout(cloudSaveTimer); cloudSaveTimer = null; } // 保留中のデバウンスを取り消す
     try{
@@ -8975,23 +8994,44 @@ document.addEventListener("DOMContentLoaded", function () {
     }catch(e){ console.warn("[TSUKUYOMI クラウド] リセットの同期に失敗（ローカルは変更していません）", e); return false; }
   }
 
-  async function loadCloud(){
-    if(!(sb && currentUser)) return;
+  /* ③：クラウドの読取結果に【出所】を付けて返す唯一の入口。読取口2本をここに集約する。
+       { ok:true,  data:オブジェクト } ＝読めた（中身あり）
+       { ok:true,  data:null }        ＝読めた結果として空＝新規ユーザーの初回ログイン（正常系。統合してよい）
+       { ok:false, data:null }        ＝読めなかった（通信断・権限エラー等。空と見なしてはいけない）
+     ★res.error を必ず見る。Supabaseは失敗を例外ではなく戻り値で返すことがあり、
+       try/catch だけでは「読めなかった」と「データが無い」の区別がつかない。
+     ※保存データがJSONとして壊れていた場合は ok:true / data:null（＝空）として扱う。
+       アプリ側に復元手段が無く、ここを ok:false にすると以後の保存が永久に止まるため。 */
+  async function readCloudState(){
+    if(!(sb && currentUser)) return { ok:false, data:null };
     try{
       var res = await sb.from(CLOUD_TABLE).select("data").eq("user_id", currentUser.id).maybeSingle();
+      if(res && res.error) throw res.error;                        // ★欠陥1の是正
       var d = res && res.data;
-      if(d && d.data){
-        var cloud = null; try{ cloud = (typeof d.data === "string") ? JSON.parse(d.data) : d.data; }catch(_){ cloud = null; }
-        if(cloud && cloud.prog){ applyState(mergeStates(cloud, state)); }
-      }
-    }catch(e){ console.warn("[TSUKUYOMI クラウド] 読込失敗", e); }
+      if(!(d && d.data)) return { ok:true, data:null };            // 行が無い＝本当に空
+      var cloud = null;
+      try{ cloud = (typeof d.data === "string") ? JSON.parse(d.data) : d.data; }catch(_){ cloud = null; }
+      if(!cloud) console.warn("[TSUKUYOMI クラウド] 保存データを解釈できませんでした（空として扱います）");
+      return { ok:true, data:cloud };
+    }catch(e){ console.warn("[TSUKUYOMI クラウド] 読込失敗", e); return { ok:false, data:null }; }
+  }
+
+  async function loadCloud(){
+    if(!(sb && currentUser)) return;
+    var r = await readCloudState();
+    if(!r.ok){ noteCloudReadFailed(); return; }   // ★読めなかった＝「クラウドが空」と見なさない（欠陥1）
+    noteCloudReadOk();                            // 復旧：読めたらゲート解除
+    var cloud = r.data;
+    if(cloud && cloud.prog){ applyState(mergeStates(cloud, state)); }   // 呼び出し条件は従来どおり
   }
   function saveCloud(){
     if(resetLock) return;            // T-1：全リセット中は旧stateを書かせない（入口側）
+    if(cloudReadFailed) return;      // ③：読取に失敗したセッションでは全量書き込みしない（入口側）
     if(!(sb && currentUser)) return; // 未ログイン/未設定なら何もしない
     if(cloudSaveTimer) clearTimeout(cloudSaveTimer);
     cloudSaveTimer = setTimeout(async function(){
       if(resetLock) return;          // T-1：ロック前に予約されたデバウンスが400ms後に旧stateを書くのを止める
+      if(cloudReadFailed) return;    // ③：ゲートが立つ前に予約されたデバウンスを400ms後に書かせない
       try{
         await sb.from(CLOUD_TABLE).upsert({ user_id: currentUser.id, updated_at: new Date().toISOString(),
           data: JSON.stringify({ prog: state.prog, todayDate: state.todayDate, todayCount: state.todayCount, todayQuota: state.todayQuota || null, custom: state.custom || [], session: state.session || null,
@@ -9017,17 +9057,29 @@ document.addEventListener("DOMContentLoaded", function () {
     if(!has){ try{ localStorage.removeItem(STORAGE_KEY); }catch(_){} return; }
     var wants = await askMergeGuestProgress();
     if(!wants){ try{ localStorage.removeItem(STORAGE_KEY); }catch(_){} return; }
-    var cloud = null;
-    try{
-      var res = await sb.from(CLOUD_TABLE).select("data").eq("user_id", currentUser.id).maybeSingle();
-      var d = res && res.data; if(d && d.data){ try{ cloud = (typeof d.data==="string")?JSON.parse(d.data):d.data; }catch(_){ cloud=null; } }
-    }catch(_){}
+    /* ③・P45：ここで読取に失敗すると cloud=null になり、mergeStates の 1行目
+         if(!primary) return secondary; により【統合ではなく置換】が起き、
+         クラウドの本物の進捗が小さなゲスト進捗で上書きされる（しかも旧コードは catch が空で痕跡が残らない）。
+       是正：読めたのか読めなかったのかを readCloudState の ok で区別し、
+         読めなかった場合は【統合そのものを中止】する。
+       ★localStorage は消さない（消すとゲスト進捗が復旧不能になる。クラウドにも上がっていないため）。
+         「統合しない」を選んだ場合や upsert 失敗時の既存設計＝次回ログインで再試行、に合わせる。
+       ★読めた結果として空（新規ユーザーの初回ログイン）は正常系なので、従来どおり統合を続行する。 */
+    var r = await readCloudState();
+    if(!r.ok){
+      noteCloudReadFailed("いまはアカウントと統合できません。通信を確認して、もう一度ログインし直してください");
+      return;
+    }
+    noteCloudReadOk();                 // 復旧：読めたらゲート解除
+    var cloud = r.data;                // null＝クラウドが本当に空（＝ゲスト進捗をそのまま上げてよい）
     var merged = mergeStates(cloud, local);
     if(merged){
+      if(cloudReadFailed) return;      // ③：書き込み口4本目のゲート（読取成功を確認済みなので通常は通る）
       try{
-        await sb.from(CLOUD_TABLE).upsert({ user_id: currentUser.id, updated_at: new Date().toISOString(), data: JSON.stringify(merged) });
+        var res2 = await sb.from(CLOUD_TABLE).upsert({ user_id: currentUser.id, updated_at: new Date().toISOString(), data: JSON.stringify(merged) });
+        if(res2 && res2.error) throw res2.error;   // ★書き込み側も res.error を見る（失敗をローカル削除の前に捕まえる）
         applyState(merged); try{ localStorage.removeItem(STORAGE_KEY); }catch(_){}
-      }catch(_){ /* 失敗時は localStorage を残して次回再試行 */ }
+      }catch(e){ console.warn("[TSUKUYOMI クラウド] 統合の書き込みに失敗（localStorage を残して次回再試行）", e); }
     }
   }
   function redirectTarget(){ return location.href.split("#")[0]; }
