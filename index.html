@@ -4412,7 +4412,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.20.12.00";
+const APP_VERSION = "2026.07.20.18.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -5091,9 +5091,11 @@ function accuracy(id){
 /* 回答を1回分記録（リトライ含む・正答率の母数）。kind: "c"(選択式) | "w"(記述式) */
 function recordAnswer(id, kind, ok){
   const st = state.words[id];
-  /* 【P33是正A】その日すでに成績を確定した語（gradedOn===today）は当日反復とみなし、正答率を汚さない。
-     gradedOn 未設定（新規・旧state）は today と異なるため初回扱い（正しく加算される）。 */
-  if(st.gradedOn === todayStr()) return;
+  /* 【P54】その日すでにセッションを解き終えた語（countedOn===today）は当日反復とみなし、正答率を汚さない。
+     ガードが countedOn なのは、苦手モードでも「数えた」印が立つようにするため（gradedOn は review でしか立たない）。
+     ここで止まるのは下2行の加算だけで、後段は無い（スケジュールは finalizeWord が別に持つ）。
+     countedOn 未設定（新規・旧state）は today と異なるため初回扱い（正しく加算される）。 */
+  if(st.countedOn === todayStr()) return;
   if(kind==="c"){ st.cSeen=(st.cSeen||0)+1; if(ok) st.cCorrect=(st.cCorrect||0)+1; }
   else{ st.wSeen=(st.wSeen||0)+1; if(ok) st.wCorrect=(st.wCorrect||0)+1; }
 }
@@ -6415,6 +6417,12 @@ function finalizeSession(){
         st.gradedOn = t;
       }
     }
+    /* 【P54】「その日もう数えた」印はモードを問わず立てる（苦手モードもここを通る）。
+       gradedOn（SRSを進めたか）と分けるのは、苦手モードのあとに復習チャンクが来ても
+       finalizeWord が呼ばれるようにするため。1本にすると復習が進まなくなる。
+       return は書かない＝以降の集計・描画は従来どおり実行される。 */
+    const stc = state.words[item.id];
+    if(stc) stc.countedOn = t;
     if(both) s.counts.ok++; else s.counts.ng++;
   }
   renderDone();
@@ -7427,7 +7435,7 @@ function renderAbout(){
 
     <h2>苦手モード</h2>
     ${shot("weak","苦手モード（選択式）")}
-    <p class="note">正答率50%以下（選択式・記述式のうち低い方）の単語を集中的に演習するモードです。復習期日とは無関係にいつでも挑戦できます。ホーム画面の「苦手モード」ボタンから始められます。カード右上の<strong>赤い「苦手」タグ</strong>で、通常の学習と区別されます。ここで動くのは<strong>正答率だけ</strong>です。<strong>復習の間隔・定着の判定は進みません</strong>（それらが動くのは「学習」だけです）。<strong>学習カレンダーも光らず、連続日数も伸びません。</strong>また、同じ日にすでに「学習」で解いた単語は、苦手モードで解き直しても正答率が動きません（その日の最初の1回だけを記録に反映するため）。</p>
+    <p class="note">正答率50%以下（選択式・記述式のうち低い方）の単語を集中的に演習するモードです。復習期日とは無関係にいつでも挑戦できます。ホーム画面の「苦手モード」ボタンから始められます。カード右上の<strong>赤い「苦手」タグ</strong>で、通常の学習と区別されます。ここで動くのは<strong>正答率だけ</strong>です。<strong>復習の間隔・定着の判定は進みません</strong>（それらが動くのは「学習」だけです）。ただし、<strong>正答率が変われば「苦手」かどうかの判定も変わります</strong>（苦手かどうかは正答率から計算されるため、正答率が50%を超えると、その単語は苦手モードに出てこなくなります）。<strong>学習カレンダーも光らず、連続日数も伸びません。</strong>また、その日すでに<strong>最後まで解き終えた</strong>単語は、同じ日にもう一度解いても正答率が動きません（「学習」で解いても、苦手モードで解いても同じです）。</p>
 
     <h2>品詞モード</h2>
     ${shot("pos","品詞モード")}
