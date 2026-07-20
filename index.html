@@ -181,6 +181,14 @@ textarea{width:100%;min-height:130px;border:1px solid var(--line);border-radius:
 .warn-banner{background:var(--shu-soft);border:1px solid var(--shu);color:var(--shu);border-radius:8px;padding:10px 12px;font-size:.78rem;margin-bottom:14px;line-height:1.6}
 .save-badge{font-size:.68rem;color:var(--sub)}
 .save-badge.err{color:var(--shu);font-weight:700}
+/* 【P55】固定表示。右下は #updateFloat と .to-top が占有済みのため左下に置く。
+   pointer-events:none ＝タップは必ず素通りする（出題カードの操作を条件ではなく性質で妨げない）。
+   position:fixed なのでレイアウトを押し下げない。sticky と座標計算は使わない（地雷#16・#17）。 */
+#saveBadge{position:fixed;left:12px;bottom:calc(12px + env(safe-area-inset-bottom, 0px));z-index:45;
+  pointer-events:none;max-width:min(78vw,360px);padding:6px 10px;border-radius:999px;
+  background:rgba(255,255,255,.94);border:1px solid var(--line);box-shadow:0 2px 8px rgba(0,0,0,.12);
+  line-height:1.4}
+#saveBadge[hidden]{display:none}
 code{background:var(--paper);padding:1px 5px;border-radius:4px;font-size:.78rem}
 .note{font-size:.76rem;color:var(--sub);line-height:1.7}
 .pw-card{margin:16px 0;padding:14px;border:1px solid var(--line);border-radius:10px;background:linear-gradient(180deg,#fff, #FAFBFC)}
@@ -440,6 +448,9 @@ h1{font-size:clamp(1.05rem,3vh,1.5rem);white-space:nowrap;overflow:hidden;text-o
     </div>
   </div>
 </div>
+<!-- 【P55】保存状態の常設表示。#app（innerHTML で丸ごと書き換わる）の【外】に置くため、
+     どの画面へ移っても消えない。正常時は hidden で、通常の利用者には何も見えない。 -->
+<div id="saveBadge" class="save-badge" hidden></div>
 <div class="copyright-wrap"><span class="version-tag" id="versionTag"></span><span class="copyright">©2026 AMATERAS</span></div>
 
 <script>
@@ -4412,7 +4423,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.20.18.00";
+const APP_VERSION = "2026.07.21.12.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4640,13 +4651,27 @@ async function backendGet(key){
   return null;
 }
 function updateSaveBadge(status){
+  /* 【P55】表示先は #app の外に常設した #saveBadge（at:443付近）。以前はこの要素がどこにも作られておらず、
+     下の if(!el) で毎回抜ける死関数だった＝式は正しいのに誰にも表示されていなかった（条文37）。
+     異常時だけ出す。正常（saved / pending）は hidden にして、通常の利用者には何も見せない。 */
   const el = document.getElementById("saveBadge");
-  if(!el) return;
-  if(status === "saved"){ el.className = "save-badge"; el.textContent = "保存済み ✓"; }
-  else if(status === "pending"){ el.className = "save-badge"; el.textContent = "保存待ち…"; }
-  else if(status === "localonly"){ el.className = "save-badge err"; el.textContent = "⚠ この端末に一時保存"; }   /* 【第3バッチ】クラウドが読めていない間は「保存済み ✓」と出さない */
-  else{ el.className = "save-badge err"; el.textContent = "⚠ 保存不可（要バックアップ）"; }
+  if(!el) return;   /* 保険（要素は常設だが、外したら死関数へ戻るため残す） */
+  if(status === "localonly"){        /* (a) クラウドへ書けないが、この端末には書けている */
+    el.className = "save-badge err"; el.textContent = "⚠ この端末に一時保存中（ホームで再読み込みできます）"; el.hidden = false;
+  }else if(status === "error"){      /* (b) 保存に失敗している（どこにも書けていない／退避を作れていない） */
+    el.className = "save-badge err"; el.textContent = "⚠ 保存に問題があります（バックアップを）"; el.hidden = false;
+  }else{                             /* saved / pending＝正常 */
+    el.className = "save-badge"; el.textContent = ""; el.hidden = true;
+  }
 }
+/* 【P55】いまの保存状態を導く。並びは flushSave の判定（失敗を先に見る）と同じ意味。
+   flushSave 側の判定は1文字も変えていない（P51で決めた意味を保つため）。 */
+function saveStatusNow(){
+  if(persistInfo.failed || pendingSaveFailed) return "error";
+  if(cloudPending()) return "localonly";
+  return "saved";
+}
+function refreshSaveBadge(){ updateSaveBadge(saveStatusNow()); }
 function scheduleSave(){ // 採点のたびに呼ぶ。2秒に1回にまとめてレート制限を回避
   dirty = true;
   updateSaveBadge("pending");
@@ -5018,11 +5043,31 @@ async function retryCloudRead(){
 window.addEventListener("online", ()=>{ retryCloudRead(); });
 document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "visible") retryCloudRead(); });
 function persistBanner(){
-  if(cloudPending()){   /* 【第3バッチ】黙って進捗ゼロのホームを出さない。「消えた」と誤解させない文面にする */
-    return `<div class="warn-banner">⚠ 学習記録をクラウドから読み込めていません（通信の問題の可能性があります）。<b>記録は消えていません</b>が、いまこの画面に出ている進捗は正しくありません。この間の学習はこの端末に一時保存し、読み込めたときにまとめて反映します。 <button id="cloudRetryBtn" type="button">もう一度読み込む</button></div>`;
-  }
-  if(persistInfo.backend === "memory" || persistInfo.failed){
+  /* 【P55】ホームは起動後に必ず1回ここを通るので、固定バッジの初回の塗り分けをここで行う。
+     以降は既存の updateSaveBadge 呼び出し（scheduleSave／flushSave）が状態変化のたびに塗り替える。
+     ＝renderCard などの描画関数には1行も足していない。 */
+  refreshSaveBadge();
+  /* 【P55】保存に失敗している状態（b）を、クラウドが読めていない状態（a）より【先に】見る。
+     以前は cloudPending() が先に return したため、どこにも保存できていない場合でも
+     「一時保存し、読み込めたときにまとめて反映します」と約束していた。 */
+  if(persistInfo.backend === "memory" || persistInfo.failed){   /* (b-1) どこにも書けていない */
     return `<div class="warn-banner">⚠ この環境では自動保存が使えていません。進捗はこの画面を閉じると消えます。学習後は「単語を追加」画面の「上級者向け」→「バックアップを書き出す」で退避してください。</div>`;
+  }
+  if(pendingSaveFailed){   /* (b-2) この端末には書けたが、復旧時に読み戻すための控え（退避）を作れていない */
+    const pendMsg = `⚠ クラウドに反映するための<b>控えをこの端末に作れませんでした</b>（保存できる容量が足りない可能性があります）。いまの進捗はこの端末には保存されていますが、<b>通信が回復しても取り戻せない可能性があります</b>。学習後は「単語を追加」画面の「上級者向け」→「バックアップを書き出す」で退避してください。`;
+    /* 【P55・追補】pendingSaveFailed が真になるのは flushSave の cloudPending() 分岐だけなので、
+       この状態ではほぼ必ずクラウドも読めていない。(b-2) だけを返すと「画面の進捗が正しくない」ことと
+       再読取の導線（唯一の回復手段）が消えるため、(a) の内容と併記して返す。
+       ただし「まとめて反映します」という約束は (b-2) では偽になるので、その一文は載せない。
+       cloudRetryBtn は【この分岐でも1つだけ】（id 重複は getElementById が先頭しか拾わず、
+       押しても効かないボタンを作る＝要件4の再発になる）。 */
+    if(cloudPending()){
+      return `<div class="warn-banner">⚠ 学習記録をクラウドから読み込めていません（通信の問題の可能性があります）。<b>記録は消えていません</b>が、いまこの画面に出ている進捗は正しくありません。 <button id="cloudRetryBtn" type="button">もう一度読み込む</button><br>${pendMsg}</div>`;
+    }
+    return `<div class="warn-banner">${pendMsg}</div>`;   /* クラウドは読めている＝retryCloudRead が何もしない状態なので、ボタンは出さない */
+  }
+  if(cloudPending()){   /* (a) 【第3バッチ】黙って進捗ゼロのホームを出さない。「消えた」と誤解させない文面にする */
+    return `<div class="warn-banner">⚠ 学習記録をクラウドから読み込めていません（通信の問題の可能性があります）。<b>記録は消えていません</b>が、いまこの画面に出ている進捗は正しくありません。この間の学習はこの端末に一時保存し、読み込めたときにまとめて反映します。 <button id="cloudRetryBtn" type="button">もう一度読み込む</button></div>`;
   }
   return "";
 }
