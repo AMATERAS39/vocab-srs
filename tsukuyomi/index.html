@@ -819,7 +819,7 @@
 
   <h2>モードの種類</h2>
   <p><b>学習を始める</b>＝1回ぶんの出題（既定10問。設定で10〜50問に変更できます）。復習の期日が来た語を優先し、足りないぶんを新しい語で補います。ここだけが定着と復習スケジュールを進めます。学習後に<b>「もう1チャンク」</b>でさらに続けられます。<br>
-  <b>苦手を復習</b>＝正答率60%以下の語を集中演習（正答率だけ数え、スケジュールは進めません）。<br>
+  <b>苦手を復習</b>＝正答率が60%以下の語を集中演習します（定着と復習スケジュールは進めません）。苦手かどうかは正答率で決まります。その正答率に数えるのは<b>その語をその日に初めて答えた1回だけ</b>で、同じ語を同じ日に何度答えても正答率は変わりません（＝繰り返すだけでは苦手から外れず、外れるのは日をあらためて正解を重ねたときです）。<br>
   <b>単語一覧</b>＝全語を辞書のように閲覧。</p>
 
   <h2>学習の流れ</h2>
@@ -868,7 +868,7 @@
   <p class="sub">各語の左上の <span class="tag">Lv.3</span> は<b>難易度</b>の目安です（Lv.1が基本、数字が大きいほど難関入試向けの語）。</p>
 
   <h2>定着判定</h2>
-  <p>「学習を始める」（本学習）で正解するたびに定着度が1つ上がり（1日1回まで）、<b>3回連続で定着すると「定着済」</b>になります。定着済のあとでも復習で間違えると定着済から外れ、復習中に戻ります（忘却曲線に忠実に、降格あり）。正答率だけを数える「苦手を復習」は、定着やスケジュールには影響しません。</p>
+  <p>「学習を始める」（本学習）で正解するたびに定着度が1つ上がり（1日1回まで）、<b>3回連続で定着すると「定着済」</b>になります。定着済のあとでも復習で間違えると定着済から外れ、復習中に戻ります（忘却曲線に忠実に、降格あり）。定着と復習スケジュールを進めるのは「学習を始める」で<b>その語をその日に初めて答えた1回だけ</b>で、「苦手を復習」は影響しません。正答率も同じく、その語をその日の初回の1回だけを数えます（モードを問いません）。</p>
 
   <h2>語誌（コアイメージ）について</h2>
   <p>語の中心にある「核となるイメージ」や成り立ちです。たとえば「ものものし」の“重々しく厳めしい”という芯をつかむと、良い意味（堂々としている）と悪い意味（おおげさだ）が1本でつながり、覚えやすくなります。</p>
@@ -1096,7 +1096,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-19a";
+const APP_VERSION = "2026-07-20a";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -6469,7 +6469,7 @@ function buildImiSession(list, n) {
        （次回出題日そのものは nextDueDate() で都度計算できるようにしておく）
    確定した方針（司令塔裁定）：
      ・降格＝案A：定着済でも誤答1回で mastery−1（即降格）。
-     ・追加学習(mode="extra")は正答率だけ数え、mastery/step には触れない。
+     ・追加学習(mode="extra")は mastery/step に触れない。正答率も、その語のその日の初回回答だけを数える（P54）。
      ・次回出題日は保存せず lastAnswered＋INTERVALS[step] から都度計算する。
      ・日付は "年-月-日" の1日単位（時刻は持たない）。
      ・助動詞は state を持たない（本体560語だけ記録する）。
@@ -6520,6 +6520,7 @@ function emptyProgress() {
     lastMasteryDate: null       // 最後に mastery を+1した日（1日1回上限の判定用）
   };
 }
+/* ★P54：countedOn／normOn（1日1回の判定日）はここに既定値を持たせない。recordAnswer が必要になった時点で生やす＝未回答語に無意味な値を持たせない（書き忘れではない）。未設定は初回扱いで正しい。 */
 
 /* 全語をゼロで初期化した state を作る（未出題は cSeen===0 で判定するため全語ぶん用意）。 */
 function createInitialState(words) {
@@ -6788,7 +6789,8 @@ function flush(state) {
 }
 
 /* 解答1回を state に反映する（中核）。
-   opts.mode "norm"(既定)=mastery/step を動かす／"extra"=正答率だけ。
+   opts.mode "norm"(既定)=定着/復習段階も動かす／"extra"=正答率のみ。
+   ★どちらも1語につき1日1回だけ（正答率=countedOn／スケジュール=normOn。P54）。
    opts.date テスト用に "年-月-日" を渡せる。 */
 function recordAnswer(state, id, correct, opts) {
   const o = opts || {};
@@ -6796,14 +6798,26 @@ function recordAnswer(state, id, correct, opts) {
   const today = ensureToday(state, o.date);
   const p = getProgress(state, id);
 
-  p.cSeen += 1;
-  if (correct) p.cCorrect += 1;
+  /* ★P54ガード1（条件ブロック）：正答率はモードを問わず「その語のその日の初回」1回だけ数える。
+     ここは【早期returnにしない】。countedOn は extra でも立つため、returnにすると
+     朝の「苦手を復習」で立った印が、その日の本学習の定着・復習段階まで殺してしまう。 */
+  if (p.countedOn !== today) {
+    p.cSeen += 1;
+    if (correct) p.cCorrect += 1;
+    p.countedOn = today;
+  }
 
   // 裁定(b)：mode を問わず、未スケジュール（初回）の語だけ lastAnswered を今日にしてSRSに載せる。
   //   既に日付がある語は extra では触らない（スケジュールを乱さない）。norm は下でどのみち今日に更新。
   if (p.lastAnswered === null) p.lastAnswered = today;
 
   if (mode === "extra") return p; // 追加・苦手は上記の初回載せ以外は cSeen/cCorrect だけ
+
+  /* ★P54ガード2（早期return）：スケジュールは「その語のその日の初回の本学習」1回だけ進める。
+     normOn は norm でしか立たない（この行は extra 早期returnの後）ので、
+     extra が norm を殺す経路は構造上できない。未設定なら today と異なるため初回扱い＝移行不要。 */
+  if (p.normOn === today) return p;
+  p.normOn = today;
 
   // ここから下は norm（今日の10語）専用：スケジュールと定着を動かす
   p.lastAnswered = today; // norm は毎回、最後に答えた日を今日に更新
@@ -7000,7 +7014,7 @@ function selectDailyWords(state, opts) {
    ・違い：今日すでに答えた語を「除外しない」（あえて再出題してよい）。
      → daily の10語を答え終えた後に呼ぶと、続きの一群が返る。
    ・記録側は recordAnswer(..., { mode:"extra" }) を使う想定
-     （正答率だけ数え、定着度・復習段階は動かさない）。
+     （定着度・復習段階は動かさない。正答率も、その語のその日の初回回答だけを数える）。
 --------------------------------------------------------- */
 function selectExtraWords(state, opts) {
   const o = opts || {};
@@ -7052,11 +7066,13 @@ function selectWeakWords(state, opts) {
   console.log("==== 機能3パート3 自己テスト（アプリ画面には出ません）====");
   const st = createInitialState();
   const past = "2026-06-01"; // 十分に過去 → 期日が来た状態を作る
+  const past2 = "2026-06-02";
+  const past3 = "2026-06-03"; // ★P54：正答率は1語1日1回しか数えないため、1/3 を作るには日を分ける
 
   // i=1：復習中・正答率低い（1/3）→ 群①（期日・復習中・60%以下）
   recordAnswer(st, 1, true,  { date: past });
-  recordAnswer(st, 1, false, { date: past });
-  recordAnswer(st, 1, false, { date: past });
+  recordAnswer(st, 1, false, { date: past2 });
+  recordAnswer(st, 1, false, { date: past3 });
 
   // i=2：復習中・正答率高い（1/1）→ 群②
   recordAnswer(st, 2, true,  { date: past });
