@@ -395,6 +395,8 @@
   .ref-detail{ margin-top:.5rem; padding-top:.5rem; border-top:1px dashed var(--line); }
   .ref-senses{ font-family:var(--serif); font-size:.95rem; line-height:1.85; }
   .ref-note{ font-family:var(--sans); font-size:.8rem; color:var(--sub); margin-top:.4rem; line-height:1.6; }
+  /* ★P57：単語一覧の常設1文。既存 .ref-note と同じ抑制されたトーンにし、新しい色・枠・背景は導入しない（常設なので主張が強いと毎回の閲覧で邪魔になる）。 */
+  .ref-help{ font-family:var(--sans); font-size:.74rem; color:var(--sub); line-height:1.6; padding:.4rem .8rem; }
   /* ===== 機能6・§8：ログイン／統合モーダル ===== */
   .menu-account{ font-family:var(--sans); font-size:.85rem; color:var(--sub); padding:.5rem .8rem; word-break:break-all; }
   .login-body{ display:flex; flex-direction:column; gap:.6rem; padding:.7rem .8rem 1rem; }
@@ -629,6 +631,8 @@
         <option value="yomi">五十音順</option>
       </select>
     </div>
+    <!-- ★P57：数字の意味を、数字を見ている場所で短く示す。リストの外側なのでスクロールしても常に見える。混在期間の説明までは書かず、本体（アプリの説明→単語一覧）へ誘導する。 -->
+    <div class="ref-help">「出題◯回」＝その語を答えた日数（同じ日に何回答えても1つ）。くわしくは☰の「アプリの説明」へ。</div>
     <div class="ref-list" id="refList"></div>
     <!-- 優先3：ナビ3点（#refScreen の中に置くので、他画面へ移れば自然に消える） -->
     <div class="refnav-index" id="refNavIndex" hidden aria-hidden="true"></div>
@@ -880,6 +884,7 @@
   <h2>単語一覧</h2>
   <p>収録する全語を辞書のように閲覧できます。<b>検索</b>（見出し・よみ・意味）、<b>並べ替え</b>（通し番号・レベル・正答率・ステータス・五十音）、各語の<b>正答率ゲージ</b>とステータスが表示されます。行をタップすると意味と語誌が開きます。</p>
   <p class="sub">各語の左上の <span class="tag">Lv.3</span> は<b>難易度</b>の目安です（Lv.1が基本、数字が大きいほど難関入試向けの語）。</p>
+  <p class="sub"><b>「出題◯回」</b>は、その語を<b>答えた日数</b>を数えたものです（同じ日に何回答えても、増えるのは1つだけです）。ただし<b>2026年7月20日より前</b>に答えたぶんは、同じ日に何回答えてもそのつど数えていました。そのため、それ以前から学習している語ほど、実際に答えた日数より大きな数字が出ることがあります。</p>
 
   <h2>定着判定</h2>
   <p>「学習を始める」（本学習）で正解するたびに定着度が1つ上がり（1日1回まで）、<b>3回連続で定着すると「定着済」</b>になります。定着済のあとでも復習で間違えると定着済から外れ、復習中に戻ります（忘却曲線に忠実に、降格あり）。定着と復習スケジュールを進めるのは「学習を始める」で<b>その語をその日に初めて答えた1回だけ</b>で、「苦手を復習」は影響しません。正答率も同じく、その語をその日の初回の1回だけを数えます（モードを問いません）。</p>
@@ -1110,7 +1115,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-21a";
+const APP_VERSION = "2026-07-21b";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -7389,7 +7394,25 @@ document.addEventListener("DOMContentLoaded", function () {
     var confirmBtn = document.createElement("button");
     confirmBtn.className = "confirm"; confirmBtn.type = "button"; confirmBtn.textContent = "確定"; confirmBtn.disabled = true;
 
-    function refresh() { confirmBtn.disabled = !(selPos >= 0 && selNeg >= 0); updateHint(); }
+    function refresh() { confirmBtn.disabled = !(selPos >= 0 && selNeg >= 0); updateHint(); scrollToNeg(); }
+    /* ★P60：良が決まって悪がまだ、という状態のあいだは「悪の欄を見える位置へ」が常に正しい。
+       ★これは「毎回呼んでも副作用が無害」なのではなく、副作用が無い設計である：
+         悪の欄が既に見えていれば block:"nearest" は1ピクセルも動かさず、
+         見えていなければ見える位置まで動かす（＝それが望ましい挙動そのもの）。
+         だからタップで良を選び直したときに呼ばれても正しい。利用者が手で上へ戻って語を
+         読み返したあと良を選び直せば、悪の欄が視界に戻る——要望の趣旨そのものだからである。
+       ★判定材料は selPos と selNeg だけ。新しい状態変数は作らない（少ないほうが壊れにくい）。
+       ★block は "start" にしない。"start" は悪の欄を画面最上部へ持ち上げるため、見出しの語と
+         良の欄が視界から消え、いま何を答えているのか分からなくなる。広い画面では良と悪が
+         2列に並ぶ（#card.bipolar .sides の grid）ので悪は既に見えており、"start" だと無意味に飛ぶ。
+       ★タップでもキーでも、確定の経路は必ず refresh を通る（click ハンドラ／onKey の両方）。
+         だからここ1箇所に置けば、片方だけに効くということが起きない。 */
+    function scrollToNeg() {
+      if (!(selPos >= 0 && selNeg < 0)) return;      // 良が決まって悪がまだ、のときだけ
+      if (!negSide || !negSide.scrollIntoView) return;
+      var reduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      negSide.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "nearest" });
+    }
     /* ★P58：いま良と悪のどちらを選んでいるかの表示。新しい状態変数は作らず selPos から導出する
        （タップで良を先に選んでも、キーの続きが自然に悪へ移る＝クリック操作と矛盾しない）。 */
     function updateHint() {
