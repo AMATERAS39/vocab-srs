@@ -4423,7 +4423,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.21.16.00";
+const APP_VERSION = "2026.07.21.18.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -6753,6 +6753,14 @@ function modalOpen(){
    （解説画面 renderExplain には .opt-list が無いため、後ろに置くと Enter が死ぬ＝地雷#22）。
    数字キーは従来どおり選択式だけ。Enterの「次へ」だけが記述式とも共通。 */
 function choiceKeydown(e){
+  /* 【P58-1】同じEnterの二度打ち防止。記述式は入力欄の中でEnterを受けて「判定」まで走り、
+     画面が解説へ入れ替わってから、その【同じイベント】がここまで上がってくる。
+     このとき元の入力欄はすでに破棄されており（isConnected===false）、
+     document.activeElement も body に戻っているため入力欄ガードを素通りしてしまう。
+     結果、1回のEnterで「判定」と「次へ」が連続して走り、解説が飛ばされる。
+     キーを受け取った要素が画面から消えている＝そのキーは既に処理済み、とみなして無視する。 */
+  if(e.target && e.target.isConnected === false) return;
+  if(e.defaultPrevented) return;                   /* 既定動作を止めた側が処理済み（記述式の判定など） */
   if(e.ctrlKey || e.metaKey || e.altKey) return;   /* 【P58】Ctrl+数字（タブ切替）や ⌘+数字を奪わない。e.key は修飾併用でも "1" のまま */
   if(e.isComposing || e.keyCode === 229) return;   /* 【P58】日本語変換中は無反応（記述式の入力欄 at:6569 と同じ形） */
   if(e.repeat) return;                             /* 【P58】押しっぱなしの自動リピートで2問飛ばさない */
