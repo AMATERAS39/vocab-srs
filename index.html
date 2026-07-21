@@ -4423,7 +4423,7 @@ const LV_COLORS = {1:"#2F7D5B",2:"#4A7FA5",3:"#8A6FB0",4:"#C07B2E",5:"#C8452C"};
 const STORE_KEY = "vocab-srs-v1";
 /* ★デプロイ（git push）で内容を変えるたびに、この文字列も必ず変更してください。
    これが変わると、旧版を開いたままのユーザーに「更新があります」通知が出ます。 */
-const APP_VERSION = "2026.07.21.12.00";
+const APP_VERSION = "2026.07.21.16.00";
 
 /* ====================== クラウド同期（Supabase） ======================
    ↓ この2つを自分の Supabase プロジェクトの値に置き換えてください。
@@ -4651,7 +4651,7 @@ async function backendGet(key){
   return null;
 }
 function updateSaveBadge(status){
-  /* 【P55】表示先は #app の外に常設した #saveBadge（at:443付近）。以前はこの要素がどこにも作られておらず、
+  /* 【P55】表示先は #app の外に常設した #saveBadge（at:453）。以前はこの要素がどこにも作られておらず、
      下の if(!el) で毎回抜ける死関数だった＝式は正しいのに誰にも表示されていなかった（条文37）。
      異常時だけ出す。正常（saved / pending）は hidden にして、通常の利用者には何も見せない。 */
   const el = document.getElementById("saveBadge");
@@ -6663,8 +6663,8 @@ function renderChoiceBody(item, w){
   const multi = q.blanks.length >= 2;
   const allPicked = q.blanks.every(k=>item.picks[k]);   // 地雷#17回避：都度評価（フラグに焼き付けない）
   const hint = multi
-    ? `<div class="hint choice-hint">各項目を1つずつ選び、すべて選ぶと出る「回答」で確定（全て選んだあとは、同じ項目をもう一度タップしても確定）</div>`
-    : `<div class="hint choice-hint">選択肢を2回タップで確定（PCは数字キー→もう一度／Enter）</div>`;
+    ? `<div class="hint choice-hint">各項目を1つずつ選び、すべて選ぶと出る「回答」で確定（同じ項目をもう一度タップしても確定）。PCは数字キーで1項目ずつその場で確定します</div>`
+    : `<div class="hint choice-hint">選択肢を2回タップで確定（PCは数字キーを1回押すと、その場で確定します）</div>`;
   const submitBtn = (multi && allPicked)
     ? `<div class="reveal-next"><button class="btn-primary" data-act="choiceSubmit">回答</button></div>`
     : ``;
@@ -6739,44 +6739,68 @@ function gradeChoice(){
   renderCard();
   speak(w.w);
 }
-/* PCキーボード：数字で先頭の未確定ブランクを選択、同数字／Enterで確定 */
+/* 【P58】可視のモーダルがあるか。存在ではなく【可視】で見る（3つとも動的生成され、
+   隠すのはクラス auth-hidden / merge-hidden / pr-hidden。開くときは className 全置換
+   （at:7719）か classList.remove（at:7972）で外す。classList.contains は両方式に効く）。
+   未生成なら getElementById が null ＝「開いていない」。 */
+function modalOpen(){
+  const m = [["authmodal","auth-hidden"],["mergeModal","merge-hidden"],["pwresetmodal","pr-hidden"]];
+  return m.some(([id,cls])=>{ const el = document.getElementById(id); return !!el && !el.classList.contains(cls); });
+}
+/* 【P58】PCキーボード：数字キー(1〜9)で選択肢をその場で確定、Enterは解説／色分け画面で「次へ」。
+   ガードの並びが要点。修飾キー・IME・自動リピートは【入口】で弾き、
+   stage 分岐（Enterで次へ）は choiceDone と .opt-list の【前】に置く
+   （解説画面 renderExplain には .opt-list が無いため、後ろに置くと Enter が死ぬ＝地雷#22）。
+   数字キーは従来どおり選択式だけ。Enterの「次へ」だけが記述式とも共通。 */
 function choiceKeydown(e){
+  if(e.ctrlKey || e.metaKey || e.altKey) return;   /* 【P58】Ctrl+数字（タブ切替）や ⌘+数字を奪わない。e.key は修飾併用でも "1" のまま */
+  if(e.isComposing || e.keyCode === 229) return;   /* 【P58】日本語変換中は無反応（記述式の入力欄 at:6569 と同じ形） */
+  if(e.repeat) return;                             /* 【P58】押しっぱなしの自動リピートで2問飛ばさない */
   const s = session;
-  if(!s || s.block !== "choice") return;
+  if(!s) return;
   const ae = document.activeElement;
-  if(ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) return; // 入力欄フォーカス中は無反応
-  if(!app.querySelector(".opt-list")) return;                            // 選択式カード表示中のみ
+  if(ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) return; // 入力欄フォーカス中は無反応
+  if(modalOpen()) return;                          /* 【P58】出題画面の上にモーダルが重なっている間は無反応 */
   const item = curItem();
-  if(!item || item.choiceDone) return;
-  if(!item.confirmed) item.confirmed = {};
-  const q = item.quiz;
-  const multi = q.blanks.length >= 2;
-  if(multi){
-    /* 複数選択：まだ選択の無い最初の空欄を対象に。全空欄選択済みなら Enter で「回答」 */
-    const activeK = q.blanks.find(k=>!item.picks[k]);
+  if(!item) return;
+  /* 【P58】採点後（解説／色分け）は Enter で画面に出ている主ボタンを押す。
+     関数を直接呼ばず click() するのは、ボタンが無い画面では何も起きない＝画面と挙動がズレないため。
+     3つが同時に出ることはない（marked＝choiceReveal のみ／解説＝ブロックに応じて choiceNext か writeNext のみ）。 */
+  if(item.stage === "explain" || item.stage === "marked"){
     if(e.key === "Enter"){
-      if(activeK === undefined){ e.preventDefault(); choiceSubmitAll(); }
-      return;
-    }
-    if(activeK === undefined) return;
-    if(/^[1-9]$/.test(e.key)){
-      const idx = parseInt(e.key) - 1;
-      const opts = q.quizzes[activeK].opts;
-      if(idx < opts.length){ e.preventDefault(); choiceSelect(activeK, opts[idx]); }
+      const btn = app.querySelector('[data-act="choiceNext"], [data-act="choiceReveal"], [data-act="writeNext"]');
+      if(btn){ e.preventDefault(); btn.click(); }
     }
     return;
   }
-  /* 単一選択：現状維持（先頭の未確定ブランクを選択、同数字／Enterで確定） */
+  if(s.block !== "choice") return;                 /* 【P58】ここから下は選択式の回答中だけ（記述式の回答中は数字キーもEnterも走らせない） */
+  if(item.choiceDone) return;
+  if(!app.querySelector(".opt-list")) return;      // 選択式カード表示中のみ
+  if(!item.confirmed) item.confirmed = {};
+  const q = item.quiz;
+  /* 【P58】対象ブランクの求め方を単一・複数で統一。!picks ではなく !confirmed を見るのは、
+     タップで選んだだけ（picks あり・confirmed なし）の欄を飛ばして次の欄を確定してしまわないため。 */
   const activeK = q.blanks.find(k=>!item.confirmed[k]);
   if(activeK === undefined) return;
   if(e.key === "Enter"){
-    if(item.picks[activeK]){ e.preventDefault(); choiceConfirmBlank(activeK); }
+    /* Enter の意味は従来どおり：複数は「全部選び終えているときだけ回答」、単一は「選んである肢を確定」。
+       数字キーがその場で確定するようになったため、キーボードだけで進めるとこの経路には到達しない
+       （到達するのは、タップで全部選んでから Enter を押す混在操作のときだけ）。 */
+    if(q.blanks.length >= 2){
+      if(q.blanks.every(k=>item.picks[k])){ e.preventDefault(); choiceSubmitAll(); }
+    }else if(item.picks[activeK]){ e.preventDefault(); choiceConfirmBlank(activeK); }
     return;
   }
   if(/^[1-9]$/.test(e.key)){
-    const idx = parseInt(e.key) - 1;
+    const idx = parseInt(e.key, 10) - 1;
     const opts = q.quizzes[activeK].opts;
-    if(idx < opts.length){ e.preventDefault(); choiceSelect(activeK, opts[idx]); }
+    if(idx < opts.length){
+      e.preventDefault();
+      /* 【P58】ワンタップ確定：選択と確定を1回で。choiceSelect（2段構え）は使わない。
+         choiceConfirmBlank は全ブランク確定で gradeChoice へ合流する（採点の入口は1本のまま）。 */
+      item.picks[activeK] = opts[idx];
+      choiceConfirmBlank(activeK);
+    }
   }
 }
 
@@ -7470,6 +7494,12 @@ function renderAbout(){
     <p class="note">英単語を見て、各品詞に合う日本語訳を選びます。<strong>左上の家アイコン</strong>で中断してホームへ（進みは保存）。<strong>カード左上の☆</strong>は難易度、その右は出題回数と正答率（選択式・記述式それぞれ）。空欄〔？〕の数は復習が進むほど増えます。</p>
     ${shot("quiz_confirm","選択式（誤答後の確認）")}
     <p class="note">間違えると、その場で正解・コアイメージ・全語義が確認できます。自分の誤答は赤字で表示されます。</p>
+
+    <h2>パソコンでのキー操作</h2>
+    <p class="note">選択式の画面では、選択肢の頭に出ている番号のキー（1〜9）を押すと、その選択肢を選んで、その場で確定します。押した時点で正誤が決まるため、押し間違えるとそのまま不正解になります。</p>
+    <p class="note">複数の項目を選ぶ問題では、番号キーで1項目ずつ確定していき、最後の1項目を押した時点で採点に進みます。</p>
+    <p class="note">採点のあとの解説画面では、Enter キーで次の問題へ進みます。記述式の解説画面でも同じです。</p>
+    <p class="note">文字を入力しているとき（記述式の解答欄、検索欄、ニックネーム欄など）と、日本語を変換している最中は、これらのキー操作は働きません。Ctrl キーや ⌘ キーと一緒に押したときも、ブラウザ本来の動作が優先されます。</p>
 
     <h2>記述式の画面</h2>
     ${shot("quiz_write","記述式")}
