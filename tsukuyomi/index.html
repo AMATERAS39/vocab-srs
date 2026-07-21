@@ -213,6 +213,14 @@
   .choice.is-answer{ outline:2px solid var(--frame-answer); outline-offset:1px; }   /* 正解＝灰の縁取り */
   .choice.correct-bg{ background:var(--bg-correct-choice); }   /* 選んだ選択肢が正解（最背面より薄い） */
   .choice.wrong-bg{ background:var(--bg-wrong-choice); }       /* 選んだ選択肢が誤答（最背面より薄い） */
+  /* ★P58：PC（キーボードのある端末）だけ、選択肢の左に番号を出す。
+     スマホ・タブレットでは表示も挙動も変わらない（data-key 属性は付くが不可視）。 */
+  @media (hover:hover) and (pointer:fine){
+    .choice[data-key]::before{ content:attr(data-key) "．"; color:var(--sub);
+                               font-family:var(--sans); font-size:.8rem; margin-right:.4rem; }
+  }
+  /* ★P58：両極性で、いまキー入力の対象になっている側（良／悪）を示す。新しい色は導入しない。 */
+  .side-active .polbadge{ box-shadow:inset 0 0 0 2px currentColor; background:#fffdf7; }
 
   /* 【調整3・追補】確定後の正誤色は「最背面（body）」だけに置く。
      巻物カード（.scroll）の地色（ベージュ）は変えない＝中間層は色変更しない。
@@ -822,6 +830,12 @@
   <b>苦手を復習</b>＝正答率が60%以下の語を集中演習します（定着と復習スケジュールは進めません）。苦手かどうかは正答率で決まります。その正答率に数えるのは<b>その語をその日に初めて答えた1回だけ</b>で、同じ語を同じ日に何度答えても正答率は変わりません（＝繰り返すだけでは苦手から外れず、外れるのは日をあらためて正解を重ねたときです）。<br>
   <b>単語一覧</b>＝全語を辞書のように閲覧。</p>
 
+  <h2>パソコンでのキー操作</h2>
+  <p>パソコン（キーボードのある端末）では、選択肢の左に番号が出ます。<b>答えが1つの問題は、数字キーを1回押すだけでその選択肢に決まり、そのまま採点まで進みます</b>（押し直しはできません）。採点のあとは<b>Enter</b>で次の問題へ進みます。<br>
+  良・悪の2つを答える語では、<b>先に「良」、続けて「悪」</b>を数字キーで選びます。いまどちらを選んでいるかは画面に出ます。2つ目を押した時点で採点します。<br>
+  助動詞の<b>接続</b>も答えが1つなので、数字キー1回で決まります。これに対して助動詞の<b>意味</b>は正解が複数あるため、数字キーで選んだり外したりしてから<b>Enter</b>で確定します。<b>1打で決まるのは答えが1つの画面だけ</b>、答えが複数ある画面は<b>選んでから Enter</b>、と覚えてください。<br>
+  メニューやログイン欄に文字を入力しているあいだは、キー操作を受け付けません。スマートフォン・タブレットの操作は今までどおりで、番号も表示されません。</p>
+
   <h2>学習の流れ</h2>
   <div class="fig">
     <svg viewBox="0 0 380 74" role="img" aria-label="学習の流れ">
@@ -1096,7 +1110,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-20a";
+const APP_VERSION = "2026-07-21a";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -7136,7 +7150,41 @@ document.addEventListener("DOMContentLoaded", function () {
   var locked = false;   // 確定後の再操作防止
   var onKey = null;     // 現在画面のキーボード処理（単極性のみ設定）
 
-  document.addEventListener("keydown", function (ev) { if (onKey && !quizScreen.hidden) onKey(ev); });
+  /* ===== ★P58：キー操作のガード（入口1箇所に集約。各 onKey には散らさない） =====
+     ★モーダルを列挙する形（menuPanel／mergeModal／confirmModal を見る）にはしない。
+       列挙は「場所を数える」設計で、オーバーレイが1つ増えるたびに列挙漏れで破れる。
+       フォーカス判定は「そのキーの持ち主を見る」設計で、入力欄が増えても自動的に守られる。
+       後者だけが増築に耐える（守りたい範囲と、判定の供給元の範囲が一致するため）。
+       ＝「モーダルを1つ足したから、ガードにも足そう」と考える必要は無い。足してはいけない。
+     ★Shift は弾かない。配列によっては上段の数字は Shift を押して初めて数字になる（AZERTY等）。
+       しかも Shift+数字 は ev.key が "!" 等になり数字判定には掛からない。弾く利益が無く害だけがある。 */
+  function keyBlocked(ev) {
+    if (ev.isComposing || ev.keyCode === 229) return true;                  // 日本語入力の変換中（既存の認証欄と同型）
+    if (ev.ctrlKey || ev.metaKey || ev.altKey) return true;                 // ショートカットは素通し
+    if (ev.repeat) return true;                                             // 押しっぱなしの二重発火を抑止
+    var el = document.activeElement;
+    if (!el) return false;
+    var tag = el.tagName;
+    return (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable === true);
+  }
+
+  document.addEventListener("keydown", function (ev) {
+    if (quizScreen.hidden) return;
+    if (keyBlocked(ev)) return;
+    if (locked) {
+      /* ★P58：採点後の Enter＝次へ。confirmSingle 等の onKey=null は無改変のまま入口で拾い、
+         nextBtn.click() を呼ぶので既存の click ハンドラを1バイトも複製しない。
+         ★条件に kaisetuEl.hidden（DOM）を使うのは、本コードベースの「状態はDOMではなく変数から」の
+           例外にあたるので理由を残す：ここでDOMが持っているのは「解説がいま出ているか」という
+           表示状態そのものであって、別の場所に真実がある値の写しではない。原則が禁じているのは
+           写しを信じることなので、この参照は原則に反しない。locked だけを見ると、終了画面
+           （解説は隠れている）で Enter を押すたびに次へ処理が空回りし、selectDailyWords と
+           saveCloud が無駄に走る。 */
+      if (ev.key === "Enter" && !kaisetuEl.hidden) { ev.preventDefault(); nextBtn.click(); }
+      return;
+    }
+    if (onKey) onKey(ev);
+  });
 
   /* ===== 機能5骨格：ナビ・ホーム ===== */
   // 画面切り替え（hidden で出し分け）
@@ -7279,7 +7327,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // ---- 単極性語 ----
   function renderSingle(s) {
-    hintEl.textContent = "もう一度タップで確定（Enter・数字キー1〜4も可）";
+    hintEl.textContent = "タップ、または数字キー（1〜4）で1打確定";
     hintEl.hidden = false;
 
     var selected = -1;
@@ -7289,6 +7337,7 @@ document.addEventListener("DOMContentLoaded", function () {
     s.q.options.forEach(function (opt, i) {
       var b = document.createElement("button");
       b.className = "choice"; b.type = "button"; b.textContent = opt;
+      b.setAttribute("data-key", String(i + 1));   // ★P58：番号（表示は pointer:fine のときだけ・CSS側）
       b.addEventListener("click", function () {
         if (locked) return;
         if (selected === i) confirmSingle(s, selected, btns); // もう一度タップ＝確定
@@ -7300,12 +7349,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function select(i) { selected = i; btns.forEach(function (b, j) { b.classList.toggle("selected", j === i); }); }
 
-    // キーボード：数字キー=選択／Enter=確定
+    /* ★P58：数字キー1〜n＝選択と確定を1打で行う（答えが1つの画面なので1打で決まる）。
+       誤打で選び直せないことはオーナー判断で承知のうえ。2操作のほうがストレス、との判断。
+       Enter は、タップで選んだあとの確定手段として残す。 */
     onKey = function (ev) {
       if (locked) return;
-      if (ev.key >= "1" && ev.key <= "4") {
+      if (ev.key >= "1" && ev.key <= "9") {
         var n = parseInt(ev.key, 10) - 1;
-        if (n < btns.length) { select(n); ev.preventDefault(); }
+        if (n < btns.length) { select(n); ev.preventDefault(); confirmSingle(s, n, btns); }
       } else if (ev.key === "Enter" && selected >= 0) {
         confirmSingle(s, selected, btns); ev.preventDefault();
       }
@@ -7331,14 +7382,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // ---- 両極性語 ----
   function renderBipolar(s) {
-    hintEl.textContent = "良・悪を1つずつ選び、確定を押す";
+    hintEl.textContent = "良・悪を1つずつ選び、確定を押す";   // ★P58：直後の updateHint() で上書きされる初期値
     hintEl.hidden = false;
 
     var selPos = -1, selNeg = -1, posBtns = [], negBtns = [];
     var confirmBtn = document.createElement("button");
     confirmBtn.className = "confirm"; confirmBtn.type = "button"; confirmBtn.textContent = "確定"; confirmBtn.disabled = true;
 
-    function refresh() { confirmBtn.disabled = !(selPos >= 0 && selNeg >= 0); }
+    function refresh() { confirmBtn.disabled = !(selPos >= 0 && selNeg >= 0); updateHint(); }
+    /* ★P58：いま良と悪のどちらを選んでいるかの表示。新しい状態変数は作らず selPos から導出する
+       （タップで良を先に選んでも、キーの続きが自然に悪へ移る＝クリック操作と矛盾しない）。 */
+    function updateHint() {
+      var toPos = (selPos < 0);
+      hintEl.textContent = toPos
+        ? "良を選んでください（タップ、または数字キー1〜" + posBtns.length + "）"
+        : "悪を選んでください（タップ、または数字キー1〜" + negBtns.length + "）";
+      if (posSide) posSide.classList.toggle("side-active", toPos);
+      if (negSide) negSide.classList.toggle("side-active", !toPos);
+    }
     function mark(btns, i) { btns.forEach(function (b, j) { b.classList.toggle("selected", j === i); }); }
 
     function makeSide(label, kind, options, btnsOut, onSel) {
@@ -7349,6 +7410,7 @@ document.addEventListener("DOMContentLoaded", function () {
       options.forEach(function (opt, i) {
         var b = document.createElement("button");
         b.className = "choice"; b.type = "button"; b.textContent = opt;
+        b.setAttribute("data-key", String(i + 1));   // ★P58：番号（良・悪それぞれ 1 から。表示は CSS 側）
         b.addEventListener("click", function () { if (!locked) { onSel(i); mark(btnsOut, i); refresh(); } });
         btnsOut.push(b); list.appendChild(b);
       });
@@ -7357,14 +7419,33 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     var sides = document.createElement("div"); sides.className = "sides"; // 良・悪の並び（広い画面で2列）
-    sides.appendChild(makeSide("良", "pos", s.posQ.options, posBtns, function (i) { selPos = i; }));
-    sides.appendChild(makeSide("悪", "neg", s.negQ.options, negBtns, function (i) { selNeg = i; }));
+    var posSide = makeSide("良", "pos", s.posQ.options, posBtns, function (i) { selPos = i; });
+    var negSide = makeSide("悪", "neg", s.negQ.options, negBtns, function (i) { selNeg = i; });
+    sides.appendChild(posSide);
+    sides.appendChild(negSide);
     quizArea.appendChild(sides);
     confirmBtn.addEventListener("click", function () {
       if (locked || selPos < 0 || selNeg < 0) return;
       confirmBipolar(s, selPos, selNeg, posBtns, negBtns, confirmBtn);
     });
     quizArea.appendChild(confirmBtn);
+
+    /* ★P58：数字キーで「良を1つ確定 → 続けて悪を1つ確定 → 2つ目の確定で採点」。別キーは導入しない。
+       両方をタップで選んだあとに数字を押すと、悪を選び直して即採点になる（誤打で選び直せない方針の帰結）。 */
+    onKey = function (ev) {
+      if (locked) return;
+      if (!(ev.key >= "1" && ev.key <= "9")) return;
+      var n = parseInt(ev.key, 10) - 1;
+      if (selPos < 0) {
+        if (n >= posBtns.length) return;
+        selPos = n; mark(posBtns, n); refresh(); ev.preventDefault();
+      } else {
+        if (n >= negBtns.length) return;
+        selNeg = n; mark(negBtns, n); refresh(); ev.preventDefault();
+        confirmBipolar(s, selPos, selNeg, posBtns, negBtns, confirmBtn);
+      }
+    };
+    updateHint();   // 初期表示（まずは「良を選んでください」）
   }
 
   function confirmBipolar(s, sp, sn, posBtns, negBtns, confirmBtn) {
@@ -7467,7 +7548,16 @@ document.addEventListener("DOMContentLoaded", function () {
     byId("jqAgain").addEventListener("click", function(){ (jqType === "imi" ? startImi : startSetsuzoku)(); });
     jqNextBtn.addEventListener("click", jqNext);
     // キーボード：この画面が表示中のときだけ効く（本体クイズと混線しない）
-    document.addEventListener("keydown", function(ev){ if(!jqScreen.hidden && jqOnKey) jqOnKey(ev); });
+    document.addEventListener("keydown", function(ev){
+      if(jqScreen.hidden) return;
+      if(keyBlocked(ev)) return;   // ★P58：ガードは入口1箇所に集約（各 jqOnKey には散らさない）
+      if(jqLocked){
+        // ★P58：採点後の Enter＝次へ。jqNextBtn.click() を呼ぶので既存の click ハンドラは複製しない。
+        if(ev.key === "Enter" && !jqKaisetuEl.hidden){ ev.preventDefault(); jqNextBtn.click(); }
+        return;
+      }
+      if(jqOnKey) jqOnKey(ev);
+    });
 
     function sessionCount(){ return jodoshiCountOf(state); } // A-2：助動詞1回の出題数（設定値）
 
@@ -7543,13 +7633,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // ---- 接続：単一選択 ----
     function renderSetsuzoku(q){
-      jqHintEl.textContent = "もう一度タップで確定（Enter・数字キー1〜4も可）";
+      jqHintEl.textContent = "タップ、または数字キー（1〜4）で1打確定";
       jqHintEl.hidden = false;
       var selected = -1, btns = [];
       var list = document.createElement("div"); list.className = "choices";
       q.options.forEach(function(opt, i){
         var b = document.createElement("button");
         b.className = "choice"; b.type = "button"; b.textContent = opt;
+        b.setAttribute("data-key", String(i + 1));   // ★P58：番号（表示は pointer:fine のときだけ・CSS側）
         b.addEventListener("click", function(){
           if(jqLocked) return;
           if(selected === i) confirmSetsuzoku(q, selected, btns); // もう一度タップ＝確定
@@ -7559,9 +7650,14 @@ document.addEventListener("DOMContentLoaded", function () {
       });
       jqAreaEl.appendChild(list);
       function pick(i){ selected = i; btns.forEach(function(b,j){ b.classList.toggle("selected", j===i); }); }
+      /* ★P58：数字キー1〜n＝選択と確定を1打で行う（答えが1つの画面なので1打で決まる）。
+         Enter は、タップで選んだあとの確定手段として残す。 */
       jqOnKey = function(ev){
         if(jqLocked) return;
-        if(ev.key >= "1" && ev.key <= "4"){ var n = parseInt(ev.key,10)-1; if(n < btns.length){ pick(n); ev.preventDefault(); } }
+        if(ev.key >= "1" && ev.key <= "9"){
+          var n = parseInt(ev.key,10)-1;
+          if(n < btns.length){ pick(n); ev.preventDefault(); confirmSetsuzoku(q, n, btns); }
+        }
         else if(ev.key === "Enter" && selected >= 0){ confirmSetsuzoku(q, selected, btns); ev.preventDefault(); }
       };
     }
@@ -7584,13 +7680,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // ---- 意味：多肢選択（過不足なく選べて正解） ----
     function renderImi(q){
-      jqHintEl.textContent = "正しい意味をすべてタップ →「確定」（数字キーも可）";
+      jqHintEl.textContent = "正しい意味をすべて選んで「確定」（数字キーで選択／Enterで確定）";
       jqHintEl.hidden = false;
       var chosen = [], btns = [];
       var list = document.createElement("div"); list.className = "choices";
       q.options.forEach(function(opt, i){
         var b = document.createElement("button");
         b.className = "choice"; b.type = "button"; b.textContent = opt;
+        b.setAttribute("data-key", String(i + 1));   // ★P58：番号（表示は pointer:fine のときだけ・CSS側）
         chosen[i] = false;
         b.addEventListener("click", function(){
           if(jqLocked) return;
