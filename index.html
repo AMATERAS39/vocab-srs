@@ -4651,7 +4651,7 @@ async function backendGet(key){
   return null;
 }
 function updateSaveBadge(status){
-  /* 【P55】表示先は #app の外に常設した #saveBadge（at:453）。以前はこの要素がどこにも作られておらず、
+  /* 【P55】表示先は #app の外に常設した #saveBadge。以前はこの要素がどこにも作られておらず、
      下の if(!el) で毎回抜ける死関数だった＝式は正しいのに誰にも表示されていなかった（条文37）。
      異常時だけ出す。正常（saved / pending）は hidden にして、通常の利用者には何も見せない。 */
   const el = document.getElementById("saveBadge");
@@ -6747,7 +6747,59 @@ function choiceSelect(k, o){
   renderCard();
   requestAnimationFrame(()=>{ window.scrollTo(0, _y); const z = document.querySelector(".prompt-zone"); if(z) z.scrollTop = _pt; });  /* P31症状A：ページ全体＋選択肢枠(.prompt-zone)のスクロール位置をレイアウト確定後に復元 */
 }
-function choiceConfirmBlank(k){
+/* ---- 【P63】選択肢枠（.prompt-zone）のスクロール補助 ---- */
+/* 枠スクロールに割り当てるキーと、その向きを1箇所で決める（0＝対象外）。
+   自動リピートの例外判定と、実際にスクロールする分岐の両方がこの関数だけを見る。
+   2箇所に同じ式を書くと、キーを増やしたときに片方へ足し忘れて
+   「1回目しか動かないキー」が静かに生まれる（条文38）。 */
+function zoneScrollDir(key){
+  if(key === "ArrowDown") return 1;
+  if(key === "ArrowUp")   return -1;
+  return 0;
+}
+/* 選択肢枠だけを1選択肢ぶん縦に動かす。ページ側は動かさない。
+   1段の高さは実測する（同じ .opt-list 内で隣り合う選択肢の上端の差＝gap 込み）。
+   CSS の数値を書き写すと、CSS を変えたときに静かにズレる（地雷#17）。
+   はみ出していない枠では何もせず false を返し、ページ側の既定スクロールに任せる。
+   scrollTop への代入は即時＝アニメーションが無いので、動きを減らす設定にも反しない。 */
+function scrollZoneByStep(dir){
+  const zone = document.querySelector(".prompt-zone");
+  if(!zone) return false;
+  if(zone.scrollHeight <= zone.clientHeight) return false;   /* はみ出していない＝動かす余地が無い */
+  const list = zone.querySelector(".opt-list");
+  const btns = list ? list.querySelectorAll(".opt-btn") : [];
+  let step = 0;
+  if(btns.length >= 2) step = btns[1].getBoundingClientRect().top - btns[0].getBoundingClientRect().top;
+  if(!(step > 0) && btns.length >= 1) step = btns[0].getBoundingClientRect().height;
+  if(!(step > 0)) step = zone.clientHeight / 6;              /* 選択肢を測れないときの最後の保険 */
+  zone.scrollTop += dir * Math.round(step);                   /* 上端・下端はブラウザが自動でクランプする */
+  return true;
+}
+/* 指定した空欄のブロック（品詞ラベル＋選択肢群）が枠内に見える位置まで、枠だけを動かす。
+   scrollIntoView を使わないのは、祖先のスクロール枠をすべて動かす仕様のため、
+   ページ全体まで動きうるから。はみ出していなければ動かさない（block:"nearest" と同じ規則）。
+   枠の取り方は choiceConfirmBlank の復元処理と同じ書き方にそろえる
+   （同じ要素の同じ scrollTop を後から上書きする形になるため）。 */
+function scrollBlankIntoZone(k){
+  const zone = document.querySelector(".prompt-zone");
+  if(!zone) return;
+  const btn = zone.querySelector('.opt-btn[data-k="' + k + '"]');
+  const block = btn ? btn.closest(".blank-block") : null;
+  if(!block) return;
+  const zr = zone.getBoundingClientRect();
+  const br = block.getBoundingClientRect();
+  const pad = 8;                                              /* はみ出しているときに付ける余白。判定には使わない */
+  let d = 0;
+  if(br.top < zr.top){                                        /* 上へはみ出している → 上へ寄せる */
+    d = br.top - zr.top - pad;
+  }else if(br.bottom > zr.bottom){                            /* 下へはみ出している → 下へ。ただし上端より上へは出さない */
+    d = Math.min(br.bottom - zr.bottom + pad, br.top - zr.top);
+    if(d < 0) d = 0;
+  }
+  if(d) zone.scrollTop += d;                                  /* 収まっているときは動かさない（block:"nearest" と同じ規則） */
+}
+/* 第2引数 fromKey は数字キー経路だけが true を渡す（タップ経路の挙動は不変）。 */
+function choiceConfirmBlank(k, fromKey){
   const item = curItem();
   if(!item || item.choiceDone) return;
   if(!item.picks[k]) return;               // 何も選んでいなければ確定不可
@@ -6759,8 +6811,9 @@ function choiceConfirmBlank(k){
     /* P31 C-5：個別確定後の再描画でもスクロール位置を保持（複数選択で他ブランクへ移る際の跳ね対策） */
     saveSession();
     const _y = window.scrollY; const _pz = document.querySelector(".prompt-zone"); const _pt = _pz ? _pz.scrollTop : 0;
+    const _nextK = fromKey ? q.blanks.find(b=>!item.confirmed[b]) : undefined;   /* 【P63】次にキーで操作する空欄。activeK と同じ規則で、再描画の【前】に決める（DOM から探さない） */
     renderCard();
-    requestAnimationFrame(()=>{ window.scrollTo(0, _y); const z = document.querySelector(".prompt-zone"); if(z) z.scrollTop = _pt; });  /* P31症状A：ページ全体＋選択肢枠(.prompt-zone)のスクロール位置をレイアウト確定後に復元 */
+    requestAnimationFrame(()=>{ window.scrollTo(0, _y); const z = document.querySelector(".prompt-zone"); if(z) z.scrollTop = _pt; if(_nextK !== undefined) scrollBlankIntoZone(_nextK); });  /* P31症状A：ページ全体＋選択肢枠(.prompt-zone)のスクロール位置をレイアウト確定後に復元。【P63】そのうえで、次に操作する空欄が枠内に見える位置へ寄せる。復元と同じ scrollTop を上書きするため、必ずこの順（同一コールバック内の文の並びで順序を保証する） */
   }
 }
 function gradeChoice(){
@@ -6781,13 +6834,15 @@ function gradeChoice(){
   renderCard();
   speak(w.w);
 }
-/* 【P58】可視のモーダルがあるか。存在ではなく【可視】で見る（3つとも動的生成され、
-   隠すのはクラス auth-hidden / merge-hidden / pr-hidden。開くときは className 全置換
-   （at:7719）か classList.remove（at:7972）で外す。classList.contains は両方式に効く）。
-   未生成なら getElementById が null ＝「開いていない」。 */
+/* 【P58／P63】可視のオーバーレイがあるか。統合指示書§4.4に従い、id を名前で列挙するのではなく
+   role="dialog" 属性で拾う（新しいオーバーレイを足しても、属性さえ付けば自動でこのガードの
+   対象になる）。「開いている」の基準は従来と同じ意味＝display が none でないこと。
+   対象はいずれも hidden クラス（auth-hidden / merge-hidden / pr-hidden）で display:none にしており、
+   未生成なら querySelectorAll に現れない＝「開いていない」。
+   ★offsetParent は使わない。対象はすべて position:fixed で、可視でも null を返すため。 */
 function modalOpen(){
-  const m = [["authmodal","auth-hidden"],["mergeModal","merge-hidden"],["pwresetmodal","pr-hidden"]];
-  return m.some(([id,cls])=>{ const el = document.getElementById(id); return !!el && !el.classList.contains(cls); });
+  return Array.from(document.querySelectorAll('[role="dialog"]'))
+    .some(el => getComputedStyle(el).display !== "none");
 }
 /* 【P58】PCキーボード：数字キー(1〜9)で選択肢をその場で確定、Enterは解説／色分け画面で「次へ」。
    ガードの並びが要点。修飾キー・IME・自動リピートは【入口】で弾き、
@@ -6804,8 +6859,8 @@ function choiceKeydown(e){
   if(e.target && e.target.isConnected === false) return;
   if(e.defaultPrevented) return;                   /* 既定動作を止めた側が処理済み（記述式の判定など） */
   if(e.ctrlKey || e.metaKey || e.altKey) return;   /* 【P58】Ctrl+数字（タブ切替）や ⌘+数字を奪わない。e.key は修飾併用でも "1" のまま */
-  if(e.isComposing || e.keyCode === 229) return;   /* 【P58】日本語変換中は無反応（記述式の入力欄 at:6569 と同じ形） */
-  if(e.repeat) return;                             /* 【P58】押しっぱなしの自動リピートで2問飛ばさない */
+  if(e.isComposing || e.keyCode === 229) return;   /* 【P58】日本語変換中は無反応（writeIn の onkeydown と同じ形） */
+  if(e.repeat && !zoneScrollDir(e.key)) return;     /* 【P58】押しっぱなしの自動リピートで2問飛ばさない。【P63】↑↓だけは通す＝画面を進めず、選択状態にも触れず、選択肢枠のスクロールしかしないため、このガードが守っている振る舞いを新たに許可しない */
   const s = session;
   if(!s) return;
   const ae = document.activeElement;
@@ -6826,6 +6881,15 @@ function choiceKeydown(e){
   if(s.block !== "choice") return;                 /* 【P58】ここから下は選択式の回答中だけ（記述式の回答中は数字キーもEnterも走らせない） */
   if(item.choiceDone) return;
   if(!app.querySelector(".opt-list")) return;      // 選択式カード表示中のみ
+  /* 【P63】↑↓は選択肢枠だけを1段スクロールする。選択の状態（picks／confirmed）には
+     一切触れないので、数字キーによる確定と競合しない。ここまでのガードで
+     「出題画面・選択式・回答中・入力欄にフォーカス無し・オーバーレイ非表示」は満たされている。
+     枠がはみ出していない画面では何もせず素通しし、ページ側の既定スクロールに任せる。 */
+  const _dir = zoneScrollDir(e.key);
+  if(_dir){
+    if(scrollZoneByStep(_dir)) e.preventDefault();   /* preventDefault は実際に動かしたときだけ */
+    return;
+  }
   if(!item.confirmed) item.confirmed = {};
   const q = item.quiz;
   /* 【P58】対象ブランクの求め方を単一・複数で統一。!picks ではなく !confirmed を見るのは、
@@ -6849,7 +6913,7 @@ function choiceKeydown(e){
       /* 【P58】ワンタップ確定：選択と確定を1回で。choiceSelect（2段構え）は使わない。
          choiceConfirmBlank は全ブランク確定で gradeChoice へ合流する（採点の入口は1本のまま）。 */
       item.picks[activeK] = opts[idx];
-      choiceConfirmBlank(activeK);
+      choiceConfirmBlank(activeK, true);   /* 【P63】キー確定のときだけ、次の空欄へ枠を寄せる */
     }
   }
 }
@@ -7440,7 +7504,7 @@ function renderSettings(){
         <option value="auto" ${(state.settings.blankCount||"auto")==="auto"?"selected":""}>自動</option>
         ${[2,3,4,5].map(n=>`<option value="${n}" ${String(state.settings.blankCount)===String(n)?"selected":""}>${n}個</option>`).join("")}
       </select></div>
-    <p class="note" style="margin:2px 0 8px;color:var(--sub);font-size:12px">※複数選択になるのは、品詞が2つ以上ある語だけです。品詞が1つの語は常に単一で出ます。</p>
+    <p class="note" style="margin:2px 0 8px;color:var(--sub);font-size:12px">※同時に問う数は、その語の品詞数を超えません。複数選択になるのは品詞が2つ以上ある語だけで、品詞が1つの語は常に単一で出ます。</p>
     <div class="setting-row"><span>音声の読み上げ速度</span>
       <select id="setRate">${[0.5,0.6,0.7,0.8,0.9,0.95,1.0,1.1,1.2].map(r=>`<option value="${r}" ${Math.abs((state.settings.rate||0.95)-r)<0.001?"selected":""}>${r}</option>`).join("")}</select></div>
     <div class="setting-row"><span>品詞モード：1回に出題する問題数</span>
@@ -7632,6 +7696,7 @@ function ensureMergeModalDom(){
   document.head.appendChild(style);
   const modal = document.createElement("div");
   modal.id = "mergeModal"; modal.className = "merge-hidden";
+  modal.setAttribute("role","dialog"); modal.setAttribute("aria-modal","true");   /* 【P63】modalOpen は role="dialog" で拾う。className は開閉のたびに全置換されるため、クラスではなく属性で付ける */
   modal.innerHTML = `
     <div class="card">
       <h3>ログイン前の学習内容があります</h3>
@@ -7687,6 +7752,7 @@ function ensureAuthDom(){
 
   const modal = document.createElement("div");
   modal.id = "authmodal"; modal.className = "auth-hidden";
+  modal.setAttribute("role","dialog"); modal.setAttribute("aria-modal","true");   /* 【P63】modalOpen は role="dialog" で拾う。className は開閉のたびに全置換されるため、クラスではなく属性で付ける */
   modal.innerHTML = `
     <div class="cardwrap">
       <button class="close" id="authClose">×</button>
@@ -8044,6 +8110,7 @@ function ensurePwResetDom(){
   document.head.appendChild(style);
   const modal = document.createElement("div");
   modal.id = "pwresetmodal";
+  modal.setAttribute("role","dialog"); modal.setAttribute("aria-modal","true");   /* 【P63】modalOpen は role="dialog" で拾う。className は開閉のたびに全置換されるため、クラスではなく属性で付ける */
   modal.innerHTML = `
     <div class="card">
       <h3>新しいパスワードの設定</h3>
