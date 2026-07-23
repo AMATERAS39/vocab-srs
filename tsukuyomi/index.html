@@ -171,6 +171,8 @@
   .set-label{ font-family:var(--sans); font-size:.82rem; color:var(--sub); margin:0 0 .3rem; }
   .set-inline{ display:flex; gap:.5rem; align-items:center; }
   .set-hint{ font-family:var(--sans); font-size:.78rem; color:var(--midori); margin-top:.3rem; }
+  /* ★P62：常時の説明（項目名から自明でない意味だけを書く）。既存 .ref-note と同じ抑制されたトーンにし、新しい色・枠・背景は導入しない。 */
+  .set-desc{ font-family:var(--sans); font-size:.78rem; color:var(--sub); margin-top:.3rem; line-height:1.55; }
   /* ===== パスワード認証UI（AMAS移植・TSUKUYOMI配色に統一） ===== */
   .authtabs{ display:flex; gap:6px; margin:4px 0 10px; }
   .authtab{ flex:1; padding:8px; border:1px solid var(--line); border-radius:8px; background:#fffdf7; color:var(--sub); font-family:var(--sans); font-size:.85rem; cursor:pointer; }
@@ -603,7 +605,7 @@
     <!-- 終了 -->
     <div class="body end" id="end" hidden>
       <p class="endmsg">学習はここまで</p>
-      <button class="homebtn primary" id="btnMoreChunk" type="button" hidden>もう1チャンク</button>
+      <button class="homebtn primary" id="btnMoreChunk" type="button" hidden>つづける</button>
       <button class="restart" id="toHome" type="button">ホームへ戻る</button>
     </div>
 
@@ -778,6 +780,23 @@
           <select class="ref-sort" id="setQuota"></select>
           <div class="set-hint" id="setQuotaMsg" hidden></div>   <!-- 追補：いつ反映されるかを明示 -->
         </div>
+        <!-- ★P62：1日の新しい単語の数（M）。即日反映＝残枠を保存せず毎回導出するため、Mの意味が午前と午後で揺れない。 -->
+        <div class="set-group">
+          <div class="set-label">1日の新しい単語の数</div>
+          <select class="ref-sort" id="setNewMax"></select>
+          <div class="set-desc">数えるのは、その日にはじめて<b>答えた</b>新しい単語です（どのモードで答えたかは問いません）。答えないまま終えた語は数えません。</div>
+          <div class="set-hint" id="setNewMaxMsg" hidden></div>
+        </div>
+        <!-- ★P62：新しい単語の出し方（トグル）。変わるのは詰め順の1点だけで、判定・記録・カレンダーは2値でまったく同じ。 -->
+        <div class="set-group">
+          <div class="set-label">新しい単語の出し方</div>
+          <select class="ref-sort" id="setNewOrder">
+            <option value="max">最大数</option>
+            <option value="quota">出題数</option>
+          </select>
+          <div class="set-desc">「最大数」＝上限として扱い、<b>復習を先に</b>出します。「出題数」＝その日のうちに出し切る数として扱い、<b>新しい単語を先に</b>出します。</div>
+          <div class="set-hint" id="setNewOrderMsg" hidden></div>
+        </div>
         <div class="set-group">
           <div class="set-label">助動詞モードの1回の出題数</div>
           <select class="ref-sort" id="setJodoshiCount"></select>
@@ -830,9 +849,14 @@
   <p><b>左上の本の形のアイコン</b>＝単語一覧（全語の閲覧）。<b>右上の☰</b>＝メニュー（設定・アプリの説明・学習カレンダー・意見箱・単語追加・ログイン）。単語の追加は「意見箱・単語追加」から入れます。下にモードボタンが並びます。</p>
 
   <h2>モードの種類</h2>
-  <p><b>学習を始める</b>＝1回ぶんの出題（既定10問。設定で10〜50問に変更できます）。復習の期日が来た語を優先し、足りないぶんを新しい語で補います。ここだけが定着と復習スケジュールを進めます。学習後に<b>「もう1チャンク」</b>でさらに続けられます。<br>
+  <p><b>学習を始める</b>＝1回ぶんの出題（既定10問。設定で10〜50問に変更できます）。<b>復習の期日が来た語</b>と、その日の残りぶんの<b>新しい語</b>で組みます。それでも問題数に足りないときは、すでに学習した語のうち<b>まだ期日が来ていない語</b>を無作為に足して数を揃えます。定着と復習スケジュールを進めるのは前の2つ（期日が来た語・新しい語）だけで、数合わせで足された語は正答率だけが動きます。学習後に<b>「つづける」</b>でさらに続けられます。<br>
   <b>苦手を復習</b>＝正答率が60%以下の語を集中演習します（定着と復習スケジュールは進めません）。苦手かどうかは正答率で決まります。その正答率に数えるのは<b>その語をその日に初めて答えた1回だけ</b>で、同じ語を同じ日に何度答えても正答率は変わりません（＝繰り返すだけでは苦手から外れず、外れるのは日をあらためて正解を重ねたときです）。<br>
   <b>単語一覧</b>＝全語を辞書のように閲覧。</p>
+
+  <h2>新しい単語の数（設定）</h2>
+  <p>☰の<b>設定</b>で、<b>1日の新しい単語の数</b>を決められます（0〜50語。既定は10語）。数えるのは、その日に<b>はじめて答えた</b>新しい単語です。答えないまま学習をやめた語は数に入らず、次の機会にまた出ます。この設定は<b>その日のうちに効きます</b>。</p>
+  <p><b>新しい単語の出し方</b>は2つから選べます。<b>「最大数」</b>＝1日の上限として扱い、復習を先に出します（復習がたまっている日は新しい単語が少なくなります）。<b>「出題数」</b>＝その日のうちに出し切る数として扱い、新しい単語を先に出します。どちらを選んでも、定着や復習スケジュールの進み方は変わりません。</p>
+  <p class="sub">新しい単語の枠を使い切り、復習の期日もまだ来ていない日は、<b>すでに学習した語</b>から無作為に選んで問題数を揃えます。この語は<b>正答率と「出題◯回」だけが動き、定着と復習スケジュールは進みません</b>（同じ日に二度は出しません）。「今日は出す語がありません」で止まらないための仕組みです。</p>
 
   <h2>パソコンでのキー操作</h2>
   <p>パソコン（キーボードのある端末）では、選択肢の左に番号が出ます。<b>答えが1つの問題は、数字キーを1回押すだけでその選択肢に決まり、そのまま採点まで進みます</b>（押し直しはできません）。採点のあとは<b>Enter</b>で次の問題へ進みます。<br>
@@ -887,7 +911,7 @@
   <p class="sub"><b>「出題◯回」</b>は、その語を<b>答えた日数</b>を数えたものです（同じ日に何回答えても、増えるのは1つだけです）。ただし<b>2026年7月20日より前</b>に答えたぶんは、同じ日に何回答えてもそのつど数えていました。そのため、それ以前から学習している語ほど、実際に答えた日数より大きな数字が出ることがあります。</p>
 
   <h2>定着判定</h2>
-  <p>「学習を始める」（本学習）で正解するたびに定着度が1つ上がり（1日1回まで）、<b>3回連続で定着すると「定着済」</b>になります。定着済のあとでも復習で間違えると定着済から外れ、復習中に戻ります（忘却曲線に忠実に、降格あり）。定着と復習スケジュールを進めるのは「学習を始める」で<b>その語をその日に初めて答えた1回だけ</b>で、「苦手を復習」は影響しません。正答率も同じく、その語をその日の初回の1回だけを数えます（モードを問いません）。</p>
+  <p>「学習を始める」（本学習）で正解するたびに定着度が1つ上がり（1日1回まで）、<b>3回連続で定着すると「定着済」</b>になります。定着済のあとでも復習で間違えると定着済から外れ、復習中に戻ります（忘却曲線に忠実に、降格あり）。定着と復習スケジュールを進めるのは、「学習を始める」で出た<b>期日が来た語</b>と<b>新しい語</b>を、その語のその日に初めて答えた1回だけです。数合わせで足された<b>まだ期日が来ていない語</b>と「苦手を復習」は影響しません。正答率は、どのモードで答えたかを問わず、その語のその日の初回の1回だけを数えます。</p>
 
   <h2>語誌（コアイメージ）について</h2>
   <p>語の中心にある「核となるイメージ」や成り立ちです。たとえば「ものものし」の“重々しく厳めしい”という芯をつかむと、良い意味（堂々としている）と悪い意味（おおげさだ）が1本でつながり、覚えやすくなります。</p>
@@ -1115,7 +1139,7 @@
    機能8・§10：更新通知。下の APP_VERSION はデプロイのたびに必ず変更する。
    定義はこの1行だけ（コメント等に同じ形を書かない。正規表現の first-match が本物になるよう先頭に置く）。
    ========================================================= */
-const APP_VERSION = "2026-07-21b";
+const APP_VERSION = "2026-07-23a";
 var _lastUpdateCheck = 0; // 最終チェック時刻（スロットル用）
 
 /* 項目30：AMATERAS（英単語）アプリへのリンク先。オーナーが後で差し替える。
@@ -6503,13 +6527,18 @@ const DAILY_QUOTA  = 10;  // 1日のノルマ既定値（設定 state.settings.q
 /* ===== 設定（state.settings）：ローカルのみ保存。saveCloud には含めない。 =====
    後方互換：settings が無い旧セーブは既定値で補完（ノルマ10・助動詞出題数10・ニックネーム空）。 */
 const QUOTA_CHOICES = [10, 15, 20, 25, 30, 35, 40, 45, 50];
-const DEFAULT_SETTINGS = { nick: "", quota: 10, jodoshiCount: 10 };
+/* ★P62：1日に新しく触れる単語の上限（M）の選択肢。0 を含むため QUOTA_CHOICES とは別配列にする。 */
+const NEW_MAX_CHOICES = [0, 5, 10, 15, 20, 30, 50];
+const DEFAULT_SETTINGS = { nick: "", quota: 10, jodoshiCount: 10, newMax: 10, newOrder: "max" };   // ★P62：newMax＝1日の新しい単語の数／newOrder＝詰め順（"max"＝最大数・"quota"＝出題数）
 function normalizeSettings(s) {
   s = (s && typeof s === "object") ? s : {};
   return {
     nick: (typeof s.nick === "string") ? s.nick : "",
     quota: (QUOTA_CHOICES.indexOf(s.quota) >= 0) ? s.quota : 10,
-    jodoshiCount: (QUOTA_CHOICES.indexOf(s.jodoshiCount) >= 0) ? s.jodoshiCount : 10
+    jodoshiCount: (QUOTA_CHOICES.indexOf(s.jodoshiCount) >= 0) ? s.jodoshiCount : 10,
+    /* ★P62：旧セーブはこの2キーを持たない。undefined はどちらの判定も通らず既定値に落ちる＝後方互換。値の書き換え・移行処理は行わない。 */
+    newMax: (NEW_MAX_CHOICES.indexOf(s.newMax) >= 0) ? s.newMax : 10,
+    newOrder: (s.newOrder === "quota") ? "quota" : "max"
   };
 }
 function ensureSettings(state) { state.settings = normalizeSettings(state.settings); return state.settings; }
@@ -6520,6 +6549,10 @@ function quotaOf(state) {
 // P33：1チャンクの問題数＝設定値（settings.quota、無ければ DAILY_QUOTA=10）。
 // 旧 todayQuota は読まない（チャンク制へ移行。todayQuota は保存・マージ・リセットはされるが誰も読まない死フィールド）。
 function jodoshiCountOf(state) { return (state && state.settings && state.settings.jodoshiCount) || 10; }   // 助動詞1回の出題数
+/* ★P62：1日の新しい単語の数（M）と、新しい単語の詰め順。settings を読むだけの純粋関数（書き込みなし）。
+   ★Mは 0 を取りうるため || での既定値補完は使えない（0 が 10 に化ける）。選択肢にあるかで判定する。 */
+function newMaxOf(state)   { var v = state && state.settings && state.settings.newMax; return (NEW_MAX_CHOICES.indexOf(v) >= 0) ? v : 10; }
+function newOrderOf(state) { return (state && state.settings && state.settings.newOrder === "quota") ? "quota" : "max"; }
 
 /* 日付を「年-月-日」文字列に（時刻は持たない）。テストでは Date を渡せる。 */
 function todayStr(d) {
@@ -6898,6 +6931,39 @@ function isDueBy(p, today) {
   return due !== null && due <= today;
 }
 
+/* ★P62：その1問の記録モードを導出する（保存しない・stateもDOMも見ない純関数）。
+   ・②新規（lastAnswered===null）と①期日到来 → "norm"（定着と復習スケジュールを進める）
+   ・③補充語（既習かつ期日前） → "extra"（正答率だけを動かす）
+   ★必ず recordAnswer を呼ぶ【直前】に呼ぶこと。recordAnswer は norm 経路で step と lastAnswered を
+     進めるため、実行後に測ると①だった語の次回復習日が未来へ動き、③に見えてしまう。
+   ★state.session に印を保存しないこと：mergeStates の統合対象（P53凍結領域）に入り、
+     クラウド統合で印だけが巻き戻る。導出なら中断再開でも日付が変わっても、その瞬間の prog から正しい答えが出る。 */
+function modeForWord(p, today) {
+  if (!p || p.lastAnswered === null) return "norm";
+  return isDueBy(p, today) ? "norm" : "extra";
+}
+
+/* ★P62：「その日はじめて答えた語」の数。日次カウンタも割当セットも作らず、毎回 prog から導出する。
+   cSeen の増分と countedOn の書き込みは recordAnswer の1箇所ずつで、どちらも mode 分岐より手前にある。
+   よって cSeen===1 かつ countedOn===today は「答えた日数が1日＝今日が初回」を構造的に保証する。
+   ★A′-2以前の語は countedOn を持たない（emptyProgress が既定値を置かない設計）ので
+     undefined !== today で正しく除外される＝移行処理は不要。 */
+function newCountToday(state, today) {
+  var prog = (state && state.prog) || {};
+  var keys = Object.keys(prog);
+  var n = 0;
+  for (var k = 0; k < keys.length; k++) {
+    var p = prog[keys[k]];
+    if (p && p.cSeen === 1 && p.countedOn === today) n++;
+  }
+  return n;
+}
+/* ★P62：今日あと何語まで新しい単語を出してよいか（残枠）。
+   未回答のまま離脱した新規語は上限を消費しない（数えるのは「答えた語」だけ）＝【意図された挙動】。 */
+function newRemainToday(state, today) {
+  return Math.max(0, newMaxOf(state) - newCountToday(state, today));
+}
+
 
 /* ---------------------------------------------------------
    selectDailyWords(state, opts?)：今日の出題語（最大 limit 語）を返す
@@ -6990,38 +7056,65 @@ function selectDailyWords(state, opts) {
   // P33：チャンク制。復習を優先度順に limit まで詰め、不足分だけ新規で補充する。
   //   ・日次割当セット（newAssign）に依存しない＝毎チャンクを現在のSRS状態から新鮮に計算する。
   //   ・これにより「残数が翌日へ積み上がる簿記」が構造ごと無くなる。
-  const g1 = [], g2 = [], g3 = [];
+  /* ★P62：①期日が来た語・②その日の残枠ぶんの新規語・③既習かつ期日前の語（数合わせ）の3種で埋める。
+     ③を同時に作らないと、Mの上限だけを入れた日に「出題0」で学習が停止する。
+     ★③は語の属性ではなく「その回の出題の性格」。prog に印を持たせない（記録モードは modeForWord で都度導出）。 */
+  const g1 = [], g2 = [], g3 = [], gFill = [];
   for (const w of allWords()) {                 // KOBUN_WORDS は i 昇順
     const p = state.prog[w.i] || emptyProgress();
     if (p.lastAnswered === today) continue;      // 今日すでに答えた語は除外（1日1回）
     const st = wordStatus(p);
     if (st === "未出題") continue;               // ★新規は後で補充（旧：割当セット依存を廃止）
-    if (!isDueBy(p, today)) continue;            // 期日前の復習中/定着済は入れない
+    /* ★P62：期日前の既習語＝③補充語のプール。★除外条件は①と③で【意図的に非対称】である。
+       ・①（上の g1〜g3）の除外は lastAnswered === today のまま【変えない】。苦手モード(extra)で答えた語は
+         countedOn だけが today になり lastAnswered は動かないため、①にも countedOn 除外を波及させると
+         「朝に苦手を復習した語が、その日の本学習から消える」＝A′-1の穴が再発する。
+         recordAnswer の normOn ガードが「extra が norm を殺す経路は構造上できない」ことを保証している
+         設計を、選定層で壊してはならない。
+       ・③にだけ countedOn === today を足すのは、③で答えても countedOn/normOn に守られて
+         正答率すら動かない「空振りの1問」を、同じ日に再提示しないため（表示は約束）。 */
+    if (!isDueBy(p, today)) { if (p.countedOn !== today) gFill.push(w); continue; }
     if (st === "復習中") { if (isWeakRate(p)) g1.push(w); else g2.push(w); }
     else g3.push(w);                             // 定着済（再確認）
   }
 
-  // ① 復習を優先度順（g1→g2→g3）に limit まで。各群内は提示順シャッフル（P23）。
   const out = [];
-  let remain = limit;
-  for (const g of [g1, g2, g3]) {
-    if (remain <= 0) break;
-    const take = g.slice(0, remain);            // i順で切り出す＝顔ぶれは決定的
-    out.push(...shuffle(take.slice()));         // 入った分だけ順序を混ぜる
-    remain -= take.length;
-  }
+  const chosen = {};
+  const add = function (ws) {
+    ws.forEach(function (w) { if (!chosen[w.i] && out.length < limit) { chosen[w.i] = true; out.push(w); } });
+  };
+  const remain = function () { return limit - out.length; };
 
-  // ② 不足分を新規で補充（P27：レベル昇順→レベル内ランダムで選定）。
-  if (remain > 0) {
-    const chosen = {};
-    out.forEach(function (w) { chosen[w.i] = true; });
+  // ① 期日が来た語を優先度順（g1→g2→g3）に。各群内は slice してから shuffle（P23：顔ぶれは決定的・提示順だけを混ぜる）。
+  const fillReview = function () {
+    for (const g of [g1, g2, g3]) {
+      if (remain() <= 0) break;
+      const take = g.slice(0, remain());        // i順で切り出す＝顔ぶれは決定的
+      add(shuffle(take.slice()));               // 入った分だけ順序を混ぜる
+    }
+  };
+  // ② その日の残枠ぶんの新規語（P27：レベル昇順→レベル内ランダムで選定）。
+  const fillNew = function () {
+    const cap = Math.min(remain(), newRemainToday(state, today));   // ★P62：1日の新規上限（保存せず毎回導出）
+    if (cap <= 0) return;
     const byI = {};
     allWords().forEach(function (w) { byI[w.i] = w; });
-    const newWords = pickNewIds(state, remain, chosen)
+    const newWords = pickNewIds(state, cap, chosen)
       .map(function (i) { return byI[i]; })
       .filter(Boolean);
-    out.push(...shuffle(newWords.slice()));      // 提示順はシャッフル（P23と整合）
-  }
+    add(shuffle(newWords.slice()));              // 提示順はシャッフル（P23と整合）
+  };
+  /* ③ ①②で足りない分を、既習かつ期日前の語から無作為に補う。
+     ③には優先度が無いため P23（slice→shuffle）は適用外＝プール全体を混ぜてから切り出す。 */
+  const fillSupp = function () {
+    if (remain() <= 0) return;
+    add(shuffle(gFill.slice()).slice(0, remain()));
+  };
+
+  /* ★P62：トグルで変わるのは【詰め順の1点だけ】。判定・記録・カレンダーの挙動は2値で完全に同じ。 */
+  if (newOrderOf(state) === "quota") { fillNew(); fillReview(); }   // 「出題数」＝その日のうちに出し切る＝新しい単語を先に
+  else { fillReview(); fillNew(); }                                  // 「最大数」＝上限として扱う＝復習を先に
+  fillSupp();                                                        // ③は常に最後
 
   return out;
 }
@@ -7034,6 +7127,10 @@ function selectDailyWords(state, opts) {
      → daily の10語を答え終えた後に呼ぶと、続きの一群が返る。
    ・記録側は recordAnswer(..., { mode:"extra" }) を使う想定
      （定着度・復習段階は動かさない。正答率も、その語のその日の初回回答だけを数える）。
+   ★【死関数】この関数はUI経路から到達できない。P33で「追加でもっと学習」ボタンを撤去して以来、
+     呼び出しは機能3パート3の自己テスト1箇所だけである（次の世代はコメントをコードより信じるため明記する）。
+   ★P62：未出題（g4）に「1日の新しい単語の数」の残枠を適用してある。呼ばれていないため現在の挙動は
+     1バイトも変わらないが、将来この関数を復活させたときに上限が抜ける事故を防ぐための予防である。
 --------------------------------------------------------- */
 function selectExtraWords(state, opts) {
   const o = opts || {};
@@ -7054,7 +7151,10 @@ function selectExtraWords(state, opts) {
       g3.push(w);
     }
   }
-  return [...g1, ...g2, ...g3, ...g4].slice(0, limit);
+  // ★P62：未出題（g4）はその日の残枠まで。残枠0なら新規は1語も出さない。
+  const newCap = newRemainToday(state, today);
+  const g4c = (newCap > 0) ? g4.slice(0, newCap) : [];
+  return [...g1, ...g2, ...g3, ...g4c].slice(0, limit);
 }
 
 
@@ -7306,6 +7406,12 @@ document.addEventListener("DOMContentLoaded", function () {
   function polLabel(pol) { return pol === "pos" ? "良" : pol === "neg" ? "悪" : "中"; } // 極性バッジの文言
   function setGraded(ok) { document.body.classList.add("graded", ok ? "correct" : "wrong"); }   // 最背面に正誤色
   function clearGraded() { document.body.classList.remove("graded", "correct", "wrong"); }
+  /* ★P57：ここと render() が出す「◯回」は cSeen＝答えた日数（1日1回まで）。
+     ★P62で cSeen の分離を見送った。理由＝cSeen は条文51の試験紙でいう補助側（正答率）に属し、
+     本体（次回復習日・定着）ではないため。prog スキーマへ触る改修が来たとき、
+     P57(b)（「日数」表記への移行）とカウンタ分離は同じ機会に判断する。
+     ★P62の③補充語（extra）でも cSeen は動く。AMATERASでは動かないが、TSUKUYOMIは正答率の分母と
+     「出題N回」表示が同一の cSeen で分離できないため＝【意図された差】であり実装漏れではない。 */
   function updateMeta(w) { var p = state.prog[w.i]; rateEl.textContent = rateText(p); seenEl.textContent = p.cSeen + "回"; }
 
   // 1画面を描画
@@ -7371,7 +7477,11 @@ document.addEventListener("DOMContentLoaded", function () {
   function confirmSingle(s, sel, btns) {
     if (locked) return; locked = true; onKey = null;
     var correct = (s.q.options[sel] === s.q.answer);
-    recordAnswer(state, s.w.i, correct, { mode: quizMode });   // 1回（今日=norm／追加・苦手=extra）
+    /* ★P62：本学習(norm)の1回ぶんには①②③が混在する。その1問の記録モードは、採点の【直前】に
+       その語の prog から導出する（保存しない＝state.session に印を足さない）。
+       苦手モード等（quizMode==="extra"）のセッションは全問 extra のまま不変。 */
+    var qmode = (quizMode === "norm") ? modeForWord(state.prog[s.w.i], todayStr()) : "extra";
+    recordAnswer(state, s.w.i, correct, { mode: qmode });   // 1回（①②=norm／③・追加・苦手=extra）
     if (quizMode === "norm" && state.session) state.session.idx = idx + 1; // 今日の学習のみ再開位置を更新
     markDirty(); flush(state);             // §7：解答確定のたびに即保存
     stampToday(state);   // P34：学習日基準。単語クイズ（norm／extra）の回答確定でのみ押す。助動詞クイズは「★記録しない」ため押さない（冪等・ゲストは押さない）
@@ -7476,7 +7586,10 @@ document.addEventListener("DOMContentLoaded", function () {
     var posOK = (s.posQ.options[sp] === s.posQ.answer);
     var negOK = (s.negQ.options[sn] === s.negQ.answer);
     var bothOK = posOK && negOK;
-    recordAnswer(state, s.w.i, bothOK, { mode: quizMode });   // 1画面＝1回（両方正解のみ cCorrect+1）
+    /* ★P62：confirmSingle と同じ。両極性語も 1画面＝1回の記録なので、同じ導出を採点直前に行う。
+       （ここを落とすと両極性語だけ③でも norm 記録になる） */
+    var qmode = (quizMode === "norm") ? modeForWord(state.prog[s.w.i], todayStr()) : "extra";
+    recordAnswer(state, s.w.i, bothOK, { mode: qmode });   // 1画面＝1回（両方正解のみ cCorrect+1）
     if (quizMode === "norm" && state.session) state.session.idx = idx + 1; // 今日の学習のみ再開位置を更新
     markDirty(); flush(state);            // §7：解答確定のたびに即保存
     stampToday(state);   // P34：学習日基準。単語クイズ（norm／extra）の回答確定でのみ押す。助動詞クイズは「★記録しない」ため押さない（冪等・ゲストは押さない）
@@ -7528,7 +7641,8 @@ document.addEventListener("DOMContentLoaded", function () {
     if (idx >= total) {
       if (quizMode === "norm") { state.session = null; } markDirty(); flush(state); saveCloud(); clearGraded();
       cardEl.hidden = true; kaisetuEl.hidden = true; endEl.hidden = false;
-      // P33：次に出せるチャンクがあるときだけ「もう1チャンク」を出す（無ければ隠す＝静かに待つ）。
+      // P33／P61：次に出せる語があるときだけ「つづける」を出す（無ければ隠す＝静かに待つ）。
+      // ★P62：③補充語が入ったため、既習語がある限りほぼ常に出せる＝「出題0」で止まらない。
       var moreW = selectDailyWords(state);
       byId("btnMoreChunk").hidden = (buildScreens(moreW).length === 0);
       window.scrollTo(0, 0);
@@ -7536,7 +7650,8 @@ document.addEventListener("DOMContentLoaded", function () {
     else render();
   });
 
-  // P33：終了画面「もう1チャンク」。norm（定着・復習スケジュールを進める本学習）で次の1チャンクを始める。
+  // P33／P61：終了画面「つづける」。norm（本学習）で次の1回ぶんを始める。
+  // ★id btnMoreChunk は据え置き（非破壊原則）。id とラベルが一致しないのは【意図された差】である。
   byId("btnMoreChunk").addEventListener("click", function () {
     launchQuiz(selectDailyWords(state), "今は出題できる語がありません。復習の期日が来た語から、またご案内します。", "norm");
   });
@@ -8201,14 +8316,26 @@ document.addEventListener("DOMContentLoaded", function () {
       var o1 = document.createElement("option"); o1.value = String(v); o1.textContent = v + " 語"; qs.appendChild(o1);
       var o2 = document.createElement("option"); o2.value = String(v); o2.textContent = v + " 問"; js.appendChild(o2);
     });
+    var ns = byId("setNewMax");   // ★P62：1日の新しい単語の数（0 を含むので QUOTA_CHOICES とは別配列）
+    if(ns){
+      NEW_MAX_CHOICES.forEach(function(v){
+        var o = document.createElement("option"); o.value = String(v);
+        o.textContent = (v === 0) ? "0 語（新しい単語を出さない）" : (v + " 語");
+        ns.appendChild(o);
+      });
+    }
   })();
   function fillSettings(){   // 設定を開くたび現在値を反映
     ensureSettings(state);
     byId("setNick").value = state.settings.nick || "";
     byId("setQuota").value = String(state.settings.quota);
     byId("setJodoshiCount").value = String(state.settings.jodoshiCount);
+    byId("setNewMax").value = String(newMaxOf(state));       // ★P62
+    byId("setNewOrder").value = newOrderOf(state);           // ★P62
     byId("setNickMsg").hidden = true;
     byId("setQuotaMsg").hidden = true;   // 追補：開き直したら前回のメッセージは消す
+    byId("setNewMaxMsg").hidden = true;
+    byId("setNewOrderMsg").hidden = true;
   }
   /* 追補：出題数の変更が「いつ効くか」を1行で知らせる。表示は 4.5 秒（短すぎて読めないことがないように）。 */
   var _quotaMsgTimer = null;
@@ -8217,6 +8344,15 @@ document.addEventListener("DOMContentLoaded", function () {
     m.textContent = text; m.hidden = false;
     if(_quotaMsgTimer) clearTimeout(_quotaMsgTimer);
     _quotaMsgTimer = setTimeout(function(){ m.hidden = true; }, 4500);
+  }
+  /* ★P62：一時メッセージの汎用版（上の showQuotaMsg と同じ 4.5 秒様式）。
+     showQuotaMsg は既存文字列ともども不改変で残し、新設の2項目はこちらを使う。 */
+  var _setHintTimers = {};
+  function showSetHint(id, text){
+    var m = byId(id); if(!m) return;
+    m.textContent = text; m.hidden = false;
+    if(_setHintTimers[id]) clearTimeout(_setHintTimers[id]);
+    _setHintTimers[id] = setTimeout(function(){ m.hidden = true; }, 4500);
   }
   byId("setNickSave").addEventListener("click", function(){   // ニックネーム保存（ローカルのみ）
     ensureSettings(state);
@@ -8235,6 +8371,27 @@ document.addEventListener("DOMContentLoaded", function () {
     ensureSettings(state);
     var v = parseInt(this.value, 10); if(QUOTA_CHOICES.indexOf(v) < 0) v = 10;
     state.settings.jodoshiCount = v; markDirty(); flush(state);
+  });
+  /* ★P62：1日の新しい単語の数（M）→ 保存＋【即日反映】。
+     残枠を保存せず毎回導出するため、Mの意味が午前と午後で揺れない
+     （「今日はじめて答えた新しい単語が M 語を超えない」という一つの意味のまま）。 */
+  byId("setNewMax").addEventListener("change", function(){
+    ensureSettings(state);
+    var v = parseInt(this.value, 10); if (NEW_MAX_CHOICES.indexOf(v) < 0) v = 10;
+    state.settings.newMax = v;
+    markDirty(); flush(state);
+    var today = todayStr();
+    var used = newCountToday(state, today);
+    var left = Math.max(0, v - used);
+    if (left > 0) showSetHint("setNewMaxMsg", "今日から反映されます（今日はあと " + left + " 語まで、新しい単語が出ます）");
+    else showSetHint("setNewMaxMsg", "今日はすでに " + used + " 語の新しい単語を学習しているため、今日はこれ以上増えません。次の設定は明日から効きます");
+  });
+  // ★P62：新しい単語の出し方（トグル）→ 保存＋【次の学習から】（チャンク途中には割り込まない）。
+  byId("setNewOrder").addEventListener("change", function(){
+    ensureSettings(state);
+    state.settings.newOrder = (this.value === "quota") ? "quota" : "max";
+    markDirty(); flush(state);
+    showSetHint("setNewOrderMsg", "次の学習から反映されます");
   });
   byId("submitClose").addEventListener("click", closeMenu);
   byId("subAddSense").addEventListener("click", addSenseRow);
